@@ -15,6 +15,10 @@ module QrReader
     # The coarsest pyramid level is the largest power-of-two reduction whose
     # longer side is still at least this many pixels.
     PYRAMID_MIN_SIDE = 800
+    # The exhaustive (try_harder) strategies only run on pyramid levels up to
+    # this size: at full resolution of a 12 MP photo they cost seconds and
+    # mostly chase texture noise, while the fast strategies still run there.
+    HARD_MAX_SIDE = 2600
     # Upper bound on alternative samplings tried per candidate.
     MAX_ALTERNATIVES = 6
 
@@ -185,6 +189,8 @@ module QrReader
       return found unless @try_harder
 
       factors.each do |f|
+        next if longest / f > HARD_MAX_SIDE
+
         @tried = {}
         found = true if run_strategies(level.call(f), f.to_f, quick: false, skip_quick: true)
         return true if found && !@multi

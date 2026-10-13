@@ -2,10 +2,11 @@
 
 ## [Unreleased]
 
+## [0.0.2] - 2026-10-13
+
 - JPEG 2000: pure-Ruby decoder for all of Part 1 (`Formats::JPEG2000`), used
   for standalone JP2/J2K files and JPXDecode images in PDFs; large images are
   read from a reduced-resolution decode first.
-
 - PDF: QR codes drawn as vector graphics are read (groups of small filled or
   stroked right-angled paths or round dots are rasterized;
   `PDF.each_image(vector: true)`), also when set as text in an embedded

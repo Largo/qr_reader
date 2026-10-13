@@ -79,6 +79,37 @@ qr_reader photo.jpg                 # prints the text of the first code
 qr_reader --all --json scan.pdf     # every code, with metadata, as JSON lines
 ```
 
+### Large images
+
+There is no need to shrink photos or page scans before reading them: large
+images are searched through a resolution pyramid (coarse levels first) and
+large JPEGs are first decoded at reduced size, so a big code is found quickly
+while a small code on a 300/600 DPI scan is still read at full resolution.
+Shrinking beforehand can make small codes unreadable — a 12 mm code on a
+300 DPI A4 scan is lost when the page is reduced to 1000 px.
+
+What does help with big inputs:
+
+- Run with YJIT (see above).
+- Pass `try_harder: false` when most images contain a code and you prefer a
+  quick "no" over a thorough search (images without a code are the slowest
+  case, since every strategy runs to the end).
+- If you already use ImageMagick or libvips, letting it *decode* big PNG/TIFF
+  files can be faster than the pure-Ruby decoders. Keep at least ~2500 px on
+  the long side for scans:
+
+  ```ruby
+  require "open3"
+
+  def read_with_imagemagick(path)
+    out, = Open3.capture2("magick", path, "-resize", "2500x2500>", "-colorspace", "Gray", "-depth", "8",
+                          "-format", "%w %h\n", "-write", "info:-", "gray:-", binmode: true)
+    header, pixels = out.split("\n", 2)
+    width, height = header.split.map(&:to_i)
+    QrReader.read(QrReader::Image.new(width, height, pixels))
+  end
+  ```
+
 ## What it handles
 
 - QR Code Model 2, versions 1–40, all error correction levels and masks;

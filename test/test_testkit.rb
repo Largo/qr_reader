@@ -93,9 +93,9 @@ class TestTestkit < Minitest::Test
     end
     synthetic = JSON.parse(File.read(File.join(BASELINES, "synthetic_zxcpp.json")))["cases"]
     # The baseline always lists the JPEG cases; without ImageMagick they are
-    # not generated, so compare the remaining ones.
-    ids = SyntheticBench.all_cases.map(&:id)
-    jpeg_ids = Distort.jpeg_available? ? [] : SyntheticBench.all_cases.select { |c| c.family == "jpeg" }.map(&:id)
-    assert_equal (ids - jpeg_ids).sort, (synthetic.keys - jpeg_ids).sort
+    # not generated, so leave them out of the comparison.
+    baseline_ids = synthetic.keys
+    baseline_ids = baseline_ids.reject { |id| id.start_with?("jpeg/") } unless Distort.jpeg_available?
+    assert_equal SyntheticBench.all_cases.map(&:id).sort, baseline_ids.sort
   end
 end

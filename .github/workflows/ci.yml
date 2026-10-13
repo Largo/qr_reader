@@ -42,3 +42,31 @@ jobs:
       - name: Corpus accuracy
         if: matrix.yjit
         run: bundle exec ruby bench/corpus.rb --rotations 0
+
+  native:
+    name: Native kernels (qr_reader-native)
+    runs-on: ubuntu-latest
+    env:
+      RUBY_YJIT_ENABLE: "1"
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          persist-credentials: false
+      - uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: "4.0"
+          bundler-cache: true
+      - name: Cache ZXing test corpus
+        uses: actions/cache@v4
+        with:
+          path: test/corpus/zxing
+          key: zxing-corpus-v1
+      - name: Fetch ZXing test corpus
+        run: bundle exec rake corpus:fetch
+      # Fails when lib/qr_reader/kernels changed without `rake native:generate`
+      # (the digest check then keeps the native kernels inactive).
+      - name: Compile and test with native kernels
+        run: MAKE_JOBS=4 bundle exec rake native:compile native:test
+      - name: Build the gem
+        run: bundle exec rake native:gem
+

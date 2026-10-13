@@ -77,9 +77,6 @@ class TestFormats < Minitest::Test
   # [name in the error message, leading bytes]
   UNSUPPORTED = [
     ["WebP", "RIFF\x24\x00\x00\x00WEBPVP8 "],
-    ["TIFF", "II*\x00\x08\x00\x00\x00"],
-    ["TIFF", "MM\x00*\x00\x00\x00\x08"],
-    ["TIFF", "II+\x00\x08\x00\x00\x00"],
     ["HEIC", "\x00\x00\x00\x18ftypheic\x00\x00\x00\x00"],
     ["HEIF", "\x00\x00\x00\x18ftypmif1\x00\x00\x00\x00"],
     ["AVIF", "\x00\x00\x00\x1CftypavifX"],
@@ -89,9 +86,20 @@ class TestFormats < Minitest::Test
     ["JPEG 2000", "\xFF\x4F\xFF\x51\x00"],
     ["PFM", "PF\n1 1\n-1.0\n"],
     ["Photoshop", "8BPS\x00\x01"],
-    ["PDF", "%PDF-1.7\n"],
     ["SVG", "<?xml version=\"1.0\"?><svg/>"]
   ].freeze
+
+  def test_tiff_and_pdf_decode_to_their_first_page
+    tiff = Dir[File.expand_path("../fixtures/tiff/*.tif", __dir__)].min
+    pdf = Dir[File.expand_path("../fixtures/pdf/*.pdf", __dir__)].min
+    { tiff => :tiff, pdf => :pdf }.each do |path, format|
+      bytes = File.binread(path)
+      assert_equal format, F.format_of(bytes), path
+      image = F.decode(bytes)
+      assert_kind_of QrReader::Image, image
+      assert_equal [image.width, image.height], F.dimensions(bytes), path
+    end
+  end
 
   def test_recognised_unsupported_formats
     UNSUPPORTED.each do |name, bytes|

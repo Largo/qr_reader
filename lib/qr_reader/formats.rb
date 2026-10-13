@@ -10,7 +10,7 @@ module QrReader
   #   QrReader::Formats.dimensions(bytes)                   # => [290, 290]
   #
   # Unknown data raises ImageError; formats that are recognised but not
-  # supported (WebP, TIFF, HEIC, AVIF, JPEG XL, ...) raise UnsupportedImageError.
+  # supported (WebP, HEIC, AVIF, JPEG XL, ...) raise UnsupportedImageError.
   module Formats
     # Largest image, in pixels, that the decoders will allocate. Larger
     # (or maliciously declared) sizes raise UnsupportedImageError.
@@ -18,26 +18,24 @@ module QrReader
 
     GIF_MAGIC = /\AGIF8[79]a/n
     PNM_MAGIC = /\AP[1-7][\s#]/n
+    TIFF_MAGIC = ["II*\0", "MM\0*", "II+\0", "MM\0+"].map(&:b).freeze
     WHITESPACE = " \t\n\v\f\r"
     ALL_BYTES = (0..255).to_a.freeze
     WHITE = "\xFF".b
 
     # Recognised formats that Formats.decode does not read: [pattern, name,
     # module that reads them (nil if none)].
-    # TIFF and PDF are multi-page containers read by their own modules.
     UNSUPPORTED = [
       [/\ARIFF....WEBP/mn, "WebP"],
-      [/\A(?:II\*\0|MM\0\*|II\+\0|MM\0\+)/n, "TIFF", "TIFF"],
       [/\A....ftyp(?:avif|avis)/mn, "AVIF"],
       [/\A....ftyp(?:heic|heix|hevc|hevx|heim|heis|mif1|msf1)/mn, "HEIC/HEIF"],
       [/\A(?:\xFF\x0A|\0\0\0\x0CJXL \r\n\x87\n)/n, "JPEG XL"],
       [/\A(?:\0\0\0\x0CjP  \r\n\x87\n|\xFF\x4F\xFF\x51)/n, "JPEG 2000"],
       [/\AP[Ff][\s#]/n, "PFM (floating point PNM)"],
       [/\A8BPS/n, "Photoshop PSD"],
-      [/\A%PDF-/n, "PDF", "PDF"],
       [/\A\s*<(?:\?xml|svg|!DOCTYPE svg)/n, "SVG"]
     ].freeze
-    private_constant :GIF_MAGIC, :PNM_MAGIC, :WHITESPACE, :ALL_BYTES, :WHITE, :UNSUPPORTED
+    private_constant :GIF_MAGIC, :PNM_MAGIC, :TIFF_MAGIC, :WHITESPACE, :ALL_BYTES, :WHITE, :UNSUPPORTED
 
     class << self
       # Decodes an encoded image (format sniffed from its magic bytes) into a
@@ -50,12 +48,15 @@ module QrReader
         when :gif then GIF.decode(bytes)
         when :bmp then BMP.decode(bytes)
         when :pnm then PNM.decode(bytes)
+        when :tiff then TIFF.decode(bytes)
+        when :pdf then first_pdf_image(bytes)
         else raise unrecognized(bytes)
         end
       end
 
-      # :png, :jpeg, :gif, :bmp, :pnm, or nil when the magic bytes are not
-      # those of a supported format.
+      # :png, :jpeg, :gif, :bmp, :pnm, :tiff, :pdf, or nil when the magic
+      # bytes are not those of a supported format. TIFF and PDF are
+      # multi-page: Formats.decode returns their first page or image.
       def format_of(bytes)
         return nil unless bytes.is_a?(String) && bytes.bytesize >= 2
 
@@ -66,6 +67,8 @@ module QrReader
         elsif b0 == 0x47 then :gif if GIF_MAGIC.match?(head)
         elsif b0 == 0x42 then :bmp if BMP.bmp?(head)
         elsif b0 == 0x50 then :pnm if PNM_MAGIC.match?(head)
+        elsif b0 == 0x49 || b0 == 0x4D then :tiff if TIFF_MAGIC.include?(head.byteslice(0, 4))
+        elsif b0 == 0x25 then :pdf if head.start_with?("%PDF-")
         end
       end
 
@@ -79,11 +82,18 @@ module QrReader
         when :gif then GIF.dimensions(bytes)
         when :bmp then BMP.dimensions(bytes)
         when :pnm then PNM.dimensions(bytes)
+        when :tiff then TIFF.dimensions(bytes)
+        when :pdf then first_pdf_image(bytes).then { |image| [image.width, image.height] }
         else raise unrecognized(bytes)
         end
       end
 
       private
+
+      def first_pdf_image(bytes)
+        PDF.each_image(bytes) { |image, _info| return image }
+        raise UnsupportedImageError, "PDF contains no decodable raster image"
+      end
 
       def unrecognized(bytes)
         head = bytes.byteslice(0, 64)

@@ -15,6 +15,7 @@ require_relative "qr_reader/formats/pdf"
 require_relative "qr_reader/decoder"
 require_relative "qr_reader/detector"
 require_relative "qr_reader/reader"
+require_relative "qr_reader/native_kernels"
 
 # Pure-Ruby QR code reader.
 #
@@ -72,3 +73,5 @@ module QrReader
     end
   end
 end
+
+QrReader::NativeKernels.install

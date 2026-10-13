@@ -1,9 +1,10 @@
 # Publishes the gem to RubyGems.org with trusted publishing (OIDC, no API key)
 # when a version tag is pushed:
 #
-#   git tag v0.1.0 && git push origin v0.1.0
+#   git tag v0.1.0 && git push origin v0.1.0   (the tag must equal QrReader::VERSION)
 #
-# RubyGems.org must know this workflow as a trusted publisher for qr_reader:
+# Releases both gems, qr_reader and qr_reader-native, at the same version.
+# RubyGems.org must know this workflow as a trusted publisher for each of them:
 # owner "largo", repository "qr_reader", workflow "release.yml", environment
 # "release" (see README, "Releasing").
 name: Release
@@ -17,7 +18,7 @@ jobs:
     runs-on: ubuntu-latest
     environment: release
     permissions:
-      contents: write # rake release may push the tag; it skips that when the tag exists
+      contents: read
       id-token: write # OIDC token exchanged for a short-lived RubyGems API key
     steps:
       - uses: actions/checkout@v5
@@ -33,4 +34,15 @@ jobs:
           test "v$version" = "$GITHUB_REF_NAME" || { echo "tag $GITHUB_REF_NAME != v$version"; exit 1; }
       - name: Run tests
         run: bundle exec rake test
-      - uses: rubygems/release-gem@v1
+      - name: Build and test with the native kernels
+        run: MAKE_JOBS=4 bundle exec rake native:compile native:test
+      - name: Build both gems
+        run: |
+          bundle exec rake build native:gem
+          ls -l pkg
+      # Exchanges the workflow's OIDC token for a short-lived RubyGems API key.
+      - uses: rubygems/configure-rubygems-credentials@v1
+      - name: Push both gems
+        run: |
+          gem push "pkg/qr_reader-${GITHUB_REF_NAME#v}.gem"
+          gem push "pkg/qr_reader-native-${GITHUB_REF_NAME#v}.gem"

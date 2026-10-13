@@ -60,7 +60,14 @@ module QrReader
         return input if input.is_a?(Image)
 
         bytes = input_bytes(input)
-        return Formats.decode(bytes) if bytes
+        if bytes
+          # Formats.decode reads the first page of TIFF and PDF too; this also
+          # finds PDFs with junk before their header.
+          if container_format(bytes) == :pdf
+            Formats::PDF.each_image(bytes) { |image, _info| return image }
+          end
+          return Formats.decode(bytes)
+        end
 
         if input.respond_to?(:width) && input.respond_to?(:height) && input.respond_to?(:pixels)
           # ChunkyPNG-style canvas: pixels are 0xRRGGBBAA integers.
@@ -73,8 +80,12 @@ module QrReader
       # Encoded image bytes for paths, IOs and byte strings; nil for other objects.
       def input_bytes(input)
         if input.is_a?(String)
+          # A short String naming an existing file is a path, even if it
+          # starts like image data ("GIF89a.gif", "P5 scan.pgm").
+          short = input.bytesize <= 4096 && !input.include?("\0")
+          return File.binread(input) if short && File.file?(input)
           return input.b if Formats.format_of(input) || container_format(input)
-          raise ImageError, "unrecognised image data" if input.bytesize > 4096 || input.include?("\0")
+          raise ImageError, "unrecognised image data" unless short
 
           File.binread(input) # raises Errno::ENOENT etc. like File.read
         elsif input.respond_to?(:to_path)

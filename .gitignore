@@ -9,3 +9,10 @@
 Gemfile.lock
 /test/corpus/scans/
 /bench/inputs/
+/native/lib/qr_reader_native/*.so
+/native/lib/qr_reader_native/*.bundle
+/native/ext/qr_reader_native/*.o
+/native/ext/qr_reader_native/*.so
+/native/ext/qr_reader_native/Makefile
+/native/ext/qr_reader_native/mkmf.log
+/native/ext/qr_reader_native/qr_reader_native/

@@ -6,7 +6,7 @@ Gem::Specification.new do |spec|
   spec.name = "qr_reader"
   spec.version = QrReader::VERSION
   spec.authors = ["Andi Idogawa"]
-  spec.email = ["andi@idogawa.com"]
+  spec.email = ["web@idogawa.com"]
 
   spec.summary = "Fast, accurate QR code reader in pure Ruby."
   spec.description = "Detects and decodes QR codes in photos and scanned documents (PNG, JPEG, JPEG 2000, GIF, " \

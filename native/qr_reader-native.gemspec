@@ -6,7 +6,7 @@ Gem::Specification.new do |spec|
   spec.name = "qr_reader-native"
   spec.version = QrReader::VERSION
   spec.authors = ["Andi Idogawa"]
-  spec.email = ["andi@idogawa.com"]
+  spec.email = ["web@idogawa.com"]
 
   spec.summary = "Optional native speed-up for qr_reader (its Ruby kernels compiled by Spinel)."
   spec.description = "The hot loops of the pure-Ruby qr_reader gem, compiled to C with the Spinel Ruby AOT " \

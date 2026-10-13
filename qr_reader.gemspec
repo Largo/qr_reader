@@ -15,7 +15,7 @@ Gem::Specification.new do |spec|
   spec.homepage = "https://github.com/largo/qr_reader"
   spec.required_ruby_version = ">= 3.2"
 
-  spec.files = Dir["lib/**/*.rb", "exe/*", "README.md", "LICENSE.txt", "CHANGELOG.md"]
+  spec.files = Dir["lib/**/*.rb", "exe/*", "README.md", "LICENSE.txt", "NOTICE", "CHANGELOG.md"]
   spec.bindir = "exe"
   spec.executables = Dir["exe/*"].map { |f| File.basename(f) }
   spec.require_paths = ["lib"]

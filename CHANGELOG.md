@@ -2,7 +2,7 @@
 
 ## [Unreleased]
 
-## [0.1.0]
+## [0.0.1] - 2026-10-13
 
 - Initial release: pure-Ruby QR code reader (Model 2, versions 1–40; numeric,
   alphanumeric, byte, Kanji, Hanzi, ECI, structured append, FNC1).

@@ -1,7 +1,7 @@
 # Publishes the gem to RubyGems.org with trusted publishing (OIDC, no API key)
 # when a version tag is pushed:
 #
-#   git tag v0.1.0 && git push origin v0.1.0   (the tag must equal QrReader::VERSION)
+#   git tag v0.0.1 && git push origin v0.0.1   (the tag must equal QrReader::VERSION)
 #
 # Releases both gems, qr_reader and qr_reader-native, at the same version.
 # RubyGems.org must know this workflow as a trusted publisher for each of them:

@@ -21,7 +21,7 @@ staying fast.
 Reference tools (development only, never runtime deps):
 
 * zxing-cpp + Pillow venv:
-  `/tmp/claude-1000/-home-andi-workspace/024a2597-ef40-4f4c-a25b-3210b1b14972/scratchpad/venv/bin/python`
+  a Python with `pip install zxing-cpp pillow` (set `ZXCPP_PYTHON` / `QR_READER_PYTHON`)
   (run Python with `-I`). `bench/reference/zxcpp.py [--rotate DEG] IMAGE...`
   prints zxing-cpp's text, corner positions, EC level and orientation as JSON lines.
   Pillow can also decode JPEG luminance exactly as libjpeg does

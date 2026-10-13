@@ -13,7 +13,8 @@ module QrReference
   class Error < StandardError; end
 
   # Venv with zxing-cpp and Pillow (see DESIGN.md); override with QR_READER_PYTHON.
-  DEFAULT_PYTHON = "/tmp/claude-1000/-home-andi-workspace/024a2597-ef40-4f4c-a25b-3210b1b14972/scratchpad/venv/bin/python"
+  # A Python with `pip install zxing-cpp pillow` (QR_READER_PYTHON or ZXCPP_PYTHON).
+  DEFAULT_PYTHON = ENV.fetch("ZXCPP_PYTHON", "python3")
   SCRIPT = File.expand_path("../../bench/reference/zxcpp.py", __dir__)
   WRITER_SCRIPT = File.expand_path("../../bench/reference/zxcpp_write.py", __dir__)
 

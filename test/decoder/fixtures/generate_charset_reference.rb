@@ -22,8 +22,7 @@ require_relative "../decoder_test_helper"
 module CharsetReference
   ROOT = File.expand_path("../../..", __dir__)
   OUTPUT = File.join(__dir__, "charset_reference.json")
-  PYTHON = ENV.fetch("ZXCPP_PYTHON",
-                     "/tmp/claude-1000/-home-andi-workspace/024a2597-ef40-4f4c-a25b-3210b1b14972/scratchpad/venv/bin/python")
+  PYTHON = ENV.fetch("ZXCPP_PYTHON", "python3")
 
   # Byte payloads for the encoding guess: Latin-1, Shift_JIS, UTF-8 (valid
   # and broken), binary with control characters, BOMs, and random bytes.

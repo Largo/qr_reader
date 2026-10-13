@@ -23,8 +23,7 @@ require_relative "../decoder_test_helper"
 module ZxingCppDamaged
   ROOT = File.expand_path("../../..", __dir__)
   OUTPUT = File.join(__dir__, "zxing_cpp_damaged.jsonl")
-  PYTHON = ENV.fetch("ZXCPP_PYTHON",
-                     "/tmp/claude-1000/-home-andi-workspace/024a2597-ef40-4f4c-a25b-3210b1b14972/scratchpad/venv/bin/python")
+  PYTHON = ENV.fetch("ZXCPP_PYTHON", "python3")
   VERSIONS = [1, 2, 3, 5, 7, 8, 10, 14, 20].freeze
 
   module_function

@@ -212,8 +212,8 @@ qr_reader-native, at the same version. Bump `QrReader::VERSION`, update
 `CHANGELOG.md`, then:
 
 ```bash
-git tag v0.1.0
-git push origin v0.1.0
+git tag v0.0.1
+git push origin v0.0.1
 ```
 
 ## License

@@ -27,7 +27,8 @@ class TestNative < Minitest::Test
   end
 
   def test_reads_a_code_with_native_kernels
-    assert_equal "MECARD:N:Google 411,;TEL:18665881077;;",
-                 QrReader.decode(File.expand_path("corpus/zxing/qrcode-3/10.png", __dir__))
+    text = "https://example.com/native?kernels=1"
+    image = QrTestHelper.rotate(QrTestHelper.render(QrTestHelper.rqr_matrix(text), module_size: 5), 17)
+    assert_equal text, QrReader.decode(image)
   end
 end

@@ -40,12 +40,12 @@ file, describe it in your final report instead.
 
 | owner | files |
 |---|---|
-| core (integrator) | `lib/qr_reader.rb`, `lib/qr_reader/{version,errors,image,bit_matrix,result,symbol_version,format_information}.rb`, `lib/qr_reader/reader.rb`, `test/test_helper.rb`, `test/test_core_types.rb`, `DESIGN.md`, `Rakefile`, gemspec |
+| core (integrator) | `lib/qr_reader.rb`, `lib/qr_reader/{version,errors,image,bit_matrix,result,symbol_version,format_information}.rb`, `lib/qr_reader/reader.rb`, `test/test_helper.rb`, `test/support/qr_test_helper.rb`, `exe/qr_reader`, `test/test_core_types.rb`, `DESIGN.md`, `Rakefile`, gemspec |
 | formats | `lib/qr_reader/formats.rb`, `lib/qr_reader/formats/{png,gif,bmp,pnm}.rb`, `test/formats/test_{png,gif,bmp,pnm,formats}.rb`, `test/fixtures/images/**` |
 | jpeg | `lib/qr_reader/formats/jpeg.rb`, `test/formats/test_jpeg.rb`, `test/fixtures/jpeg/**`, `bench/jpeg_bench.rb` |
 | decoder | `lib/qr_reader/decoder.rb`, `lib/qr_reader/decoder/**`, `test/decoder/**` |
 | detector | `lib/qr_reader/detector.rb`, `lib/qr_reader/detector/**`, `lib/qr_reader/binarizer.rb`, `test/detector/**` |
-| testkit | `test/support/**` (except `test_helper.rb`), `test/test_encoder.rb`, `bench/**` (except `bench/jpeg_bench.rb`, `bench/scans/**`; `bench/reference/zxcpp.py` may be extended) |
+| testkit | `test/support/**` (except `qr_test_helper.rb` and `scan_sim.rb`), `test/test_encoder.rb`, `bench/**` (except `bench/jpeg_bench.rb`, `bench/scans/**`; `bench/reference/zxcpp.py` may be extended) |
 | tiff | `lib/qr_reader/formats/{ccitt,tiff}.rb`, `test/formats/test_{ccitt,tiff}*.rb`, `test/fixtures/tiff/**` |
 | pdf | `lib/qr_reader/formats/pdf.rb`, `test/formats/test_pdf*.rb`, `test/fixtures/pdf/**` |
 | scans | `bench/scans/**`, `test/corpus/scans/**` (generated, gitignored), `test/support/scan_sim.rb` |
@@ -252,6 +252,11 @@ symbols should be produced.
   Keep Integers below 2**62 (fixnum range).
 * Precompute and cache per-version tables (function pattern masks, codeword
   placement order, GF log/exp tables) in frozen constants or lazily memoized.
+* YJIT has no on-stack replacement: a method entered once and looping over a
+  whole image stays in the interpreter. Put per-pixel work in a per-row (or
+  per-block) method called many times. A side exit inside a hot method (e.g.
+  `String.new(capacity:, encoding:)` or other keyword-argument cfunc calls)
+  makes the rest of that call interpreted — allocate buffers in helper methods.
 * Code must be fast both with and without YJIT; measure both
   (`ruby --yjit` vs plain `ruby`).
 * `# frozen_string_literal: true` in every file; no global state mutation; no

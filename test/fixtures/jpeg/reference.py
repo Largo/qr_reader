@@ -4,9 +4,10 @@
 #   YCbCr -> the Y channel (no colour conversion)
 #   RGB   -> Rec.601 luma, (306 R + 601 G + 117 B + 512) >> 10
 #   CMYK / YCCK (Adobe, inverted) -> luma of R = C' K' / 255 etc.
-# where C', K' are the values libjpeg outputs (255 = no ink).
+# where C', K' are the values libjpeg outputs (255 = no ink); with "plain"
+# (JPEG.decode cmyk: :plain) the libjpeg values are ink: C' = 255 - value.
 #
-# Usage: python -I reference.py IN.jpg SCALE OUT.gray
+# Usage: python -I reference.py IN.jpg SCALE OUT.gray [plain]
 # Prints "WIDTH HEIGHT COLORSPACE". Development tool only (fixture generation).
 import re
 import struct
@@ -76,6 +77,7 @@ def djpeg_gray(path, scale):
 
 def main():
     path, scale, out = sys.argv[1], int(sys.argv[2]), sys.argv[3]
+    plain = sys.argv[4:] == ["plain"]
     data = open(path, "rb").read()
     cs = color_space(data)
     im = Image.open(path)
@@ -104,8 +106,9 @@ def main():
     else:
         im.draft("CMYK", size)
         im.load()
-        # Pillow inverts CMYK JPEG samples ("CMYK;I"); undo that.
-        c, m, y, k = ([255 - v for v in ch.tobytes()] for ch in im.split())
+        # Pillow inverts CMYK JPEG samples ("CMYK;I"); undo that (plain:
+        # the inverted values are the C', K' wanted).
+        c, m, y, k = (list(ch.tobytes()) if plain else [255 - v for v in ch.tobytes()] for ch in im.split())
         result = bytes(
             luma((c[i] * k[i] + 127) // 255, (m[i] * k[i] + 127) // 255, (y[i] * k[i] + 127) // 255)
             for i in range(len(c))

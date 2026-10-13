@@ -82,12 +82,23 @@ class TestFormats < Minitest::Test
     ["AVIF", "\x00\x00\x00\x1CftypavifX"],
     ["JPEG XL", "\xFF\x0A\xFA\x7F"],
     ["JPEG XL", "\x00\x00\x00\x0CJXL \r\n\x87\n"],
-    ["JPEG 2000", "\x00\x00\x00\x0CjP  \r\n\x87\n"],
-    ["JPEG 2000", "\xFF\x4F\xFF\x51\x00"],
     ["PFM", "PF\n1 1\n-1.0\n"],
     ["Photoshop", "8BPS\x00\x01"],
     ["SVG", "<?xml version=\"1.0\"?><svg/>"]
   ].freeze
+
+  def test_jpeg2000_files_and_codestreams
+    dir = File.expand_path("../fixtures/jpeg2000", __dir__)
+    %w[gray_53.jp2 gray_raw.j2k].each do |name|
+      bytes = File.binread(File.join(dir, name))
+      assert_equal :jpeg2000, F.format_of(bytes), name
+      image = F.decode(bytes)
+      assert_equal QrReader::Formats::JPEG2000.decode(bytes).data, image.data, name
+      assert_equal [image.width, image.height], F.dimensions(bytes), name
+    end
+    assert_raises(QrReader::ImageError) { F.decode("\x00\x00\x00\x0CjP  \r\n\x87\n".b) }
+    assert_raises(QrReader::ImageError) { F.decode("\xFF\x4F\xFF\x51\x00".b) }
+  end
 
   def test_tiff_and_pdf_decode_to_their_first_page
     tiff = Dir[File.expand_path("../fixtures/tiff/*.tif", __dir__)].min

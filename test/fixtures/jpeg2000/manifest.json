@@ -1,0 +1,434 @@
+[
+ {
+  "name": "gray_53",
+  "file": "gray_53.jp2",
+  "width": 129,
+  "height": 67,
+  "tolerance": 0,
+  "luma": "fcae9d0324d4a2260b0d0f0159a62bb05f6e8aedf81f0f2863f535b4b84e699a"
+ },
+ {
+  "name": "rgb_53_rct",
+  "file": "rgb_53_rct.jp2",
+  "width": 129,
+  "height": 67,
+  "tolerance": 0,
+  "luma": "79d59d94f7b690b7c3e7098af700671fcd0b1a8f7beb02dd6263b57d777540a8",
+  "components": [
+   "fcae9d0324d4a2260b0d0f0159a62bb05f6e8aedf81f0f2863f535b4b84e699a",
+   "cc70ca2af078ffeed22da6fc98a93fddf2776192a7642ec4e0faf70b8239355c",
+   "4e39eaac77e9204f290b1d59576d1e20d07e47e2664368825694018997ded446"
+  ],
+  "color": "rgb"
+ },
+ {
+  "name": "rgb_53_rct_r1",
+  "file": "rgb_53_rct.jp2",
+  "width": 65,
+  "height": 34,
+  "tolerance": 0,
+  "luma": "576fd4366e6102c7920a5b32ae5d552029d3b73c0acfa090fa94e3b02268a788",
+  "reduce": 1
+ },
+ {
+  "name": "rgb_97_ict",
+  "file": "rgb_97_ict.jp2",
+  "width": 129,
+  "height": 67,
+  "tolerance": 2,
+  "reference": "rgb_97_ict.ref.pgm"
+ },
+ {
+  "name": "rgb_97_ict_r2",
+  "file": "rgb_97_ict.jp2",
+  "width": 33,
+  "height": 17,
+  "tolerance": 2,
+  "reference": "rgb_97_ict_r2.ref.pgm",
+  "reduce": 2
+ },
+ {
+  "name": "gray_97_layers",
+  "file": "gray_97_layers.jp2",
+  "width": 97,
+  "height": 75,
+  "tolerance": 2,
+  "reference": "gray_97_layers.ref.pgm"
+ },
+ {
+  "name": "gray_raw",
+  "file": "gray_raw.j2k",
+  "width": 64,
+  "height": 48,
+  "tolerance": 0,
+  "luma": "b5e1e9860f0a7d2b98cd6c1a4c63e5d66460656556ad80846cac3d31cafe75a8"
+ },
+ {
+  "name": "gray16",
+  "file": "gray16.jp2",
+  "width": 64,
+  "height": 48,
+  "tolerance": 0,
+  "luma": "03bf2f24d27da748320d9da981bb001f9b36f1dd0cd58fc4db31d9f331b80b34"
+ },
+ {
+  "name": "rgba",
+  "file": "rgba.jp2",
+  "width": 64,
+  "height": 48,
+  "tolerance": 0,
+  "luma": "5f56406e84ad8e8c38f4debaf40c83f19c50ae89b5eca06430800cf3e35644fb"
+ },
+ {
+  "name": "gray_alpha",
+  "file": "gray_alpha.jp2",
+  "width": 64,
+  "height": 48,
+  "tolerance": 0,
+  "luma": "6405a537b19a618b3b4b17d8a37e0142b675447974cdade0f65fd955fef26cd3"
+ },
+ {
+  "name": "rgb_tiles_offset",
+  "file": "rgb_tiles_offset.jp2",
+  "width": 100,
+  "height": 70,
+  "tolerance": 0,
+  "luma": "e13ed84fbf5210d7126cfab483b2de74e050c699e7dcc8955957864b27e0c8b7"
+ },
+ {
+  "name": "prog_lrcp",
+  "file": "prog_lrcp.j2k",
+  "width": 67,
+  "height": 53,
+  "tolerance": 0,
+  "luma": "39e2dbbdf037a816fe699d5803fe113b3f585d61bedce53025391fb8e8f1828e"
+ },
+ {
+  "name": "prog_rlcp",
+  "file": "prog_rlcp.j2k",
+  "width": 67,
+  "height": 53,
+  "tolerance": 0,
+  "luma": "39e2dbbdf037a816fe699d5803fe113b3f585d61bedce53025391fb8e8f1828e"
+ },
+ {
+  "name": "prog_rpcl",
+  "file": "prog_rpcl.j2k",
+  "width": 67,
+  "height": 53,
+  "tolerance": 0,
+  "luma": "39e2dbbdf037a816fe699d5803fe113b3f585d61bedce53025391fb8e8f1828e"
+ },
+ {
+  "name": "prog_pcrl",
+  "file": "prog_pcrl.j2k",
+  "width": 67,
+  "height": 53,
+  "tolerance": 0,
+  "luma": "39e2dbbdf037a816fe699d5803fe113b3f585d61bedce53025391fb8e8f1828e"
+ },
+ {
+  "name": "prog_cprl",
+  "file": "prog_cprl.j2k",
+  "width": 67,
+  "height": 53,
+  "tolerance": 0,
+  "luma": "39e2dbbdf037a816fe699d5803fe113b3f585d61bedce53025391fb8e8f1828e"
+ },
+ {
+  "name": "prog_rpcl_r1",
+  "file": "prog_rpcl_r1.j2k",
+  "width": 34,
+  "height": 27,
+  "tolerance": 0,
+  "luma": "e7832180640ad0a3ddf7784aa7026241200051bb7b35d4b96ce211dcc423a6ab",
+  "reduce": 1
+ },
+ {
+  "name": "prog_rpcl_r2",
+  "file": "prog_rpcl_r1.j2k",
+  "width": 17,
+  "height": 14,
+  "tolerance": 0,
+  "luma": "fefe6284de477ee0b4acc01ee71d44289108e33aea8b6ffe4aecebbfe3847feb",
+  "reduce": 2
+ },
+ {
+  "name": "tiles_odd_offset",
+  "file": "tiles_odd_offset.j2k",
+  "width": 61,
+  "height": 45,
+  "tolerance": 0,
+  "luma": "c3445574056e7df9bc669e0782c2c58106281af5947c934f9239d05582f08470"
+ },
+ {
+  "name": "cblk_4x4",
+  "file": "cblk_4x4.j2k",
+  "width": 64,
+  "height": 48,
+  "tolerance": 0,
+  "luma": "5a301020f62b1fed167b8068a494da610049a731a9151f805d46ef816941d11c"
+ },
+ {
+  "name": "cblk_16x64",
+  "file": "cblk_16x64.j2k",
+  "width": 64,
+  "height": 48,
+  "tolerance": 0,
+  "luma": "5a301020f62b1fed167b8068a494da610049a731a9151f805d46ef816941d11c"
+ },
+ {
+  "name": "res1",
+  "file": "res1.j2k",
+  "width": 64,
+  "height": 48,
+  "tolerance": 0,
+  "luma": "5a301020f62b1fed167b8068a494da610049a731a9151f805d46ef816941d11c"
+ },
+ {
+  "name": "sop_eph",
+  "file": "sop_eph.j2k",
+  "width": 64,
+  "height": 48,
+  "tolerance": 0,
+  "luma": "5a301020f62b1fed167b8068a494da610049a731a9151f805d46ef816941d11c"
+ },
+ {
+  "name": "tileparts",
+  "file": "tileparts.j2k",
+  "width": 64,
+  "height": 48,
+  "tolerance": 0,
+  "luma": "5a301020f62b1fed167b8068a494da610049a731a9151f805d46ef816941d11c"
+ },
+ {
+  "name": "roi",
+  "file": "roi.j2k",
+  "width": 64,
+  "height": 48,
+  "tolerance": 0,
+  "luma": "5a301020f62b1fed167b8068a494da610049a731a9151f805d46ef816941d11c"
+ },
+ {
+  "name": "poc",
+  "file": "poc.j2k",
+  "width": 64,
+  "height": 48,
+  "tolerance": 0,
+  "luma": "5a301020f62b1fed167b8068a494da610049a731a9151f805d46ef816941d11c"
+ },
+ {
+  "name": "mode1",
+  "file": "mode1.j2k",
+  "width": 64,
+  "height": 48,
+  "tolerance": 0,
+  "luma": "5a301020f62b1fed167b8068a494da610049a731a9151f805d46ef816941d11c"
+ },
+ {
+  "name": "mode2",
+  "file": "mode2.j2k",
+  "width": 64,
+  "height": 48,
+  "tolerance": 0,
+  "luma": "5a301020f62b1fed167b8068a494da610049a731a9151f805d46ef816941d11c"
+ },
+ {
+  "name": "mode4",
+  "file": "mode4.j2k",
+  "width": 64,
+  "height": 48,
+  "tolerance": 0,
+  "luma": "5a301020f62b1fed167b8068a494da610049a731a9151f805d46ef816941d11c"
+ },
+ {
+  "name": "mode8",
+  "file": "mode8.j2k",
+  "width": 64,
+  "height": 48,
+  "tolerance": 0,
+  "luma": "5a301020f62b1fed167b8068a494da610049a731a9151f805d46ef816941d11c"
+ },
+ {
+  "name": "mode16",
+  "file": "mode16.j2k",
+  "width": 64,
+  "height": 48,
+  "tolerance": 0,
+  "luma": "5a301020f62b1fed167b8068a494da610049a731a9151f805d46ef816941d11c"
+ },
+ {
+  "name": "mode32",
+  "file": "mode32.j2k",
+  "width": 64,
+  "height": 48,
+  "tolerance": 0,
+  "luma": "5a301020f62b1fed167b8068a494da610049a731a9151f805d46ef816941d11c"
+ },
+ {
+  "name": "mode63",
+  "file": "mode63.j2k",
+  "width": 64,
+  "height": 48,
+  "tolerance": 0,
+  "luma": "5a301020f62b1fed167b8068a494da610049a731a9151f805d46ef816941d11c"
+ },
+ {
+  "name": "res7",
+  "file": "res7.j2k",
+  "width": 129,
+  "height": 67,
+  "tolerance": 0,
+  "luma": "0f2294252c193994736c738a218f5c9841cf99d14f28a78f311aac4ef29a683f"
+ },
+ {
+  "name": "mode63_97",
+  "file": "mode63_97.j2k",
+  "width": 80,
+  "height": 60,
+  "tolerance": 2,
+  "reference": "mode63_97.ref.pgm"
+ },
+ {
+  "name": "rgb_97_160",
+  "file": "rgb_97_160.j2k",
+  "width": 160,
+  "height": 120,
+  "tolerance": 2,
+  "reference": "rgb_97_160.ref.pgm"
+ },
+ {
+  "name": "signed8",
+  "file": "signed8.j2k",
+  "width": 64,
+  "height": 48,
+  "tolerance": 0,
+  "luma": "174986eed94c9afc59bbf03cdbf12f07b4c42659ab8e4115d71eba54251e6ade"
+ },
+ {
+  "name": "gray12",
+  "file": "gray12.j2k",
+  "width": 64,
+  "height": 48,
+  "tolerance": 0,
+  "luma": "39ecd21f34870dc519a6fbc335b4c28127f417825719e6fe8e489f00880dca9a"
+ },
+ {
+  "name": "bilevel1",
+  "file": "bilevel1.j2k",
+  "width": 64,
+  "height": 48,
+  "tolerance": 0,
+  "luma": "811e2a27f09123c240507de4db0373af79dd2db1aa28db192eb1efb6e1389919"
+ },
+ {
+  "name": "ycc420",
+  "file": "ycc420.jp2",
+  "width": 64,
+  "height": 48,
+  "tolerance": 0,
+  "luma": "91002a0d55d4bd3192356eefbd92f1d8c4755bd5b442aecf9eb86e9484606ff6",
+  "components": [
+   "91002a0d55d4bd3192356eefbd92f1d8c4755bd5b442aecf9eb86e9484606ff6",
+   "a4c39fc1a9eaa40cf69794229f91cb62b85ea2554e155fca311b9b2d9feb024d",
+   "bf0dcc901417deee5df3a7a7a706c39dc155b2924073187b6c06f1e2ad3abe05"
+  ],
+  "color": "ycc"
+ },
+ {
+  "name": "ycc420_r1",
+  "file": "ycc420.jp2",
+  "width": 32,
+  "height": 24,
+  "tolerance": 0,
+  "luma": "4ac6f1dcfad16a609ed1f70997843cb37003c9ce0d9d695fd3e650fc2bba18b9",
+  "reduce": 1
+ },
+ {
+  "name": "ycc420_offset",
+  "file": "ycc420_offset.jp2",
+  "width": 64,
+  "height": 48,
+  "tolerance": 0,
+  "luma": "91002a0d55d4bd3192356eefbd92f1d8c4755bd5b442aecf9eb86e9484606ff6",
+  "components": [
+   "91002a0d55d4bd3192356eefbd92f1d8c4755bd5b442aecf9eb86e9484606ff6",
+   "7b9e41397d2ff68314f1da831394ef6804db8fbda2c720c8c41037eeeb88371f",
+   "69a1f0c69a5a4e48cf4327110763985e19bbbd3eb305a64c38f817a9ead6ff91"
+  ],
+  "color": "ycc"
+ },
+ {
+  "name": "cmyk",
+  "file": "cmyk.jp2",
+  "width": 64,
+  "height": 48,
+  "tolerance": 0,
+  "luma": "e07e2089f8297f9c01750d44e1b214bc00bb5c64b4afdd678fc84486c6abb9a5",
+  "color": "cmyk"
+ },
+ {
+  "name": "palette",
+  "file": "palette.jp2",
+  "width": 64,
+  "height": 48,
+  "tolerance": 0,
+  "luma": "c999367ead0d44e3ccfa84d890073abb9d558f5420fd1317c4fa6696f52df381",
+  "components": [
+   "b3919c8da9f38ccafa71779d259eadb58b75fca828f85111c888c8744156bbf4",
+   "13c6dcc96f3175ec68ae9563e2ceafc50f47d820879e2dc81ccad8f100a658cc",
+   "6c7c0cc21ff3e7727035f82e410abfcdb7aebe99761087ca9e2b6d268ad50566"
+  ],
+  "color": "rgb",
+  "palette_applied": true
+ },
+ {
+  "name": "tiles_reversed",
+  "file": "tiles_reversed.j2k",
+  "width": 64,
+  "height": 64,
+  "tolerance": 0,
+  "luma": "547d930131b22f3e20454f3c0bc94bc777888b26af13641f2225fe06102c90b2"
+ },
+ {
+  "name": "tile_missing",
+  "file": "tile_missing.j2k",
+  "width": 64,
+  "height": 64,
+  "tolerance": 0,
+  "luma": "1d6e5142240a29f815d1d8ba13b1e85557eb563001b2766f797d6bf986fc6815"
+ },
+ {
+  "name": "truncated",
+  "file": "truncated.j2k",
+  "width": 64,
+  "height": 64,
+  "tolerance": 0,
+  "top_rows": 32,
+  "top_luma": "9141673479ff1b1c5ecb084fc1bf90e7182311d0def5831848a499263bfdd640"
+ },
+ {
+  "name": "trailing_junk",
+  "file": "trailing_junk.j2k",
+  "width": 64,
+  "height": 64,
+  "tolerance": 0,
+  "luma": "547d930131b22f3e20454f3c0bc94bc777888b26af13641f2225fe06102c90b2"
+ },
+ {
+  "name": "ppt",
+  "file": "ppt.j2k",
+  "width": 48,
+  "height": 40,
+  "tolerance": 0,
+  "luma": "ba00a74d27fa623d9e7e5e6e18ba67005d4d0d730cd35fec9fd703682b6a36d0"
+ },
+ {
+  "name": "ppm",
+  "file": "ppm.j2k",
+  "width": 48,
+  "height": 40,
+  "tolerance": 0,
+  "luma": "ba00a74d27fa623d9e7e5e6e18ba67005d4d0d730cd35fec9fd703682b6a36d0"
+ }
+]

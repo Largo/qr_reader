@@ -46,10 +46,18 @@ module QrReader
       class << self
         # Decodes JPEG +bytes+ to a luminance Image. +scale+ (1, 2, 4 or 8)
         # decodes at reduced size: ceil(width / scale) x ceil(height / scale).
-        def decode(bytes, scale: 1)
+        # +cmyk+ says how 4-component (CMYK and YCCK) samples are read:
+        # :inverted (255 = no ink, as Adobe applications write them and as
+        # standalone CMYK JPEGs are read) or :plain (0 = no ink, as PDFs
+        # declare them without an inverting /Decode array).
+        def decode(bytes, scale: 1, cmyk: :inverted)
           scale = check_scale(scale)
           bytes = binary(bytes)
-          data = guard("data") { QrReaderKernels.jpeg_luma(bytes, scale) }
+          data = case cmyk
+                 when :inverted then guard("data") { QrReaderKernels.jpeg_luma(bytes, scale) }
+                 when :plain then guard("data") { PlainCmykDecoder.new(bytes, scale, false).decode }
+                 else raise ArgumentError, "cmyk must be :inverted or :plain, not #{cmyk.inspect}"
+                 end
           image(bytes, scale, data)
         end
 
@@ -114,6 +122,57 @@ module QrReader
           raise ImageError, "JPEG data must be a String" unless bytes.is_a?(String)
 
           bytes.encoding == Encoding::BINARY ? bytes : bytes.b
+        end
+      end
+
+      # The kernel's decoder with 4-component samples read as plain ink
+      # amounts (JPEG.decode with cmyk: :plain): the colour conversion of
+      # QrReaderKernels::JpegDecoder with every C, M, Y and K value v taken
+      # as 255 - v. Pure Ruby only (not a kernel entry point).
+      class PlainCmykDecoder < QrReaderKernels::JpegDecoder
+        private
+
+        def cmyk_row(c, m, y, k, i, n)
+          row = String.new(capacity: n, encoding: Encoding::BINARY)
+          stop = i + n
+          while i < stop
+            kk = 255 - k.getbyte(i)
+            r = ((255 - c.getbyte(i)) * kk + 127) / 255
+            g = ((255 - m.getbyte(i)) * kk + 127) / 255
+            b = ((255 - y.getbyte(i)) * kk + 127) / 255
+            row << ((306 * r + 601 * g + 117 * b + 0x200) >> 10)
+            i += 1
+          end
+          row
+        end
+
+        # YCCK: libjpeg's YCbCr -> CMY conversion gives R, G, B directly
+        # (C = 255 - R, and plain C means R = 255 - C).
+        def ycck_row(y, cb, cr, k, i, n)
+          row = String.new(capacity: n, encoding: Encoding::BINARY)
+          cr_r = QrReaderKernels::JPEG_CR_R
+          cb_b = QrReaderKernels::JPEG_CB_B
+          cr_g = QrReaderKernels::JPEG_CR_G
+          cb_g = QrReaderKernels::JPEG_CB_G
+          stop = i + n
+          while i < stop
+            yy = y.getbyte(i)
+            u = cb.getbyte(i)
+            v = cr.getbyte(i)
+            kk = 255 - k.getbyte(i)
+            r = yy + cr_r[v]
+            g = yy + ((cb_g[u] + cr_g[v]) >> 16)
+            b = yy + cb_b[u]
+            r = r < 0 ? 0 : (r > 255 ? 255 : r)
+            g = g < 0 ? 0 : (g > 255 ? 255 : g)
+            b = b < 0 ? 0 : (b > 255 ? 255 : b)
+            r = (r * kk + 127) / 255
+            g = (g * kk + 127) / 255
+            b = (b * kk + 127) / 255
+            row << ((306 * r + 601 * g + 117 * b + 0x200) >> 10)
+            i += 1
+          end
+          row
         end
       end
 

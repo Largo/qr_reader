@@ -15,6 +15,9 @@ module QrReader
     # The coarsest pyramid level is the largest power-of-two reduction whose
     # longer side is still at least this many pixels.
     PYRAMID_MIN_SIDE = 800
+    # ... and whose shorter side still has room for the smallest symbol (21
+    # modules), so long thin images (banners, rules) are not reduced to nothing.
+    PYRAMID_MIN_SHORT_SIDE = 21
     # The exhaustive (try_harder) strategies only run on pyramid levels up to
     # this size: at full resolution of a 12 MP photo they cost seconds and
     # mostly chase texture noise, while the fast strategies still run there.
@@ -138,12 +141,13 @@ module QrReader
           return if scan_page(image, info) && !multi
         end
       when :pdf
-        # Plain JPEG page images come undecoded, for the reduced-size pass.
-        Formats::PDF.each_image(bytes, raw_jpeg: true) do |image, info|
-          found = if info[:format] == :jpeg
-                    scan_jpeg_or_full(image, info[:page], info[:pixel_aspect])
-                  else
-                    scan_page(image, info)
+        # Plain JPEG page images come undecoded, for the reduced-size pass;
+        # groups of vector shapes that may be a code come rendered.
+        Formats::PDF.each_image(bytes, raw_jpeg: true, vector: true) do |image, info|
+          found = case info[:format]
+                  when :jpeg then scan_jpeg_or_full(image, info[:page], info[:pixel_aspect])
+                  when :jpx then scan_jpx(image, info[:page], info[:pixel_aspect])
+                  else scan_page(image, info)
                   end
           return if found && !multi
         end
@@ -188,6 +192,28 @@ module QrReader
       scan_pyramid(full, page, skip_factor: scale)
     end
 
+    # A JPEG 2000 image of a PDF (a PDF::RawJpx): large ones are first
+    # decoded at reduced resolution, which skips most of the decoding work
+    # (JPEG 2000 resolutions are coded separately), and only decoded in
+    # full when the quick strategies find nothing there.
+    def scan_jpx(raw, page, aspect)
+      aspect ||= 1.0
+      base = raw.fitting_reduce
+      longest = raw.width > raw.height ? raw.width : raw.height
+      preview = base
+      preview += 1 while preview < base + 3 && (longest >> (preview + 1)) >= PYRAMID_MIN_SIDE
+      if preview > base && (aspect - 1.0).abs < SQUARE_TOLERANCE
+        @page = page
+        @tried = {}
+        small = raw.decode(reduce: preview)
+        return true if run_strategies(small, (1 << preview).to_f, quick: true) && !@multi
+
+        small = nil
+        return scan_pyramid(raw.decode(reduce: base), page, skip_factor: 1 << (preview - base))
+      end
+      scan_page(raw.decode(reduce: base), page: page, pixel_aspect: aspect)
+    end
+
     # [image with square pixels, factor mapping its rows back to the original].
     # Fax pages (204 x 98 dpi) have pixels about twice as tall as wide: their
     # rows are repeated so that finder patterns are square again.
@@ -201,16 +227,16 @@ module QrReader
     # Reduced decode scale (2, 4 or 8) for big JPEGs, or nil.
     def jpeg_prescale(bytes)
       w, h = Formats::JPEG.dimensions(bytes)
-      factors = pyramid_factors(w > h ? w : h)
+      factors = pyramid_factors(w > h ? w : h, w < h ? w : h)
       factors.size > 1 ? [factors.first, 8].min : nil
     rescue Error
       nil
     end
 
     # Power-of-two reduction factors, coarsest first, ending with 1.
-    def pyramid_factors(longest)
+    def pyramid_factors(longest, shortest)
       f = 1
-      f *= 2 while longest / (f * 2) >= PYRAMID_MIN_SIDE
+      f *= 2 while longest / (f * 2) >= PYRAMID_MIN_SIDE && shortest / (f * 2) >= PYRAMID_MIN_SHORT_SIDE
       factors = []
       while f >= 1
         factors << f
@@ -225,7 +251,7 @@ module QrReader
       @page = page
       @tried = {}
       longest = image.width > image.height ? image.width : image.height
-      factors = pyramid_factors(longest)
+      factors = pyramid_factors(longest, image.width < image.height ? image.width : image.height)
       levels = { 1 => image }
       level = lambda do |f|
         levels[f] ||= level.call(f / 2).downscale(2)

@@ -101,6 +101,27 @@ class TestPdfSynthetic < Minitest::Test
     assert_image bits.map { |b| b.zero? ? 255 : 0 }, image
   end
 
+  # CMYK and YCCK JPEGs: PDFs read the decoded values as ink amounts unless
+  # /Decode inverts them (as Adobe applications write CMYK JPEGs).
+  def test_cmyk_jpeg_with_and_without_inverting_decode
+    jpeg_dir = File.expand_path("../fixtures/jpeg", __dir__)
+    %w[cmyk ycck].each do |name|
+      jpeg = File.binread(File.join(jpeg_dir, "#{name}.jpg"))
+      plain = QrReader::Formats::JPEG.decode(jpeg, cmyk: :plain)
+      inverted = QrReader::Formats::JPEG.decode(jpeg)
+      [[nil, plain], [[1, 0, 1, 0, 1, 0, 1, 0], inverted]].each do |decode, expected|
+        dict = { ColorSpace: :DeviceCMYK, BitsPerComponent: 8, Filter: :DCTDecode }
+        dict[:Decode] = decode if decode
+        pdf = image_pdf(dict, jpeg, width: plain.width, height: plain.height)
+        assert_equal expected.data, single_image(pdf).data, "#{name} #{decode.inspect}"
+        # The reader's raw-JPEG path decodes it the same way.
+        image, info = PDF.each_image(pdf, raw_jpeg: true).first
+        image = QrReader::Formats::JPEG.decode(image) if info[:format] == :jpeg
+        assert_equal expected.data, image.data, "#{name} #{decode.inspect} raw_jpeg"
+      end
+    end
+  end
+
   def test_rgb_cmyk_and_their_decode_arrays
     rgb = random_bytes(W * H * 3)
     image = single_image(image_pdf({ ColorSpace: :DeviceRGB, BitsPerComponent: 8 }, rgb))
@@ -350,6 +371,26 @@ class TestPdfSynthetic < Minitest::Test
     assert_equal [picture.byteslice(0, 1000).bytes], images.map { |i| i.data.bytes }
   end
 
+  # Printer drivers draw strips that overlap by a row so that no gap shows:
+  # the repeated row is dropped (here the strips repeat picture rows 9 and 19).
+  def test_overlapping_bands_are_joined
+    picture = random_bytes(50 * 30)
+    w = PdfWriter.new
+    strips = [[0, 10], [9, 11], [19, 11]].map do |first, rows|
+      w.image(width: 50, height: rows, data: picture.byteslice(first * 50, rows * 50))
+    end
+    resources = { XObject: { S0: strips[0], S1: strips[1], S2: strips[2] } }
+    top_down = "q 100 0 0 10 0 20 cm /S0 Do Q q 100 0 0 11 0 10 cm /S1 Do Q q 100 0 0 11 0 0 cm /S2 Do Q"
+    bottom_up = "q 100 0 0 11 0 0 cm /S2 Do Q q 100 0 0 11 0 10 cm /S1 Do Q q 100 0 0 10 0 20 cm /S0 Do Q"
+    [top_down, bottom_up].each do |content|
+      pairs = PDF.each_image(w.document([[content, resources]])).to_a
+      assert_equal [[picture.bytes, [36.0, 72.0]]], pairs.map { |image, info| [image.data.bytes, info[:dpi]] }, content
+    end
+    # Overlapping by more than MAX_OVERLAP_ROWS: separate images.
+    content = "q 100 0 0 10 0 20 cm /S0 Do Q q 100 0 0 11 0 12 cm /S1 Do Q"
+    assert_equal 2, PDF.images(w.document([[content, resources]])).size
+  end
+
   def test_images_that_are_not_bands_stay_separate
     w = PdfWriter.new
     a = w.image(width: 50, height: 10, data: "\x01".b * 500)
@@ -421,7 +462,7 @@ class TestPdfSynthetic < Minitest::Test
     pdf = w.document([["/J Do /B Do /H Do /G Do", { XObject: { J: jpx, B: bad, H: huge, G: good } }]])
     assert_equal [[5]], PDF.images(pdf).map { |i| i.data.bytes }
 
-    error = assert_raises(QrReader::UnsupportedImageError) do
+    error = assert_raises(QrReader::ImageError) do
       PDF.images(w.document([["/J Do", { XObject: { J: jpx } }]]))
     end
     assert_match(/JPEG 2000/, error.message)

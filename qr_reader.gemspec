@@ -9,8 +9,9 @@ Gem::Specification.new do |spec|
   spec.email = ["andi@idogawa.com"]
 
   spec.summary = "Fast, accurate QR code reader in pure Ruby."
-  spec.description = "Detects and decodes QR codes in photos and scanned documents (PNG, JPEG, GIF, BMP, " \
-                     "PNM, TIFF incl. CCITT fax, PDF) without native extensions or external tools."
+  spec.description = "Detects and decodes QR codes in photos and scanned documents (PNG, JPEG, JPEG 2000, GIF, " \
+                     "BMP, PNM, TIFF incl. CCITT fax, PDF incl. vector-drawn codes) without native extensions or " \
+                     "external tools."
   spec.license = "MIT"
   spec.homepage = "https://github.com/largo/qr_reader"
   spec.required_ruby_version = ">= 3.2"

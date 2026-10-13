@@ -19,6 +19,8 @@ module QrReader
     GIF_MAGIC = /\AGIF8[79]a/n
     PNM_MAGIC = /\AP[1-7][\s#]/n
     TIFF_MAGIC = ["II*\0", "MM\0*", "II+\0", "MM\0+"].map(&:b).freeze
+    JP2_SIGNATURE = "\0\0\0\x0CjP  \r\n\x87\n".b.freeze
+    JP2_CODESTREAM = "\xFF\x4F\xFF\x51".b.freeze
     WHITESPACE = " \t\n\v\f\r"
     ALL_BYTES = (0..255).to_a.freeze
     WHITE = "\xFF".b
@@ -30,12 +32,11 @@ module QrReader
       [/\A....ftyp(?:avif|avis)/mn, "AVIF"],
       [/\A....ftyp(?:heic|heix|hevc|hevx|heim|heis|mif1|msf1)/mn, "HEIC/HEIF"],
       [/\A(?:\xFF\x0A|\0\0\0\x0CJXL \r\n\x87\n)/n, "JPEG XL"],
-      [/\A(?:\0\0\0\x0CjP  \r\n\x87\n|\xFF\x4F\xFF\x51)/n, "JPEG 2000"],
       [/\AP[Ff][\s#]/n, "PFM (floating point PNM)"],
       [/\A8BPS/n, "Photoshop PSD"],
       [/\A\s*<(?:\?xml|svg|!DOCTYPE svg)/n, "SVG"]
     ].freeze
-    private_constant :GIF_MAGIC, :PNM_MAGIC, :TIFF_MAGIC, :WHITESPACE, :ALL_BYTES, :WHITE, :UNSUPPORTED
+    private_constant :GIF_MAGIC, :PNM_MAGIC, :TIFF_MAGIC, :JP2_SIGNATURE, :JP2_CODESTREAM, :WHITESPACE, :ALL_BYTES, :WHITE, :UNSUPPORTED
 
     class << self
       # Decodes an encoded image (format sniffed from its magic bytes) into a
@@ -49,12 +50,14 @@ module QrReader
         when :bmp then BMP.decode(bytes)
         when :pnm then PNM.decode(bytes)
         when :tiff then TIFF.decode(bytes)
+        when :jpeg2000 then JPEG2000.decode(bytes, reduce: JPEG2000.fitting_reduce(bytes))
         when :pdf then first_pdf_image(bytes)
         else raise unrecognized(bytes)
         end
       end
 
-      # :png, :jpeg, :gif, :bmp, :pnm, :tiff, :pdf, or nil when the magic
+      # :png, :jpeg, :gif, :bmp, :pnm, :tiff, :jpeg2000 (JP2 file or raw
+      # codestream), :pdf, or nil when the magic
       # bytes are not those of a supported format. TIFF and PDF are
       # multi-page: Formats.decode returns their first page or image.
       def format_of(bytes)
@@ -63,7 +66,11 @@ module QrReader
         head = bytes.byteslice(0, 32).b
         b0 = head.getbyte(0)
         if b0 == 0x89 then :png if head.start_with?(PNG::SIGNATURE)
-        elsif b0 == 0xFF then :jpeg if head.getbyte(1) == 0xD8 && head.getbyte(2) == 0xFF
+        elsif b0 == 0xFF
+          if head.getbyte(1) == 0xD8 && head.getbyte(2) == 0xFF then :jpeg
+          elsif head.start_with?(JP2_CODESTREAM) then :jpeg2000
+          end
+        elsif b0 == 0x00 then :jpeg2000 if head.start_with?(JP2_SIGNATURE)
         elsif b0 == 0x47 then :gif if GIF_MAGIC.match?(head)
         elsif b0 == 0x42 then :bmp if BMP.bmp?(head)
         elsif b0 == 0x50 then :pnm if PNM_MAGIC.match?(head)
@@ -83,6 +90,7 @@ module QrReader
         when :bmp then BMP.dimensions(bytes)
         when :pnm then PNM.dimensions(bytes)
         when :tiff then TIFF.dimensions(bytes)
+        when :jpeg2000 then JPEG2000.dimensions(bytes)
         when :pdf then first_pdf_image(bytes).then { |image| [image.width, image.height] }
         else raise unrecognized(bytes)
         end
@@ -277,3 +285,4 @@ require_relative "formats/gif"
 require_relative "formats/bmp"
 require_relative "formats/pnm"
 require_relative "formats/jpeg"
+require_relative "formats/jpeg2000"

@@ -1,0 +1,36 @@
+# Publishes the gem to RubyGems.org with trusted publishing (OIDC, no API key)
+# when a version tag is pushed:
+#
+#   git tag v0.1.0 && git push origin v0.1.0
+#
+# RubyGems.org must know this workflow as a trusted publisher for qr_reader:
+# owner "largo", repository "qr_reader", workflow "release.yml", environment
+# "release" (see README, "Releasing").
+name: Release
+
+on:
+  push:
+    tags: ["v*"]
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    environment: release
+    permissions:
+      contents: write # rake release may push the tag; it skips that when the tag exists
+      id-token: write # OIDC token exchanged for a short-lived RubyGems API key
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          persist-credentials: false
+      - uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: ruby
+          bundler-cache: true
+      - name: Check that the tag matches QrReader::VERSION
+        run: |
+          version=$(ruby -Ilib -e 'require "qr_reader/version"; print QrReader::VERSION')
+          test "v$version" = "$GITHUB_REF_NAME" || { echo "tag $GITHUB_REF_NAME != v$version"; exit 1; }
+      - name: Run tests
+        run: bundle exec rake test
+      - uses: rubygems/release-gem@v1

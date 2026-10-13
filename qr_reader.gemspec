@@ -9,9 +9,10 @@ Gem::Specification.new do |spec|
   spec.email = ["andi@idogawa.com"]
 
   spec.summary = "Fast, accurate QR code reader in pure Ruby."
-  spec.description = "Detects and decodes QR codes in PNG, JPEG, GIF, BMP and PNM images " \
-                     "(or raw pixel buffers) without native extensions or external tools."
+  spec.description = "Detects and decodes QR codes in photos and scanned documents (PNG, JPEG, GIF, BMP, " \
+                     "PNM, TIFF incl. CCITT fax, PDF) without native extensions or external tools."
   spec.license = "MIT"
+  spec.homepage = "https://github.com/largo/qr_reader"
   spec.required_ruby_version = ">= 3.2"
 
   spec.files = Dir["lib/**/*.rb", "exe/*", "README.md", "LICENSE.txt", "CHANGELOG.md"]
@@ -19,4 +20,7 @@ Gem::Specification.new do |spec|
   spec.executables = Dir["exe/*"].map { |f| File.basename(f) }
   spec.require_paths = ["lib"]
   spec.metadata["rubygems_mfa_required"] = "true"
+  spec.metadata["source_code_uri"] = spec.homepage
+  spec.metadata["changelog_uri"] = "#{spec.homepage}/blob/main/CHANGELOG.md"
+  spec.metadata["bug_tracker_uri"] = "#{spec.homepage}/issues"
 end

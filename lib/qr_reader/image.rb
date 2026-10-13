@@ -192,25 +192,9 @@ module QrReader
     # Box-filter downscale by an integer factor (partial edge blocks are dropped).
     def downscale(factor)
       return self if factor <= 1
+      raise ArgumentError, "downscale factor too large" if @width < factor || @height < factor
 
-      w = @width / factor
-      h = @height / factor
-      raise ArgumentError, "downscale factor too large" if w < 1 || h < 1
-
-      out = Image.buffer(w * h)
-      step = factor * @width
-      off = 0
-      y = 0
-      while y < h
-        if factor == 2
-          downscale2_row(out, off, w)
-        else
-          downscale_row(out, off, w, factor)
-        end
-        off += step
-        y += 1
-      end
-      Image.new(w, h, out)
+      Image.new(@width / factor, @height / factor, QrReaderKernels.downscale(@data, @width, @height, factor))
     end
 
     def inspect
@@ -227,46 +211,6 @@ module QrReader
       while i >= 0
         out << src.getbyte(i)
         i -= w
-      end
-    end
-
-    # Appends one 2x-reduced row whose top source row starts at +off+.
-    def downscale2_row(out, off, w)
-      src = @data
-      a = off
-      b = off + @width
-      e = off + 2 * w
-      while a < e
-        out << ((src.getbyte(a) + src.getbyte(a + 1) + src.getbyte(b) + src.getbyte(b + 1) + 2) >> 2)
-        a += 2
-        b += 2
-      end
-    end
-
-    # Appends one row reduced by +factor+ whose top source row starts at +off+.
-    def downscale_row(out, off, w, factor)
-      src = @data
-      sw = @width
-      area = factor * factor
-      half = area / 2
-      x = 0
-      start = off
-      while x < w
-        s = 0
-        row = start
-        row_end = start + factor * sw
-        while row < row_end
-          i = row
-          e = row + factor
-          while i < e
-            s += src.getbyte(i)
-            i += 1
-          end
-          row += sw
-        end
-        out << (s + half) / area
-        start += factor
-        x += 1
       end
     end
   end

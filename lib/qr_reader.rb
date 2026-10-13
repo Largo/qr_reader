@@ -2,6 +2,7 @@
 
 require_relative "qr_reader/version"
 require_relative "qr_reader/errors"
+require_relative "qr_reader/kernels"
 require_relative "qr_reader/image"
 require_relative "qr_reader/bit_matrix"
 require_relative "qr_reader/result"

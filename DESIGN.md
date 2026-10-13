@@ -40,7 +40,7 @@ file, describe it in your final report instead.
 
 | owner | files |
 |---|---|
-| core (integrator) | `lib/qr_reader.rb`, `lib/qr_reader/{version,errors,image,bit_matrix,result,symbol_version,format_information}.rb`, `lib/qr_reader/reader.rb`, `test/test_helper.rb`, `test/support/qr_test_helper.rb`, `exe/qr_reader`, `test/test_core_types.rb`, `DESIGN.md`, `Rakefile`, gemspec |
+| core (integrator) | `lib/qr_reader.rb`, `lib/qr_reader/kernels.rb`, `lib/qr_reader/kernels/image.rb`, `script/**`, `native/**`, `lib/qr_reader/{version,errors,image,bit_matrix,result,symbol_version,format_information}.rb`, `lib/qr_reader/reader.rb`, `test/test_helper.rb`, `test/support/qr_test_helper.rb`, `exe/qr_reader`, `test/test_core_types.rb`, `DESIGN.md`, `Rakefile`, gemspec |
 | formats | `lib/qr_reader/formats.rb`, `lib/qr_reader/formats/{png,gif,bmp,pnm}.rb`, `test/formats/test_{png,gif,bmp,pnm,formats}.rb`, `test/fixtures/images/**` |
 | jpeg | `lib/qr_reader/formats/jpeg.rb`, `test/formats/test_jpeg.rb`, `test/fixtures/jpeg/**`, `bench/jpeg_bench.rb` |
 | decoder | `lib/qr_reader/decoder.rb`, `lib/qr_reader/decoder/**`, `test/decoder/**` |
@@ -237,6 +237,48 @@ symbols should be produced.
   comparison with a previous run and with the zxing-cpp baseline).
 * `bench/synthetic.rb`: deterministic synthetic stress grid.
 * `bench/speed.rb`: per-stage timings (image decode, binarize, detect, decode).
+
+## Kernels (optional native acceleration with Spinel)
+
+The hot loops of every component live in `lib/qr_reader/kernels/<component>.rb`
+as module functions of the **top-level** module `QrReaderKernels` (Spinel's
+extension entry points must be top-level module methods), required by
+`lib/qr_reader/kernels.rb` (core). The rest of the gem calls them, e.g.
+`QrReaderKernels.downscale(data, w, h, 2)` (see `kernels/image.rb` for a
+complete example). Pure Ruby is the default and the fallback; the optional
+gem `qr_reader-native` compiles the very same files with Spinel
+(`spin ext`, https://github.com/matz/spinel) into a CRuby extension and swaps
+in the native entries when its kernel digest matches.
+
+Rules for kernel code (everything reachable from an entry point):
+
+1. Spinel's Ruby subset: plain modules and classes with instance variables,
+   `while` loops, Integer/Float/String/Array/Hash, `getbyte`/`setbyte`/`<<`/
+   `byteslice`/`pack`/`unpack`. **No** blocks, `yield`, procs or iterators
+   (`each`, `times`, `map`, ...), `enum_for`, `define_method`, `class_eval`,
+   `send`, `method_missing`, `Data`/`Struct`, Regexp, `bytesplice`,
+   `String#encode`/`force_encoding` to anything but BINARY/UTF-8.
+2. **Never mutate a String received as a parameter** — Spinel passes Strings
+   by copy, so the caller would not see the change. Build and return new
+   Strings (`out << helper_row(...)`). Arrays may be mutated in place.
+3. Entry points take Integer, Float, true/false, String, or Arrays of one of
+   these, and return a String, Integer, Float or Array of one of these. They
+   are **coarse-grained** (one call per image, stream or scan — never per
+   row): arguments and results are copied across the native boundary.
+4. Errors: `raise QrReader::ImageError` / `UnsupportedImageError`
+   (`require_relative "../errors"`); they reach CRuby as the same classes.
+5. YJIT compiles methods, not loops: hot loops go in small helpers called many
+   times (per row, block, MCU) that return their result.
+6. Kernel files `require_relative` only other kernel files and `errors.rb`.
+7. Each entry point has a typed sample call in a comment in its kernel file:
+   `# spinel-sample: QrReaderKernels.downscale("\x00\x01\x02\x03".b, 2, 2, 2)`.
+   Verify with
+   `ruby script/spinel_ext.rb /tmp/out --require lib/qr_reader/kernels/x.rb --sample '<call>'`
+   (builds `QrReaderNative.<entry>`; compare `QrReaderNative.x(...).b ==
+   QrReaderKernels.x(...)`). Spinel builds: `MAKE_JOBS=2` at most.
+
+Measured so far: Spinel-compiled byte loops run at about the speed of the same
+Ruby under YJIT and ~10x faster than the plain interpreter.
 
 ## Coding guidelines (performance matters — this is pure Ruby)
 

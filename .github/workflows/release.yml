@@ -41,7 +41,7 @@ jobs:
           bundle exec rake build native:gem
           ls -l pkg
       # Exchanges the workflow's OIDC token for a short-lived RubyGems API key.
-      - uses: rubygems/configure-rubygems-credentials@v2
+      - uses: rubygems/configure-rubygems-credentials@dc5a8d8553e6ee01fc26761a49e99e733d17954a # v2.1.0
       - name: Push both gems
         run: |
           gem push "pkg/qr_reader-${GITHUB_REF_NAME#v}.gem"

@@ -280,6 +280,18 @@ Rules for kernel code (everything reachable from an entry point):
 Measured so far: Spinel-compiled byte loops run at about the speed of the same
 Ruby under YJIT and ~10x faster than the plain interpreter.
 
+## Memory safety (development and runtime)
+
+* **Development:** run every Ruby, `make`, Spinel, ImageMagick and Python
+  command through `script/capped` (hard 3 GB limit per process via a systemd
+  scope; `QR_MEM_MAX=4G script/capped ...` to raise it). Runaway processes
+  (20 GB) have twice taken the machine down.
+* **Runtime:** decoding must never need memory far beyond the decoded image.
+  Corrupt or malicious headers may declare huge sizes (up to
+  `Formats::MAX_PIXELS`); working storage must be compact (packed Strings,
+  not Arrays of Integers per pixel or per coefficient), checked before
+  allocation, and covered by tests that measure peak memory on such inputs.
+
 ## Coding guidelines (performance matters — this is pure Ruby)
 
 * Hot loops: `while` with integer indices and local variables; no blocks,

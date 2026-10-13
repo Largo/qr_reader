@@ -21,11 +21,11 @@ class TestDecoderBitstreamParser < Minitest::Test
   def test_iso_numeric_example
     content = parse(bits("0001 0000001000 0000001100 0101011001 1000011"))
     assert_equal "01234567", content.text
-    assert_equal "01234567".b, content.bytes
+    assert_equal "01234567".b, content.raw_bytes
     assert_equal [QrReader::Segment.new(mode: :numeric, text: "01234567", eci: nil)], content.segments
     assert_equal "]Q1", content.symbology_identifier
     assert_equal Encoding::UTF_8, content.text.encoding
-    assert_equal Encoding::BINARY, content.bytes.encoding
+    assert_equal Encoding::BINARY, content.raw_bytes.encoding
   end
 
   # ISO/IEC 18004:2015 §7.4.5 example.
@@ -38,7 +38,7 @@ class TestDecoderBitstreamParser < Minitest::Test
   def test_iso_kanji_example
     content = parse(bits("1000 00000010 0110110011111 1101010101010"))
     assert_equal "点茗", content.text
-    assert_equal "\x93\x5F\xE4\xAA".b, content.bytes
+    assert_equal "\x93\x5F\xE4\xAA".b, content.raw_bytes
     assert_equal :kanji, content.segments.first.mode
   end
 
@@ -91,7 +91,7 @@ class TestDecoderBitstreamParser < Minitest::Test
   def test_byte_mode_unaligned_and_aligned
     data = (0..255).map(&:chr).join.b
     content = parse(BitWriter.new.bytes(data, 10), 10, capacity: 300)
-    assert_equal data, content.bytes
+    assert_equal data, content.raw_bytes
     assert content.text.valid_encoding?
     # aligned: 4 (mode) + 8 (count) + 4 bits of a previous segment = 16
     writer = BitWriter.new.numeric("7", 1).bytes("xyz", 1)
@@ -143,7 +143,7 @@ class TestDecoderBitstreamParser < Minitest::Test
     assert_equal "漢字ABC亜", content.text
     assert_equal %i[kanji alphanumeric kanji], content.segments.map(&:mode)
     # E040.. range and an NEC extension character (only in Windows-31J)
-    assert_equal "开", parse(BitWriter.new.kanji("\xE0\x40".encode("UTF-8", "Shift_JIS").encode("Shift_JIS"), 1)).text.then { "开" }
+    assert_equal "漾", parse(BitWriter.new.kanji("\xE0\x40".b, 1)).text
     assert_equal "①", parse(BitWriter.new.kanji("\x87\x40".b, 1)).text
   end
 
@@ -152,7 +152,7 @@ class TestDecoderBitstreamParser < Minitest::Test
     content = parse(BitWriter.new.hanzi(text.encode("GB2312"), 1))
     assert_equal text, content.text
     assert_equal :hanzi, content.segments.first.mode
-    assert_equal text.encode("GB2312").b, content.bytes
+    assert_equal text.encode("GB2312").b, content.raw_bytes
     # GB2312 A5A2 (katakana A) -> 0x0181 (ZXing testHanziLevel1)
     assert_equal "ア", parse(BitWriter.new.put(13, 4).put(1, 4).put(1, 8).put(0x0181, 13)).text
     assert_raises(FormatError) { parse(BitWriter.new.hanzi("中".encode("GB2312"), 1, subset: 2)) }
@@ -225,7 +225,7 @@ class TestDecoderBitstreamParser < Minitest::Test
     content = parse(writer)
     assert_equal "é", content.text
     assert_equal ["�", "�"], content.segments.map(&:text)
-    assert_equal "\xC3\xA9".b, content.bytes
+    assert_equal "\xC3\xA9".b, content.raw_bytes
   end
 
   def test_garbage_never_raises_anything_but_format_error

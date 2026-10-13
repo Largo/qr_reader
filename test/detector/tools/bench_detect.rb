@@ -8,9 +8,12 @@
 # detector in normal and try_harder mode. "detect" consumes every candidate
 # the way a reader would before decoding: geometry, #bits and, for
 # candidates that pass the timing plausibility check, #alternatives.
-# Reports the median of N runs (default 3) after one warm-up run.
+# Reports the minimum process CPU time of N runs (default 3) after one
+# warm-up run (CPU time and minimum: robust against a busy machine). The
+# repository's lib comes last on the load path, so `-I other/lib` compares
+# another version.
 
-$LOAD_PATH.unshift File.expand_path("../../../lib", __dir__)
+$LOAD_PATH.push File.expand_path("../../../lib", __dir__)
 require "qr_reader"
 require "optparse"
 
@@ -18,7 +21,7 @@ runs = 3
 OptionParser.new { |o| o.on("--runs N", Integer) { |v| runs = v } }.parse!
 
 def clock
-  Process.clock_gettime(Process::CLOCK_MONOTONIC)
+  Process.clock_gettime(Process::CLOCK_PROCESS_CPUTIME_ID)
 end
 
 def measure
@@ -51,8 +54,8 @@ ARGV.each do |path|
   image = QrReader.load_image(path)
   run(image)
   samples = Array.new(runs) { run(image) }
-  med = ->(key) { samples.map { |s| s[key] }.sort[runs / 2] }
+  med = ->(key) { samples.map { |s| s[key] }.min }
   puts format("%-28s %9s %7.1f %8.1f %8.1f %8.1f  %s", File.basename(path), "#{image.width}x#{image.height}",
               med.call(:bin), med.call(:pure), med.call(:fast), med.call(:hard), samples.first[:candidates].inspect)
 end
-puts "(ms, median of #{runs}; ruby #{RUBY_VERSION}#{defined?(RubyVM::YJIT) && RubyVM::YJIT.enabled? ? ' +YJIT' : ''})"
+puts "(ms CPU time, best of #{runs}; ruby #{RUBY_VERSION}#{defined?(RubyVM::YJIT) && RubyVM::YJIT.enabled? ? ' +YJIT' : ''})"

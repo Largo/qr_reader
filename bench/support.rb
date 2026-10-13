@@ -7,6 +7,7 @@ $LOAD_PATH.unshift File.expand_path("../lib", __dir__)
 $LOAD_PATH.unshift File.expand_path("../test/support", __dir__)
 
 require "json"
+require "optparse"
 require "zlib"
 require "qr_reader"
 
@@ -16,6 +17,10 @@ module BenchSupport
   # Exceptions a component under construction may raise; recorded per case
   # instead of aborting the whole run.
   CASE_ERRORS = [StandardError, ScriptError, SystemStackError].freeze
+
+  # Gray byte => the same value as an RGB triple (String#gsub with a Hash
+  # expands a whole row at C speed).
+  GRAY_TO_RGB = (0..255).to_h { |v| [v.chr.b, (v.chr * 3).b] }.freeze
 
   module_function
 
@@ -86,6 +91,27 @@ module BenchSupport
     abort "cannot read #{path}: #{e.message}"
   end
 
+  # Parses +argv+ with +parser+; bad options print the usage and exit 2
+  # instead of a stack trace.
+  def parse!(parser, argv)
+    parser.parse!(argv)
+  rescue OptionParser::ParseError => e
+    warn "#{e.message}\n\n#{parser.help}"
+    exit 2
+  end
+
+  # Exit status 1 (for CI) when fewer than +min_pass+ cases passed or more
+  # than +max_wrong+ results were misreads; nil limits are not checked.
+  def check_limits(passed, min_pass: nil, wrong: 0, max_wrong: nil)
+    failures = []
+    failures << "#{passed} cases passed, expected at least #{min_pass}" if min_pass && passed < min_pass
+    failures << "#{wrong} misreads, at most #{max_wrong} allowed" if max_wrong && wrong > max_wrong
+    return if failures.empty?
+
+    warn "FAILED: #{failures.join('; ')}"
+    exit 1
+  end
+
   # Compares two {id => {"pass" => bool, ...}} maps over their common ids.
   def compare(previous, current)
     common = previous.keys & current.keys
@@ -104,6 +130,8 @@ module BenchSupport
     return warn("#{path} not found") unless File.exist?(path)
 
     previous = load_json(path)
+    abort "#{path} is not a corpus/synthetic report (no \"cases\")" unless previous["cases"].is_a?(Hash)
+
     diff = compare(previous["cases"], current["cases"])
     labels = baseline ? { current_label: "qr_reader", previous_label: "zxing-cpp" } : {}
     print_comparison(title, diff, **labels)
@@ -113,9 +141,15 @@ module BenchSupport
 
     before = timed.sum { |id| previous["cases"][id]["ms"] } / timed.size
     after = timed.sum { |id| current["cases"][id]["ms"] } / timed.size
-    puts format("  mean decode time over %d cases: %s -> %s (%s)%s", timed.size, ms(before), ms(after),
-                after.positive? ? format("%.2fx", before / after) : "-",
+    puts format("  mean decode time over %d cases: %s -> %s (%s)%s", timed.size, ms(before), ms(after), speed_change(before, after),
                 baseline ? " [#{previous.dig('meta', 'decoder')} -> #{current.dig('meta', 'decoder')}]" : "")
+  end
+
+  # "2.5x faster" / "3.0x slower" going from +before+ to +after+ ms.
+  def speed_change(before, after)
+    return "-" unless before.positive? && after.positive?
+
+    after <= before ? format("%.1fx faster", before / after) : format("%.1fx slower", after / before)
   end
 
   def print_comparison(title, diff, current_label: "now", previous_label: "before", limit: 60)
@@ -178,7 +212,7 @@ module BenchSupport
     raw = String.new(capacity: image.size * (rgb ? 3 : 1) + image.height, encoding: Encoding::BINARY)
     image.height.times do |y|
       row = image.row(y)
-      raw << "\0" << (rgb ? row.bytes.map { |v| [v, v, v] }.flatten.pack("C*") : row)
+      raw << "\0" << (rgb ? row.gsub(/./mn, GRAY_TO_RGB) : row)
     end
     chunk = lambda do |type, body|
       [body.bytesize].pack("N") + type + body + [Zlib.crc32(type + body)].pack("N")

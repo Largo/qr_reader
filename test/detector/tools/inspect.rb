@@ -22,7 +22,14 @@ OptionParser.new do |o|
 end.parse!
 
 path = ARGV.fetch(0) { abort "usage: inspect.rb IMAGE" }
-image = QrReader.load_image(path).rotate(opts[:rotate])
+# First page of TIFF / PDF files, any other image format directly.
+bytes = File.binread(path)
+image = case QrReader::Reader.container_format(bytes)
+        when :tiff then QrReader::Formats::TIFF.decode(bytes)
+        when :pdf then QrReader::Formats::PDF.images(bytes).first
+        else QrReader.load_image(bytes)
+        end
+image = image.rotate(opts[:rotate])
 t0 = Process.clock_gettime(Process::CLOCK_MONOTONIC)
 bm = opts[:global] ? QrReader::Binarizer.global_histogram(image) : QrReader::Binarizer.hybrid(image)
 bm = bm.invert if opts[:invert]

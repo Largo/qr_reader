@@ -14,6 +14,8 @@ module QrReader
       HEADER_INT = /\G(?>(?:\s|#[^\r\n]*)*)(\d+)/n
       PAM_LINE = /\G(?>(?:\s|#[^\r\n]*)*)([A-Za-z_]+)[ \t]*([^\r\n]*)/n
       COMMENT = /#[^\r\n]*/n
+      LINE_END = /[\r\n]/n
+      NOT_PLAIN_SAMPLE = /[^0-9 \t\n\v\f\r]/n
       LEADING_INT = /\A\s*(\d+)/n
       PBM_LUMA = "\xFF\x00".b # "0" white, "1" black
       SEPARATORS = WHITESPACE.bytes.freeze
@@ -68,7 +70,7 @@ module QrReader
             when 1 then plain_bits
             when 2, 3 then luminance(plain_samples)
             when 4 then packed_bits
-            else luminance(raw_samples)
+            else raw_luminance
             end
           Image.new(@width, @height, gray)
         end
@@ -84,8 +86,15 @@ module QrReader
         end
 
         # Exactly one whitespace byte separates the header from raw rasters.
+        # A comment may also follow the last header value directly; then the
+        # end of its line is the separator (as in libnetpbm and ImageMagick).
         def skip_raster_separator
           byte = @bytes.getbyte(@pos)
+          if byte == 35 # "#"
+            eol = @bytes.byteindex(LINE_END, @pos) or raise ImageError, "truncated PNM header"
+            @pos = eol + 1
+            return
+          end
           raise ImageError, "truncated PNM header" unless SEPARATORS.include?(byte)
 
           @pos += 1
@@ -138,38 +147,64 @@ module QrReader
           @width * @height * @channels
         end
 
-        # 8-bit samples of a raw (binary) raster.
-        def raw_samples
+        # Luminance of a raw (binary) raster. Samples of maxval 65535 are
+        # read in place (their high bytes); other maxvals are scaled first.
+        def raw_luminance
           wide = @maxval > 255
           size = sample_count * (wide ? 2 : 1)
           raw = @bytes.byteslice(@pos, size)
           raise ImageError, "truncated PNM pixel data" if raw.nil? || raw.bytesize < size
 
           if !wide
-            @maxval == 255 ? raw : Support.translate!(raw, ALL_BYTES, scale_table(255))
+            luminance(@maxval == 255 ? raw : Support.translate!(raw, ALL_BYTES, scale_table(255)))
           elsif @maxval == 65_535
-            samples = Support.buffer(size / 2)
-            step = @width * @channels
-            @height.times { |y| Rows.high_bytes(raw, y * step * 2, step, samples) }
-            samples
+            luminance(raw, 2)
           else
-            scale_values(raw.unpack("n*"))
+            luminance(scale16(raw))
           end
         end
 
-        # 8-bit samples of a plain (ASCII) raster.
+        # Big-endian 16-bit samples (maxval 256..65534) scaled to 8 bits.
+        def scale16(raw)
+          max = @maxval
+          table = scale_table(max)
+          step = @width * @channels
+          out = Support.buffer(raw.bytesize / 2)
+          off = 0
+          @height.times do # row by row, so that YJIT compiles scale16_row
+            scale16_row(raw, off, step, table, max, out)
+            off += 2 * step
+          end
+          out
+        end
+
+        def scale16_row(raw, i, n, table, max, out)
+          stop = i + 2 * n
+          while i < stop
+            v = (raw.getbyte(i) << 8) | raw.getbyte(i + 1)
+            out << (v >= max ? 255 : table[v])
+            i += 2
+          end
+        end
+
+        # 8-bit samples of a plain (ASCII) raster. Digits and whitespace
+        # only (the usual case) are split at C speed, anything else is
+        # scanned for numbers.
         def plain_samples
           text = @bytes.byteslice(@pos, @bytes.bytesize - @pos).gsub(COMMENT, "")
-          values = text.scan(/\d+/)
+          values = NOT_PLAIN_SAMPLE.match?(text) ? text.scan(/\d+/) : text.split
           n = sample_count
           raise ImageError, "truncated PNM pixel data" if values.size < n
 
           scale_values(values.first(n).map!(&:to_i))
         end
 
-        # Sample value -> 8 bits; values above maxval saturate.
+        # Sample value -> 8 bits; values above maxval saturate. Maxval 65535
+        # keeps the high byte, the same as raw rasters and 16-bit PNG.
         def scale_table(top)
           max = @maxval
+          return Array.new(top + 1) { |v| v >> 8 } if max == 65_535
+
           Array.new(top + 1) { |v| v >= max ? 255 : (v * 255 + max / 2) / max }
         end
 
@@ -195,23 +230,31 @@ module QrReader
           end
         end
 
-        # Gray, gray+alpha, RGB or RGBA 8-bit samples -> luminance.
-        def luminance(samples)
-          return samples if @channels == 1
+        # Gray, gray+alpha, RGB or RGBA samples -> luminance. +size+ is the
+        # sample size in bytes: of 16-bit samples only the high byte is read.
+        def luminance(samples, size = 1)
+          return samples if @channels == 1 && size == 1
 
           w = @width
-          step = w * @channels
+          step = w * @channels * size
           out = Support.buffer(w * @height)
+          table = Support.over_white_table if @channels.even?
           off = 0
           @height.times do
-            case @channels
-            when 2 then Rows.gray_alpha(samples, off, w, out)
-            when 3 then Rows.rgb(samples, off, w, out)
-            else Rows.rgba(samples, off, w, out)
-            end
+            luminance_row(samples, off, size, table, out)
             off += step
           end
           out
+        end
+
+        def luminance_row(samples, off, s, table, out)
+          w = @width
+          case @channels
+          when 1 then Rows.high_bytes(samples, off, w, out) # 16-bit only: 8-bit gray is returned as is
+          when 2 then Rows.gray_alpha(samples, off, w, out, table, s, 2 * s)
+          when 3 then Rows.rgb(samples, off, w, out, 0, s, 2 * s, 3 * s)
+          else Rows.rgba(samples, off, w, out, table, 0, s, 2 * s, 3 * s, 4 * s)
+          end
         end
 
         # P1: "1" is black; digits need not be separated.

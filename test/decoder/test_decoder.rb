@@ -72,7 +72,7 @@ class TestDecoder < Minitest::Test
       8.times do |mask|
         matrix = SymbolBuilder.build("\0".b * QrReader::SymbolVersion[1].data_codewords(level), version: 1, level: level,
                                                                                                mask: mask)
-        bits = Decoder::FormatReader.format_bits(matrix.bits, 21, true)
+        bits = Decoder::FormatReader.format_bits(matrix.bits, 21, mirrored: true)
         assert_operator Decoder::FormatReader.decode_format(*bits)&.last || 4, :>=, 2, "#{level} mask #{mask}"
       end
     end
@@ -156,7 +156,7 @@ class TestDecoder < Minitest::Test
     ok = Decoder.diagnose(matrix)
     assert_equal :ok, ok[:status]
     assert_equal 8, ok[:version]
-    assert_equal :Q, ok[:ec_level]
+    assert_equal :q, ok[:ec_level]
     assert_equal 2, ok[:mask]
     assert_equal 0, ok[:format_distance]
     assert_equal [8, 8], ok[:version_info]

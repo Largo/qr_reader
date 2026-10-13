@@ -31,6 +31,11 @@ module QrReader
     FAST_TRIPLES = 12
     HARD_TRIPLES = 40
     MULTI_TRIPLES = 120
+    # With multi, up to this many finder patterns are considered.
+    MULTI_PATTERNS = 400
+    # Besides the best scored triples overall, each finder pattern is
+    # combined with pairs of this many of its nearest neighbours.
+    NEIGHBOURS = 8
 
     attr_reader :matrix, :image
 
@@ -41,50 +46,57 @@ module QrReader
     end
 
     # +matrix+ - binarized image (BitMatrix, 1 = dark)
-    # +image+  - the grayscale Image it came from (optional)
+    # +image+  - the grayscale Image it came from (optional; ignored unless
+    #            it has the matrix's size)
     def initialize(matrix, image: nil)
       @matrix = matrix
-      @image = image
+      @image = image if image && image.width == matrix.width && image.height == matrix.height
       @finder = FinderPatternFinder.new(matrix)
       @confirmed = []
     end
 
     # Yields Candidates, most likely first (Enumerator without a block).
+    # Candidates whose timing patterns read like noise (false finder
+    # triples, mostly) are only produced with try_harder, after all others
+    # (with multi, the FAST_TRIPLES best of those that span no other finder
+    # pattern).
+    #
     # try_harder: scan every row and try more finder pattern triples.
-    # multi: try all triples, skipping those that share a finder pattern
-    # with (or lie inside) a candidate passed to #confirm.
+    # multi: look for all symbols - also triples of neighbouring finder
+    # patterns (pages with many symbols), skipping triples that share a
+    # finder pattern with (or lie inside) a candidate passed to #confirm.
     def each_candidate(try_harder: false, multi: false)
       return enum_for(:each_candidate, try_harder: try_harder, multi: multi) unless block_given?
 
-      limit = if multi
-                MULTI_TRIPLES
-              else
-                try_harder ? HARD_TRIPLES : FAST_TRIPLES
-              end
-      # Candidates whose timing patterns read like noise (false finder
-      # triples, mostly) are deferred until all others were tried. With
-      # multi, those spanning other finder patterns (triples mixing several
-      # symbols) are dropped.
-      patterns = finder_patterns(try_harder: try_harder)
+      patterns, triples = multi ? multi_triples(try_harder) : single_triples(try_harder)
       deferred = []
-      PatternSets.generate(patterns, limit).each do |triple|
+      triples.each do |triple|
         next if multi && confirmed?(triple)
 
         candidate = Candidate.locate(self, triple) or next
         if candidate.likely?
           yield candidate
-        elsif !multi || !spans_others?(candidate, patterns)
+        elsif try_harder && !(multi && spans_others?(candidate, patterns))
           deferred << candidate
         end
       end
+      deferred = deferred.first(FAST_TRIPLES) if multi
       deferred.each { |candidate| yield candidate unless multi && confirmed?(candidate) }
       nil
     end
 
-    # Records that +candidate+ decoded, so that multi-symbol detection skips
-    # triples that reuse its finder patterns or lie inside it.
-    def confirm(candidate)
-      @confirmed << candidate
+    # Records a decoded symbol, so that multi-symbol detection skips
+    # triples that reuse its finder patterns or lie inside it: a Candidate
+    # (or detect_pure result), anything else with #points (e.g. a Result
+    # decoded earlier from another binarization of the same image, its
+    # points scaled to this matrix), or the corner quad [[x, y], ...]
+    # itself. Returns self.
+    def confirm(symbol)
+      quad = symbol.is_a?(Array) ? symbol : symbol.points
+      if quad.is_a?(Array) && quad.size == 4 && quad.flatten.all? { |v| v.is_a?(Numeric) && v.finite? }
+        @confirmed << [quad, symbol.respond_to?(:uses?) ? symbol : nil]
+      end
+      self
     end
 
     # Finder patterns found in the image (cached per mode).
@@ -122,13 +134,50 @@ module QrReader
 
     private
 
+    # [patterns, triples] for single-symbol detection: the best scored
+    # triples of the most consistent finder patterns and of each pattern's
+    # nearest neighbours, those without another symbol's finder pattern
+    # inside first (on a sheet of labels the best shaped triples join
+    # finders of neighbouring symbols).
+    def single_triples(try_harder)
+      patterns = finder_patterns(try_harder: try_harder)
+      limit = try_harder ? HARD_TRIPLES : FAST_TRIPLES
+      clean, foreign = ranked_triples(PatternSets.generate(patterns, 4 * limit), patterns, patterns)
+      [patterns, (clean + foreign).first(limit)]
+    end
+
+    # [patterns, triples] for multi-symbol detection: as for a single
+    # symbol, but from up to MULTI_PATTERNS patterns and MULTI_TRIPLES
+    # triples (a page with that many symbols).
+    def multi_triples(try_harder)
+      all = @finder.find(try_harder: try_harder, limit: MULTI_PATTERNS)
+      best = if all.size > FinderPatternFinder::MAX_PATTERNS
+               all.max_by(FinderPatternFinder::MAX_PATTERNS) { |p| p.quality * Math.sqrt(p.count) }
+             else
+               all
+             end
+      clean, foreign = ranked_triples(PatternSets.generate(best, MULTI_TRIPLES), all, all)
+      [all, (clean + foreign).first(MULTI_TRIPLES)]
+    end
+
+    # +triples+ plus the neighbourhood triples of +near+, split into
+    # [clean, foreign] (see PatternSets.partition_clean against +all+), the
+    # clean ones best first.
+    def ranked_triples(triples, near, all)
+      seen = triples.to_h { |t| [t.patterns.map(&:object_id), true] }
+      PatternSets.neighbourhood(near, NEIGHBOURS).each do |t|
+        triples << t unless seen[t.patterns.map(&:object_id)]
+      end
+      clean, foreign = PatternSets.partition_clean(triples, all)
+      [clean.sort_by!(&:score), foreign]
+    end
+
     # True if a triple (or candidate) shares a finder pattern with a
-    # confirmed candidate or has one inside it.
+    # confirmed symbol or has one inside it.
     def confirmed?(set)
       patterns = set.respond_to?(:patterns) ? set.patterns : [set.tl, set.tr, set.bl]
-      @confirmed.any? do |c|
-        quad = c.points
-        patterns.any? { |p| c.uses?(p) || inside?(quad, p.x, p.y) }
+      @confirmed.any? do |quad, owner|
+        patterns.any? { |p| owner&.uses?(p) || inside?(quad, p.x, p.y) }
       end
     end
 

@@ -1,0 +1,4207 @@
+{
+  "meta": {
+    "decoder": "zxing-cpp 3.1.1",
+    "created": "2026-10-13T10:05:18Z",
+    "only": [],
+    "corpus": {
+      "version": 1,
+      "seed": 20261013,
+      "imagemagick": "7.1.2-18"
+    }
+  },
+  "summary": {
+    "cases": 259,
+    "pass": 226,
+    "statuses": {
+      "pass": 226,
+      "partial": 6,
+      "fail": 27,
+      "error": 0,
+      "timeout": 0
+    },
+    "codes": 351,
+    "found": 309,
+    "wrong": 0,
+    "by_tier": {
+      "common": {
+        "cases": 109,
+        "pass": 108,
+        "partial": 1,
+        "wrong": 0
+      },
+      "hard": {
+        "cases": 97,
+        "pass": 87,
+        "partial": 2,
+        "wrong": 0
+      },
+      "extreme": {
+        "cases": 53,
+        "pass": 31,
+        "partial": 3,
+        "wrong": 0
+      }
+    },
+    "by_tag": {
+      "doc:letter": {
+        "cases": 22,
+        "pass": 19,
+        "partial": 0,
+        "wrong": 0
+      },
+      "scanner:sheetfed": {
+        "cases": 70,
+        "pass": 61,
+        "partial": 2,
+        "wrong": 0
+      },
+      "deg:tint": {
+        "cases": 99,
+        "pass": 84,
+        "partial": 0,
+        "wrong": 0
+      },
+      "fmt:tiff-jpeg": {
+        "cases": 26,
+        "pass": 23,
+        "partial": 1,
+        "wrong": 0
+      },
+      "mode:gray": {
+        "cases": 100,
+        "pass": 92,
+        "partial": 2,
+        "wrong": 0
+      },
+      "dpi:300": {
+        "cases": 124,
+        "pass": 121,
+        "partial": 1,
+        "wrong": 0
+      },
+      "codes:1": {
+        "cases": 210,
+        "pass": 186,
+        "partial": 0,
+        "wrong": 0
+      },
+      "payload:vcard": {
+        "cases": 27,
+        "pass": 19,
+        "partial": 0,
+        "wrong": 0
+      },
+      "ec:h": {
+        "cases": 22,
+        "pass": 18,
+        "partial": 2,
+        "wrong": 0
+      },
+      "version:18-25": {
+        "cases": 1,
+        "pass": 1,
+        "partial": 0,
+        "wrong": 0
+      },
+      "size:25-40mm": {
+        "cases": 66,
+        "pass": 65,
+        "partial": 0,
+        "wrong": 0
+      },
+      "ppm:3-4": {
+        "cases": 41,
+        "pass": 35,
+        "partial": 2,
+        "wrong": 0
+      },
+      "scanner:flatbed": {
+        "cases": 55,
+        "pass": 52,
+        "partial": 0,
+        "wrong": 0
+      },
+      "deg:rot180": {
+        "cases": 33,
+        "pass": 29,
+        "partial": 1,
+        "wrong": 0
+      },
+      "fmt:tiff-lzw-color": {
+        "cases": 6,
+        "pass": 6,
+        "partial": 0,
+        "wrong": 0
+      },
+      "mode:color": {
+        "cases": 91,
+        "pass": 79,
+        "partial": 3,
+        "wrong": 0
+      },
+      "payload:url": {
+        "cases": 72,
+        "pass": 63,
+        "partial": 5,
+        "wrong": 0
+      },
+      "ec:q": {
+        "cases": 48,
+        "pass": 40,
+        "partial": 2,
+        "wrong": 0
+      },
+      "version:5-9": {
+        "cases": 54,
+        "pass": 48,
+        "partial": 4,
+        "wrong": 0
+      },
+      "size:15-25mm": {
+        "cases": 126,
+        "pass": 108,
+        "partial": 4,
+        "wrong": 0
+      },
+      "ppm:4-6": {
+        "cases": 69,
+        "pass": 66,
+        "partial": 1,
+        "wrong": 0
+      },
+      "fmt:tiff-lzw": {
+        "cases": 14,
+        "pass": 12,
+        "partial": 0,
+        "wrong": 0
+      },
+      "ec:m": {
+        "cases": 182,
+        "pass": 162,
+        "partial": 5,
+        "wrong": 0
+      },
+      "version:1-4": {
+        "cases": 122,
+        "pass": 110,
+        "partial": 5,
+        "wrong": 0
+      },
+      "ppm:6+": {
+        "cases": 111,
+        "pass": 110,
+        "partial": 0,
+        "wrong": 0
+      },
+      "scanner:mfp": {
+        "cases": 56,
+        "pass": 55,
+        "partial": 0,
+        "wrong": 0
+      },
+      "fmt:jpeg-gray": {
+        "cases": 17,
+        "pass": 15,
+        "partial": 1,
+        "wrong": 0
+      },
+      "payload:utf8": {
+        "cases": 26,
+        "pass": 22,
+        "partial": 2,
+        "wrong": 0
+      },
+      "fmt:pdf-dct": {
+        "cases": 56,
+        "pass": 51,
+        "partial": 0,
+        "wrong": 0
+      },
+      "version:10-17": {
+        "cases": 85,
+        "pass": 72,
+        "partial": 0,
+        "wrong": 0
+      },
+      "pdf:objstm": {
+        "cases": 19,
+        "pass": 15,
+        "partial": 0,
+        "wrong": 0
+      },
+      "dpi:200": {
+        "cases": 74,
+        "pass": 59,
+        "partial": 2,
+        "wrong": 0
+      },
+      "fmt:png-gray": {
+        "cases": 19,
+        "pass": 18,
+        "partial": 0,
+        "wrong": 0
+      },
+      "scanner:mfp_bw": {
+        "cases": 43,
+        "pass": 34,
+        "partial": 1,
+        "wrong": 0
+      },
+      "fmt:pdf-g4": {
+        "cases": 28,
+        "pass": 22,
+        "partial": 1,
+        "wrong": 0
+      },
+      "mode:adaptive": {
+        "cases": 9,
+        "pass": 8,
+        "partial": 0,
+        "wrong": 0
+      },
+      "dpi:600": {
+        "cases": 15,
+        "pass": 15,
+        "partial": 0,
+        "wrong": 0
+      },
+      "deg:color-qr": {
+        "cases": 47,
+        "pass": 43,
+        "partial": 1,
+        "wrong": 0
+      },
+      "pdf:linearize": {
+        "cases": 9,
+        "pass": 7,
+        "partial": 0,
+        "wrong": 0
+      },
+      "fmt:pdf-flate": {
+        "cases": 14,
+        "pass": 12,
+        "partial": 1,
+        "wrong": 0
+      },
+      "deg:texture": {
+        "cases": 83,
+        "pass": 61,
+        "partial": 4,
+        "wrong": 0
+      },
+      "deg:pen": {
+        "cases": 8,
+        "pass": 4,
+        "partial": 1,
+        "wrong": 0
+      },
+      "deg:blur": {
+        "cases": 44,
+        "pass": 30,
+        "partial": 2,
+        "wrong": 0
+      },
+      "size:0-15mm": {
+        "cases": 42,
+        "pass": 31,
+        "partial": 6,
+        "wrong": 0
+      },
+      "scanner:archive": {
+        "cases": 14,
+        "pass": 6,
+        "partial": 3,
+        "wrong": 0
+      },
+      "fmt:png-1bit": {
+        "cases": 10,
+        "pass": 8,
+        "partial": 0,
+        "wrong": 0
+      },
+      "mode:threshold": {
+        "cases": 30,
+        "pass": 25,
+        "partial": 0,
+        "wrong": 0
+      },
+      "dpi:150": {
+        "cases": 19,
+        "pass": 7,
+        "partial": 3,
+        "wrong": 0
+      },
+      "ppm:2-3": {
+        "cases": 30,
+        "pass": 15,
+        "partial": 3,
+        "wrong": 0
+      },
+      "deg:rot90": {
+        "cases": 14,
+        "pass": 13,
+        "partial": 0,
+        "wrong": 0
+      },
+      "fmt:tiff-g4": {
+        "cases": 22,
+        "pass": 17,
+        "partial": 0,
+        "wrong": 0
+      },
+      "ec:l": {
+        "cases": 51,
+        "pass": 42,
+        "partial": 2,
+        "wrong": 0
+      },
+      "deg:dotgain": {
+        "cases": 28,
+        "pass": 18,
+        "partial": 0,
+        "wrong": 0
+      },
+      "deg:adf-streak": {
+        "cases": 12,
+        "pass": 9,
+        "partial": 1,
+        "wrong": 0
+      },
+      "fmt:jpeg-color": {
+        "cases": 33,
+        "pass": 28,
+        "partial": 2,
+        "wrong": 0
+      },
+      "deg:crease": {
+        "cases": 11,
+        "pass": 4,
+        "partial": 0,
+        "wrong": 0
+      },
+      "mode:diffusion": {
+        "cases": 22,
+        "pass": 16,
+        "partial": 0,
+        "wrong": 0
+      },
+      "ppm:<2": {
+        "cases": 8,
+        "pass": 0,
+        "partial": 0,
+        "wrong": 0
+      },
+      "deg:halftone": {
+        "cases": 38,
+        "pass": 34,
+        "partial": 0,
+        "wrong": 0
+      },
+      "deg:speckles": {
+        "cases": 15,
+        "pass": 13,
+        "partial": 0,
+        "wrong": 0
+      },
+      "deg:skew": {
+        "cases": 56,
+        "pass": 44,
+        "partial": 2,
+        "wrong": 0
+      },
+      "deg:moire": {
+        "cases": 34,
+        "pass": 30,
+        "partial": 0,
+        "wrong": 0
+      },
+      "deg:thin": {
+        "cases": 7,
+        "pass": 4,
+        "partial": 2,
+        "wrong": 0
+      },
+      "doc:invoice": {
+        "cases": 24,
+        "pass": 19,
+        "partial": 4,
+        "wrong": 0
+      },
+      "deg:rot270": {
+        "cases": 22,
+        "pass": 20,
+        "partial": 0,
+        "wrong": 0
+      },
+      "codes:2": {
+        "cases": 32,
+        "pass": 26,
+        "partial": 4,
+        "wrong": 0
+      },
+      "mode:ordered": {
+        "cases": 7,
+        "pass": 6,
+        "partial": 1,
+        "wrong": 0
+      },
+      "payload:epc": {
+        "cases": 13,
+        "pass": 11,
+        "partial": 2,
+        "wrong": 0
+      },
+      "payload:numeric": {
+        "cases": 27,
+        "pass": 22,
+        "partial": 3,
+        "wrong": 0
+      },
+      "deg:stamp": {
+        "cases": 4,
+        "pass": 2,
+        "partial": 2,
+        "wrong": 0
+      },
+      "deg:noise": {
+        "cases": 52,
+        "pass": 38,
+        "partial": 3,
+        "wrong": 0
+      },
+      "deg:starvation": {
+        "cases": 2,
+        "pass": 2,
+        "partial": 0,
+        "wrong": 0
+      },
+      "deg:shadow": {
+        "cases": 13,
+        "pass": 10,
+        "partial": 1,
+        "wrong": 0
+      },
+      "doc:qrbill": {
+        "cases": 34,
+        "pass": 32,
+        "partial": 0,
+        "wrong": 0
+      },
+      "deg:slip-only": {
+        "cases": 11,
+        "pass": 11,
+        "partial": 0,
+        "wrong": 0
+      },
+      "payload:qrbill": {
+        "cases": 46,
+        "pass": 44,
+        "partial": 0,
+        "wrong": 0
+      },
+      "size:>40mm": {
+        "cases": 64,
+        "pass": 56,
+        "partial": 0,
+        "wrong": 0
+      },
+      "scanner:fax": {
+        "cases": 27,
+        "pass": 24,
+        "partial": 0,
+        "wrong": 0
+      },
+      "dpi:fax-fine": {
+        "cases": 15,
+        "pass": 14,
+        "partial": 0,
+        "wrong": 0
+      },
+      "deg:photocopy": {
+        "cases": 14,
+        "pass": 14,
+        "partial": 0,
+        "wrong": 0
+      },
+      "deg:jpeg": {
+        "cases": 22,
+        "pass": 18,
+        "partial": 1,
+        "wrong": 0
+      },
+      "fmt:tiff-g3": {
+        "cases": 8,
+        "pass": 8,
+        "partial": 0,
+        "wrong": 0
+      },
+      "dpi:fax-standard": {
+        "cases": 12,
+        "pass": 10,
+        "partial": 0,
+        "wrong": 0
+      },
+      "deg:faded": {
+        "cases": 14,
+        "pass": 11,
+        "partial": 0,
+        "wrong": 0
+      },
+      "doc:label": {
+        "cases": 21,
+        "pass": 21,
+        "partial": 0,
+        "wrong": 0
+      },
+      "payload:parcel": {
+        "cases": 21,
+        "pass": 21,
+        "partial": 0,
+        "wrong": 0
+      },
+      "payload:alnum": {
+        "cases": 38,
+        "pass": 33,
+        "partial": 1,
+        "wrong": 0
+      },
+      "deg:on-glass": {
+        "cases": 43,
+        "pass": 39,
+        "partial": 0,
+        "wrong": 0
+      },
+      "codes:3+": {
+        "cases": 17,
+        "pass": 14,
+        "partial": 2,
+        "wrong": 0
+      },
+      "deg:dead-lines": {
+        "cases": 7,
+        "pass": 5,
+        "partial": 0,
+        "wrong": 0
+      },
+      "fmt:jpeg-q<50": {
+        "cases": 13,
+        "pass": 11,
+        "partial": 0,
+        "wrong": 0
+      },
+      "doc:receipt": {
+        "cases": 21,
+        "pass": 18,
+        "partial": 0,
+        "wrong": 0
+      },
+      "payload:rksv": {
+        "cases": 13,
+        "pass": 10,
+        "partial": 0,
+        "wrong": 0
+      },
+      "deg:wave": {
+        "cases": 2,
+        "pass": 0,
+        "partial": 0,
+        "wrong": 0
+      },
+      "deg:curl": {
+        "cases": 10,
+        "pass": 9,
+        "partial": 0,
+        "wrong": 0
+      },
+      "doc:card": {
+        "cases": 20,
+        "pass": 14,
+        "partial": 0,
+        "wrong": 0
+      },
+      "deg:color-bg": {
+        "cases": 20,
+        "pass": 18,
+        "partial": 0,
+        "wrong": 0
+      },
+      "fmt:png-color": {
+        "cases": 6,
+        "pass": 6,
+        "partial": 0,
+        "wrong": 0
+      },
+      "deg:low-contrast": {
+        "cases": 5,
+        "pass": 4,
+        "partial": 0,
+        "wrong": 0
+      },
+      "deg:inverted": {
+        "cases": 2,
+        "pass": 1,
+        "partial": 0,
+        "wrong": 0
+      },
+      "doc:ticket": {
+        "cases": 17,
+        "pass": 17,
+        "partial": 0,
+        "wrong": 0
+      },
+      "payload:ticket": {
+        "cases": 17,
+        "pass": 17,
+        "partial": 0,
+        "wrong": 0
+      },
+      "doc:multi": {
+        "cases": 22,
+        "pass": 17,
+        "partial": 2,
+        "wrong": 0
+      },
+      "layout:invoice+qrbill": {
+        "cases": 2,
+        "pass": 2,
+        "partial": 0,
+        "wrong": 0
+      },
+      "pages:multi": {
+        "cases": 12,
+        "pass": 12,
+        "partial": 0,
+        "wrong": 0
+      },
+      "layout:labels": {
+        "cases": 9,
+        "pass": 7,
+        "partial": 1,
+        "wrong": 0
+      },
+      "layout:handout": {
+        "cases": 3,
+        "pass": 3,
+        "partial": 0,
+        "wrong": 0
+      },
+      "layout:catalog": {
+        "cases": 6,
+        "pass": 3,
+        "partial": 1,
+        "wrong": 0
+      },
+      "layout:separators": {
+        "cases": 2,
+        "pass": 2,
+        "partial": 0,
+        "wrong": 0
+      },
+      "doc:edge": {
+        "cases": 16,
+        "pass": 15,
+        "partial": 0,
+        "wrong": 0
+      },
+      "deg:edge": {
+        "cases": 16,
+        "pass": 15,
+        "partial": 0,
+        "wrong": 0
+      },
+      "deg:dark-backing": {
+        "cases": 12,
+        "pass": 11,
+        "partial": 0,
+        "wrong": 0
+      },
+      "doc:fax": {
+        "cases": 22,
+        "pass": 20,
+        "partial": 0,
+        "wrong": 0
+      },
+      "layout:form": {
+        "cases": 13,
+        "pass": 12,
+        "partial": 0,
+        "wrong": 0
+      },
+      "layout:qrbill": {
+        "cases": 10,
+        "pass": 10,
+        "partial": 0,
+        "wrong": 0
+      },
+      "layout:letter": {
+        "cases": 4,
+        "pass": 3,
+        "partial": 0,
+        "wrong": 0
+      },
+      "doc:large": {
+        "cases": 13,
+        "pass": 7,
+        "partial": 0,
+        "wrong": 0
+      },
+      "payload:jwt": {
+        "cases": 13,
+        "pass": 7,
+        "partial": 0,
+        "wrong": 0
+      },
+      "version:26-40": {
+        "cases": 13,
+        "pass": 7,
+        "partial": 0,
+        "wrong": 0
+      },
+      "doc:magazine": {
+        "cases": 14,
+        "pass": 14,
+        "partial": 0,
+        "wrong": 0
+      },
+      "doc:photocopy": {
+        "cases": 13,
+        "pass": 13,
+        "partial": 0,
+        "wrong": 0
+      },
+      "layout:invoice": {
+        "cases": 8,
+        "pass": 8,
+        "partial": 0,
+        "wrong": 0
+      }
+    },
+    "ms": {
+      "n": 259,
+      "total": 4663.964,
+      "mean": 18.008,
+      "median": 15.784,
+      "p95": 52.733,
+      "max": 171.517
+    },
+    "ms_by_tier": {
+      "common": {
+        "n": 109,
+        "total": 2488.87,
+        "mean": 22.834,
+        "median": 18.097,
+        "p95": 72.029,
+        "max": 171.517
+      },
+      "hard": {
+        "n": 97,
+        "total": 1583.181,
+        "mean": 16.321,
+        "median": 15.784,
+        "p95": 42.303,
+        "max": 59.267
+      },
+      "extreme": {
+        "n": 53,
+        "total": 591.913,
+        "mean": 11.168,
+        "median": 7.421,
+        "p95": 26.87,
+        "max": 78.542
+      }
+    },
+    "wall_s": 212.984
+  },
+  "cases": {
+    "letter-common-01": {
+      "status": "pass",
+      "pass": true,
+      "found": 1,
+      "missed": 0,
+      "wrong": [],
+      "misplaced": 0,
+      "ms": 27.915,
+      "texts": [
+        "BEGIN:VCARD\r\nVERSION:3.0\r\nN:Häfeli;Françoise;;;\r\nFN:Françoise Häfeli\r\nORG:Société Générale de Fribourg SA\r\nTITLE:Projektleiter\r\nTEL;TYPE=WORK,VOICE:+41 61 113 89 25\r\nEMAIL:francoise.hafeli@shop.example.org\r\nADR;TYPE=WORK:;;Via Cantonale 109;Lugano;;6900;Schweiz\r\nTEL;TYPE=CELL:+41 78 699 17 25\r\nEND:VCARD"
+      ],
+      "tier": "common"
+    },
+    "letter-common-02": {
+      "status": "pass",
+      "pass": true,
+      "found": 1,
+      "missed": 0,
+      "wrong": [],
+      "misplaced": 0,
+      "ms": 25.74,
+      "texts": [
+        "https://www.beispiel.ch/fr/facture/-kJkxnAZwF1HoIreQGSsEutP1Yb4XBj"
+      ],
+      "tier": "common"
+    },
+    "letter-common-03": {
+      "status": "pass",
+      "pass": true,
+      "found": 1,
+      "missed": 0,
+      "wrong": [],
+      "misplaced": 0,
+      "ms": 19.293,
+      "texts": [
+        "https://www.portal.example.net/i/uN6lQJ"
+      ],
+      "tier": "common"
+    },
+    "letter-common-04": {
+      "status": "pass",
+      "pass": true,
+      "found": 1,
+      "missed": 0,
+      "wrong": [],
+      "misplaced": 0,
+      "ms": 21.686,
+      "texts": [
+        "Inventar 55604 – Temperatur −18 °C – Zürich"
+      ],
+      "tier": "common"
+    },
+    "letter-common-05": {
+      "status": "pass",
+      "pass": true,
+      "found": 1,
+      "missed": 0,
+      "wrong": [],
+      "misplaced": 0,
+      "ms": 18.032,
+      "texts": [
+        "BEGIN:VCARD\nVERSION:3.0\nN:Zürcher;Jörg;;;\nFN:Jörg Zürcher\nORG:Schreinerei Würsch\nTITLE:Verkaufsleiter\nTEL;TYPE=WORK,VOICE:+41 31 049 04 89\nEMAIL:jorg.zurcher@example.ch\nADR;TYPE=WORK:;;Löwenstrasse 14;Biel;;2501;Schweiz\nURL:https://www.example.com\nEND:VCARD"
+      ],
+      "tier": "common"
+    },
+    "letter-common-06": {
+      "status": "pass",
+      "pass": true,
+      "found": 1,
+      "missed": 0,
+      "wrong": [],
+      "misplaced": 0,
+      "ms": 7.639,
+      "texts": [
+        "BEGIN:VCARD\r\nVERSION:3.0\r\nN:Rutschmann-Schnyder;Ruth;;;\r\nFN:Ruth Rutschmann-Schnyder\r\nORG:Märki Logistik AG\r\nTITLE:Directrice\r\nTEL;TYPE=WORK,VOICE:+41 46 144 59 82\r\nEMAIL:ruth.rutschmannschnyder@portal.example.net\r\nADR;TYPE=WORK:;;Chemin des Écoliers 111;Basel;;4051;Schweiz\r\nTEL;TYPE=CELL:+41 76 925 17 05\r\nEND:VCARD"
+      ],
+      "tier": "common"
+    },
+    "letter-common-07": {
+      "status": "pass",
+      "pass": true,
+      "found": 1,
+      "missed": 0,
+      "wrong": [],
+      "misplaced": 0,
+      "ms": 18.097,
+      "texts": [
+        "https://www.example.com/go/qwPIsy5F_9lI6x"
+      ],
+      "tier": "common"
+    },
+    "letter-common-08": {
+      "status": "pass",
+      "pass": true,
+      "found": 1,
+      "missed": 0,
+      "wrong": [],
+      "misplaced": 0,
+      "ms": 15.688,
+      "texts": [
+        "https://portal.shop.example.org/track/7R8HNejcqgANDxgJOFdojhgeaN4zHRnm3dvQ"
+      ],
+      "tier": "common"
+    },
+    "letter-common-09": {
+      "status": "pass",
+      "pass": true,
+      "found": 1,
+      "missed": 0,
+      "wrong": [],
+      "misplaced": 0,
+      "ms": 98.602,
+      "texts": [
+        "BEGIN:VCARD\nVERSION:3.0\nN:Würsch;Jürg;;;\nFN:Jürg Würsch\nORG:Rösti & Söhne KG\nTITLE:Directrice\nTEL;TYPE=WORK,VOICE:+41 69 380 35 61\nEMAIL:jurg.wursch@shop.example.org\nADR;TYPE=WORK:;;Chemin des Écoliers 102;Basel;;4051;Schweiz\nTEL;TYPE=CELL:+41 78 503 71 37\nURL:https://www.beispiel.ch\nEND:VCARD"
+      ],
+      "tier": "common"
+    },
+    "letter-common-10": {
+      "status": "pass",
+      "pass": true,
+      "found": 1,
+      "missed": 0,
+      "wrong": [],
+      "misplaced": 0,
+      "ms": 10.71,
+      "texts": [
+        "Notiz 76877 – Grösse 42, Farbe Grün – Zürich"
+      ],
+      "tier": "common"
+    },
+    "letter-common-11": {
+      "status": "pass",
+      "pass": true,
+      "found": 1,
+      "missed": 0,
+      "wrong": [],
+      "misplaced": 0,
+      "ms": 22.077,
+      "texts": [
+        "Notiz 29409 – Café crème, 2× Croissant – München"
+      ],
+      "tier": "common"
+    },
+    "letter-common-12": {
+      "status": "pass",
+      "pass": true,
+      "found": 1,
+      "missed": 0,
+      "wrong": [],
+      "misplaced": 0,
+      "ms": 16.173,
+      "texts": [
+        "https://portal.example.ch/go/INKob8hQgyAPiU8BEe0ORvoqpyNSD9"
+      ],
+      "tier": "common"
+    },
+    "letter-hard-01": {
+      "status": "pass",
+      "pass": true,
+      "found": 1,
+      "missed": 0,
+      "wrong": [],
+      "misplaced": 0,
+      "ms": 18.62,
+      "texts": [
+        "https://portal.portal.example.net/de/rechnung/_phZ"
+      ],
+      "tier": "hard"
+    },
+    "letter-hard-02": {
+      "status": "pass",
+      "pass": true,
+      "found": 1,
+      "missed": 0,
+      "wrong": [],
+      "misplaced": 0,
+      "ms": 6.089,
+      "texts": [
+        "https://app.portal.example.net/i/Nl1HxXK3h-3f6kywCZ8TbNYGz_dTS_PH"
+      ],
+      "tier": "hard"
+    },
+    "letter-hard-03": {
+      "status": "pass",
+      "pass": true,
+      "found": 1,
+      "missed": 0,
+      "wrong": [],
+      "misplaced": 0,
+      "ms": 21.226,
+      "texts": [
+        "BEGIN:VCARD\r\nVERSION:3.0\r\nN:Brändli;Mia;;;\r\nFN:Mia Brändli\r\nORG:Café Fässler\r\nTITLE:Directrice\r\nTEL;TYPE=WORK,VOICE:+41 73 846 75 40\r\nEMAIL:mia.brandli@shop.example.org\r\nADR;TYPE=WORK:;;Löwenstrasse 57;Chur;;7000;Schweiz\r\nTEL;TYPE=CELL:+41 77 377 56 07\r\nEND:VCARD"
+      ],
+      "tier": "hard"
+    },
+    "letter-hard-04": {
+      "status": "pass",
+      "pass": true,
+      "found": 1,
+      "missed": 0,
+      "wrong": [],
+      "misplaced": 0,
+      "ms": 5.859,
+      "texts": [
+        "Prüfetikette 08779 – Ölwechsel fällig: 15 000 km – München"
+      ],
+      "tier": "hard"
+    },
+    "letter-hard-05": {
+      "status": "pass",
+      "pass": true,
+      "found": 1,
+      "missed": 0,
+      "wrong": [],
+      "misplaced": 0,
+      "ms": 8.429,
+      "texts": [
+        "Prüfetikette 56275 – Café crème, 2× Croissant – München"
+      ],
+      "tier": "hard"
+    },
+    "letter-hard-06": {
+      "status": "fail",
+      "pass": false,
+      "found": 0,
+      "missed": 1,
+      "wrong": [],
+      "misplaced": 0,
+      "ms": 24.567,
+      "texts": [],
+      "tier": "hard"
+    },
+    "letter-hard-07": {
+      "status": "pass",
+      "pass": true,
+      "found": 1,
+      "missed": 0,
+      "wrong": [],
+      "misplaced": 0,
+      "ms": 7.752,
+      "texts": [
+        "https://app.example.ch/fr/facture/IsAasR"
+      ],
+      "tier": "hard"
+    },
+    "letter-extreme-01": {
+      "status": "fail",
+      "pass": false,
+      "found": 0,
+      "missed": 1,
+      "wrong": [],
+      "misplaced": 0,
+      "ms": 4.223,
+      "texts": [],
+      "tier": "extreme"
+    },
+    "letter-extreme-02": {
+      "status": "pass",
+      "pass": true,
+      "found": 1,
+      "missed": 0,
+      "wrong": [],
+      "misplaced": 0,
+      "ms": 24.336,
+      "texts": [
+        "https://www.example.ch/r/8hzHYpIi5vkSqVgfgW90AfE"
+      ],
+      "tier": "extreme"
+    },
+    "letter-extreme-03": {
+      "status": "fail",
+      "pass": false,
+      "found": 0,
+      "missed": 1,
+      "wrong": [],
+      "misplaced": 0,
+      "ms": 6.991,
+      "texts": [],
+      "tier": "extreme"
+    },
+    "invoice-common-01": {
+      "status": "pass",
+      "pass": true,
+      "found": 1,
+      "missed": 0,
+      "wrong": [],
+      "misplaced": 0,
+      "ms": 16.896,
+      "texts": [
+        "Bon de livraison 66983 – Käse & Brötchen – München"
+      ],
+      "tier": "common"
+    },
+    "invoice-common-02": {
+      "status": "pass",
+      "pass": true,
+      "found": 1,
+      "missed": 0,
+      "wrong": [],
+      "misplaced": 0,
+      "ms": 18.437,
+      "texts": [
+        "Lieferschein 77311 – Ölwechsel fällig: 15 000 km – Genève"
+      ],
+      "tier": "common"
+    },
+    "invoice-common-03": {
+      "status": "pass",
+      "pass": true,
+      "found": 2,
+      "missed": 0,
+      "wrong": [],
+      "misplaced": 0,
+      "ms": 7.008,
+      "texts": [
+        "https://portal.beispiel.ch/p/sviTWpOqYt0jX_8XD3Q4Q_OWsNzk_Xp8ol4FM37h",
+        "https://www.example.ch/invoice/Rx-R"
+      ],
+      "tier": "common"
+    },
+    "invoice-common-04": {
+      "status": "pass",
+      "pass": true,
+      "found": 2,
+      "missed": 0,
+      "wrong": [],
+      "misplaced": 0,
+      "ms": 24.247,
+      "texts": [
+        "https://portal.example.com/track/CuaXkb1",
+        "Lieferschein 85416 – Pièce détachée n° 7 – Linz"
+      ],
+      "tier": "common"
+    },
+    "invoice-common-05": {
+      "status": "pass",
+      "pass": true,
+      "found": 2,
+      "missed": 0,
+      "wrong": [],
+      "misplaced": 0,
+      "ms": 7.136,
+      "texts": [
+        "BCD\n002\n1\nSCT\nBFSWDE33BER\nElektro Brändli AG\nDE46964596786256283041\nEUR660.76\n\n\nRechnung 485942 vom 19.8.2026",
+        "https://app.shop.example.org/r/1P6vM8fdUn_G"
+      ],
+      "tier": "common"
+    },
+    "invoice-common-06": {
+      "status": "pass",
+      "pass": true,
+      "found": 1,
+      "missed": 0,
+      "wrong": [],
+      "misplaced": 0,
+      "ms": 25.771,
+      "texts": [
+        "https://portal.example.ch/de/rechnung/j0cboAJD1J51Twa5P8npI29aQCg1Q2j_W0GjYxn"
+      ],
+      "tier": "common"
+    },
+    "invoice-common-07": {
+      "status": "pass",
+      "pass": true,
+      "found": 2,
+      "missed": 0,
+      "wrong": [],
+      "misplaced": 0,
+      "ms": 8.418,
+      "texts": [
+        "https://www.example.com/p/ykQy6",
+        "Lieferschein 59588 – Café crème, 2× Croissant – Genève"
+      ],
+      "tier": "common"
+    },
+    "invoice-common-08": {
+      "status": "pass",
+      "pass": true,
+      "found": 1,
+      "missed": 0,
+      "wrong": [],
+      "misplaced": 0,
+      "ms": 7.027,
+      "texts": [
+        "Lieferschein 93020 – Pièce détachée n° 7 – Zürich"
+      ],
+      "tier": "common"
+    },
+    "invoice-common-09": {
+      "status": "pass",
+      "pass": true,
+      "found": 1,
+      "missed": 0,
+      "wrong": [],
+      "misplaced": 0,
+      "ms": 18.057,
+      "texts": [
+        "BCD\n002\n1\nSCT\nCOBADEFFXXX\nStiftung Bühl\nDE97173111656315793517\nEUR2442.20\n\n\nRechnung 954164 vom 19.3.2026"
+      ],
+      "tier": "common"
+    },
+    "invoice-common-10": {
+      "status": "pass",
+      "pass": true,
+      "found": 1,
+      "missed": 0,
+      "wrong": [],
+      "misplaced": 0,
+      "ms": 7.158,
+      "texts": [
+        "https://www.example.com/de/rechnung/LGloIQpHu4Sfsfu_5IMI"
+      ],
+      "tier": "common"
+    },
+    "invoice-common-11": {
+      "status": "pass",
+      "pass": true,
+      "found": 1,
+      "missed": 0,
+      "wrong": [],
+      "misplaced": 0,
+      "ms": 7.043,
+      "texts": [
+        "https://app.example.de/r/nX84lgglrd-LcsFG"
+      ],
+      "tier": "common"
+    },
+    "invoice-common-12": {
+      "status": "pass",
+      "pass": true,
+      "found": 2,
+      "missed": 0,
+      "wrong": [],
+      "misplaced": 0,
+      "ms": 20.76,
+      "texts": [
+        "710946371976436430541902263443516570",
+        "https://app.example.de/fr/facture/CGxh"
+      ],
+      "tier": "common"
+    },
+    "invoice-hard-01": {
+      "status": "partial",
+      "pass": false,
+      "found": 1,
+      "missed": 1,
+      "wrong": [],
+      "misplaced": 0,
+      "ms": 5.572,
+      "texts": [
+        "https://app.example.de/de/rechnung/5eGp"
+      ],
+      "tier": "hard"
+    },
+    "invoice-hard-02": {
+      "status": "pass",
+      "pass": true,
+      "found": 1,
+      "missed": 0,
+      "wrong": [],
+      "misplaced": 0,
+      "ms": 18.831,
+      "texts": [
+        "https://app.shop.example.org/i/QIYBmJ"
+      ],
+      "tier": "hard"
+    },
+    "invoice-hard-03": {
+      "status": "fail",
+      "pass": false,
+      "found": 0,
+      "missed": 1,
+      "wrong": [],
+      "misplaced": 0,
+      "ms": 10.125,
+      "texts": [],
+      "tier": "hard"
+    },
+    "invoice-hard-04": {
+      "status": "pass",
+      "pass": true,
+      "found": 1,
+      "missed": 0,
+      "wrong": [],
+      "misplaced": 0,
+      "ms": 22.292,
+      "texts": [
+        "BCD\n002\n1\nSCT\nGENODEF1S04\nElektro Brändli AG\nDE63530972079480201060\nEUR2347.69\n\n\nRechnung 905254 vom 23.8.2026"
+      ],
+      "tier": "hard"
+    },
+    "invoice-hard-05": {
+      "status": "partial",
+      "pass": false,
+      "found": 1,
+      "missed": 1,
+      "wrong": [],
+      "misplaced": 0,
+      "ms": 6.134,
+      "texts": [
+        "Prüfetikette 85536 – Café crème, 2× Croissant – München"
+      ],
+      "tier": "hard"
+    },
+    "invoice-hard-06": {
+      "status": "pass",
+      "pass": true,
+      "found": 1,
+      "missed": 0,
+      "wrong": [],
+      "misplaced": 0,
+      "ms": 26.331,
+      "texts": [
+        "https://www.portal.example.net/fr/facture/oyHV"
+      ],
+      "tier": "hard"
+    },
+    "invoice-hard-07": {
+      "status": "pass",
+      "pass": true,
+      "found": 1,
+      "missed": 0,
+      "wrong": [],
+      "misplaced": 0,
+      "ms": 22.741,
+      "texts": [
+        "https://www.portal.example.net/r/506-"
+      ],
+      "tier": "hard"
+    },
+    "invoice-hard-08": {
+      "status": "pass",
+      "pass": true,
+      "found": 1,
+      "missed": 0,
+      "wrong": [],
+      "misplaced": 0,
+      "ms": 19.546,
+      "texts": [
+        "https://portal.portal.example.net/invoice/wySZ"
+      ],
+      "tier": "hard"
+    },
+    "invoice-extreme-01": {
+      "status": "pass",
+      "pass": true,
+      "found": 2,
+      "missed": 0,
+      "wrong": [],
+      "misplaced": 0,
+      "ms": 13.698,
+      "texts": [
+        "https://app.example.com/r/k913CCV",
+        "https://app.example.ch/invoice/V-BM"
+      ],
+      "tier": "extreme"
+    },
+    "invoice-extreme-02": {
+      "status": "pass",
+      "pass": true,
+      "found": 2,
+      "missed": 0,
+      "wrong": [],
+      "misplaced": 0,
+      "ms": 19.323,
+      "texts": [
+        "https://www.shop.example.org/track/FHDXeL7O8eR-RmXDo8KHf8gd3F4TR-Qu96QmsuJR9L9Z",
+        "https://app.example.de/invoice/On9A"
+      ],
+      "tier": "extreme"
+    },
+    "invoice-extreme-03": {
+      "status": "partial",
+      "pass": false,
+      "found": 1,
+      "missed": 1,
+      "wrong": [],
+      "misplaced": 0,
+      "ms": 21.026,
+      "texts": [
+        "https://www.portal.example.net/r/anks"
+      ],
+      "tier": "extreme"
+    },
+    "invoice-extreme-04": {
+      "status": "partial",
+      "pass": false,
+      "found": 1,
+      "missed": 1,
+      "wrong": [],
+      "misplaced": 0,
+      "ms": 7.233,
+      "texts": [
+        "https://app.example.ch/go/qzk7CSY-eH3_GJnG"
+      ],
+      "tier": "extreme"
+    },
+    "qrbill-common-01": {
+      "status": "pass",
+      "pass": true,
+      "found": 1,
+      "missed": 0,
+      "wrong": [],
+      "misplaced": 0,
+      "ms": 5.744,
+      "texts": [
+        "SPC\n0200\n1\nCH9030755906840776922\nS\nStiftung Bühl\nVia Cantonale\n71\n1204\nGenève\nCH\n\n\n\n\n\n\n\n2152.21\nCHF\nS\nUeli Zürcher\nChemin des Écoliers\n57\n8001\nZürich\nCH\nQRR\n308197462274969590492887892\nAbo 34770\nEPD"
+      ],
+      "tier": "common"
+    },
+    "qrbill-common-02": {
+      "status": "pass",
+      "pass": true,
+      "found": 1,
+      "missed": 0,
+      "wrong": [],
+      "misplaced": 0,
+      "ms": 23.106,
+      "texts": [
+        "SPC\r\n0200\r\n1\r\nCH9404560527609867130\r\nS\r\nCafé Fässler\r\nSeeweg\r\n5\r\n4051\r\nBasel\r\nCH\r\n\r\n\r\n\r\n\r\n\r\n\r\n\r\n1764.87\r\nCHF\r\nS\r\nSébastien Schnyder\r\nLöwenstrasse\r\n46\r\n3011\r\nBern\r\nCH\r\nNON\r\n\r\nAbo 07281\r\nEPD"
+      ],
+      "tier": "common"
+    },
+    "qrbill-common-03": {
+      "status": "pass",
+      "pass": true,
+      "found": 1,
+      "missed": 0,
+      "wrong": [],
+      "misplaced": 0,
+      "ms": 17.949,
+      "texts": [
+        "SPC\r\n0200\r\n1\r\nCH9731236528087028553\r\nS\r\nRösti & Söhne KG\r\nGrosse Marktgasse\r\n79\r\n9400\r\nRorschach\r\nCH\r\n\r\n\r\n\r\n\r\n\r\n\r\n\r\n1678.94\r\nCHF\r\nS\r\nJürg Schnyder\r\nVia Cantonale\r\n58\r\n6003\r\nLuzern\r\nCH\r\nQRR\r\n721417834224988422941156758\r\nAuftrag vom 16819\r\nEPD"
+      ],
+      "tier": "common"
+    },
+    "qrbill-common-04": {
+      "status": "pass",
+      "pass": true,
+      "found": 1,
+      "missed": 0,
+      "wrong": [],
+      "misplaced": 0,
+      "ms": 24.141,
+      "texts": [
+        "SPC\r\n0200\r\n1\r\nCH8931536089991310638\r\nS\r\nHäfeli Treuhand AG\r\nLöwenstrasse\r\n92\r\n9400\r\nRorschach\r\nCH\r\n\r\n\r\n\r\n\r\n\r\n\r\n\r\n3912.87\r\nCHF\r\nS\r\nLukas Brändli\r\nChemin des Écoliers\r\n29\r\n6003\r\nLuzern\r\nCH\r\nQRR\r\n922200765067543920371664863\r\nMitgliederbeitrag 66156\r\nEPD\r\n//S1/10/59357570/11/315992/30/750671169/32/8.1\r\neBill/B/peter.muster@example.com"
+      ],
+      "tier": "common"
+    },
+    "qrbill-common-05": {
+      "status": "pass",
+      "pass": true,
+      "found": 1,
+      "missed": 0,
+      "wrong": [],
+      "misplaced": 0,
+      "ms": 18.081,
+      "texts": [
+        "SPC\r\n0200\r\n1\r\nCH8906018570253619334\r\nS\r\nCafé Fässler\r\nRue du Lac\r\n95\r\n6900\r\nLugano\r\nCH\r\n\r\n\r\n\r\n\r\n\r\n\r\n\r\n3803.67\r\nCHF\r\nS\r\nBéatrice Bühler\r\nRue du Lac\r\n52\r\n4051\r\nBasel\r\nCH\r\nNON\r\n\r\nFacture 13472\r\nEPD"
+      ],
+      "tier": "common"
+    },
+    "qrbill-common-06": {
+      "status": "pass",
+      "pass": true,
+      "found": 1,
+      "missed": 0,
+      "wrong": [],
+      "misplaced": 0,
+      "ms": 6.143,
+      "texts": [
+        "SPC\n0200\n1\nCH7903347041611717055\nS\nStiftung Bühl\nHauptstrasse\n97\n1204\nGenève\nCH\n\n\n\n\n\n\n\n2000.17\nCHF\nS\nUeli Dubois\nRue du Lac\n70\n7000\nChur\nCH\nSCOR\nRF69Y11UR3\nFacture 73274\nEPD\n//S1/10/36633040/11/480423/30/700269578/32/8.1"
+      ],
+      "tier": "common"
+    },
+    "qrbill-common-07": {
+      "status": "pass",
+      "pass": true,
+      "found": 1,
+      "missed": 0,
+      "wrong": [],
+      "misplaced": 0,
+      "ms": 26.234,
+      "texts": [
+        "SPC\r\n0200\r\n1\r\nCH0230193444214857258\r\nS\r\nRösti & Söhne KG\r\nGrosse Marktgasse\r\n15\r\n4051\r\nBasel\r\nCH\r\n\r\n\r\n\r\n\r\n\r\n\r\n\r\n1654.67\r\nCHF\r\nS\r\nFrançoise Fässler\r\nGrosse Marktgasse\r\n41\r\n4051\r\nBasel\r\nCH\r\nQRR\r\n454015461618666048535246007\r\nMitgliederbeitrag 70013\r\nEPD\r\n//S1/10/96798990/11/985556/30/352563063/32/8.1\r\neBill/B/peter.muster@example.com"
+      ],
+      "tier": "common"
+    },
+    "qrbill-common-08": {
+      "status": "pass",
+      "pass": true,
+      "found": 1,
+      "missed": 0,
+      "wrong": [],
+      "misplaced": 0,
+      "ms": 6.339,
+      "texts": [
+        "SPC\r\n0200\r\n1\r\nCH9704547081223648193\r\nS\r\nGarage du Lac Sàrl\r\nChemin des Écoliers\r\n18\r\n8640\r\nRapperswil\r\nCH\r\n\r\n\r\n\r\n\r\n\r\n\r\n\r\n3210.90\r\nCHF\r\nS\r\nRuth Bühler\r\nSeeweg\r\n4\r\n8640\r\nRapperswil\r\nCH\r\nSCOR\r\nRF44QDKM49OZO\r\nRechnung 47085\r\nEPD"
+      ],
+      "tier": "common"
+    },
+    "qrbill-common-09": {
+      "status": "pass",
+      "pass": true,
+      "found": 1,
+      "missed": 0,
+      "wrong": [],
+      "misplaced": 0,
+      "ms": 20.206,
+      "texts": [
+        "SPC\r\n0200\r\n1\r\nCH0302107307145246387\r\nS\r\nCafé Fässler\r\nLöwenstrasse\r\n68\r\n8640\r\nRapperswil\r\nCH\r\n\r\n\r\n\r\n\r\n\r\n\r\n\r\n587.99\r\nCHF\r\nS\r\nFrançoise Müller\r\nRue du Lac\r\n56\r\n9400\r\nRorschach\r\nCH\r\nSCOR\r\nRF85SYZFTDKCEGGAAQ\r\nAuftrag vom 54174\r\nEPD"
+      ],
+      "tier": "common"
+    },
+    "qrbill-common-10": {
+      "status": "pass",
+      "pass": true,
+      "found": 1,
+      "missed": 0,
+      "wrong": [],
+      "misplaced": 0,
+      "ms": 9.68,
+      "texts": [
+        "SPC\n0200\n1\nCH5331025365788590468\nS\nStiftung Bühl\nDorfstrasse\n66\n1700\nFribourg\nCH\n\n\n\n\n\n\n\n1114.64\nCHF\nS\nSébastien Gerber\nGrosse Marktgasse\n28\n6900\nLugano\nCH\nQRR\n941790482303934899932568072\nAuftrag vom 03333\nEPD"
+      ],
+      "tier": "common"
+    },
+    "qrbill-common-11": {
+      "status": "pass",
+      "pass": true,
+      "found": 1,
+      "missed": 0,
+      "wrong": [],
+      "misplaced": 0,
+      "ms": 16.889,
+      "texts": [
+        "SPC\n0200\n1\nCH0802102085759807586\nS\nRösti & Söhne KG\nLöwenstrasse\n2\n9400\nRorschach\nCH\n\n\n\n\n\n\n\n3904.52\nCHF\nS\nLukas Kälin\nDorfstrasse\n22\n6900\nLugano\nCH\nSCOR\nRF55A5X457LD6K1\nFacture 83195\nEPD\n//S1/10/70080272/11/777174/30/730847621/32/8.1\neBill/B/peter.muster@example.com"
+      ],
+      "tier": "common"
+    },
+    "qrbill-common-12": {
+      "status": "pass",
+      "pass": true,
+      "found": 1,
+      "missed": 0,
+      "wrong": [],
+      "misplaced": 0,
+      "ms": 103.222,
+      "texts": [
+        "SPC\n0200\n1\nCH3702195471843370310\nS\nSociété Générale de Fribourg SA\nChemin des Écoliers\n22\n8001\nZürich\nCH\n\n\n\n\n\n\n\n813.95\nCHF\nS\nUeli Würsch\nVia Cantonale\n99\n9400\nRorschach\nCH\nNON\n\nAuftrag vom 49644\nEPD\n//S1/10/24279132/11/706807/30/506201136/32/8.1"
+      ],
+      "tier": "common"
+    },
+    "qrbill-common-13": {
+      "status": "pass",
+      "pass": true,
+      "found": 1,
+      "missed": 0,
+      "wrong": [],
+      "misplaced": 0,
+      "ms": 19.637,
+      "texts": [
+        "SPC\n0200\n1\nCH8306208289777878888\nS\nSchreinerei Würsch\nRämistrasse\n31\n3011\nBern\nCH\n\n\n\n\n\n\n\n263.18\nCHF\nS\nElif Rüegg\nRue du Lac\n93\n6900\nLugano\nCH\nNON\n\nAbo 30407\nEPD\neBill/B/peter.muster@example.com"
+      ],
+      "tier": "common"
+    },
+    "qrbill-common-14": {
+      "status": "pass",
+      "pass": true,
+      "found": 1,
+      "missed": 0,
+      "wrong": [],
+      "misplaced": 0,
+      "ms": 6.466,
+      "texts": [
+        "SPC\n0200\n1\nCH4902767302706360348\nS\nBäckerei Zürcher GmbH\nRämistrasse\n5\n9400\nRorschach\nCH\n\n\n\n\n\n\n\n1687.85\nCHF\nS\nMia Schnyder\nLöwenstrasse\n50\n4051\nBasel\nCH\nSCOR\nRF30NBVBAVA94B\nMitgliederbeitrag 01935\nEPD"
+      ],
+      "tier": "common"
+    },
+    "qrbill-common-15": {
+      "status": "pass",
+      "pass": true,
+      "found": 1,
+      "missed": 0,
+      "wrong": [],
+      "misplaced": 0,
+      "ms": 6.237,
+      "texts": [
+        "SPC\r\n0200\r\n1\r\nCH7831948222882104842\r\nS\r\nSchreinerei Würsch\r\nDorfstrasse\r\n7\r\n9400\r\nRorschach\r\nCH\r\n\r\n\r\n\r\n\r\n\r\n\r\n\r\n2428.60\r\nCHF\r\nS\r\nAnna-Lena Schnyder\r\nGrosse Marktgasse\r\n17\r\n3011\r\nBern\r\nCH\r\nQRR\r\n918656267460270041184568072\r\nAuftrag vom 54294\r\nEPD\r\n//S1/10/04314827/11/219365/30/149739714/32/8.1"
+      ],
+      "tier": "common"
+    },
+    "qrbill-common-16": {
+      "status": "pass",
+      "pass": true,
+      "found": 1,
+      "missed": 0,
+      "wrong": [],
+      "misplaced": 0,
+      "ms": 24.861,
+      "texts": [
+        "SPC\r\n0200\r\n1\r\nCH2930482670265916099\r\nS\r\nElektro Brändli AG\r\nVia Cantonale\r\n37\r\n7000\r\nChur\r\nCH\r\n\r\n\r\n\r\n\r\n\r\n\r\n\r\n989.61\r\nCHF\r\nS\r\nUeli Rüegg\r\nRue du Lac\r\n40\r\n7000\r\nChur\r\nCH\r\nQRR\r\n509871199865894168475635415\r\nRechnung 91312\r\nEPD\r\neBill/B/41010560425610173"
+      ],
+      "tier": "common"
+    },
+    "qrbill-hard-01": {
+      "status": "pass",
+      "pass": true,
+      "found": 1,
+      "missed": 0,
+      "wrong": [],
+      "misplaced": 0,
+      "ms": 7.717,
+      "texts": [
+        "SPC\r\n0200\r\n1\r\nCH1604685710837014833\r\nS\r\nMärki Logistik AG\r\nChemin des Écoliers\r\n81\r\n6900\r\nLugano\r\nCH\r\n\r\n\r\n\r\n\r\n\r\n\r\n\r\n560.87\r\nCHF\r\nS\r\nMia Müller\r\nVia Cantonale\r\n71\r\n9400\r\nRorschach\r\nCH\r\nNON\r\n\r\nAuftrag vom 01539\r\nEPD\r\n//S1/10/06455915/11/720895/30/636733278/32/8.1"
+      ],
+      "tier": "hard"
+    },
+    "qrbill-hard-02": {
+      "status": "pass",
+      "pass": true,
+      "found": 1,
+      "missed": 0,
+      "wrong": [],
+      "misplaced": 0,
+      "ms": 21.231,
+      "texts": [
+        "SPC\n0200\n1\nCH5430330557957478697\nS\nSchreinerei Würsch\nBahnhofstrasse\n17\n3011\nBern\nCH\n\n\n\n\n\n\n\n2756.74\nCHF\nS\nElif Müller\nRue du Lac\n51\n1204\nGenève\nCH\nQRR\n698174045442788326278327635\nFacture 29919\nEPD"
+      ],
+      "tier": "hard"
+    },
+    "qrbill-hard-03": {
+      "status": "pass",
+      "pass": true,
+      "found": 1,
+      "missed": 0,
+      "wrong": [],
+      "misplaced": 0,
+      "ms": 8.069,
+      "texts": [
+        "SPC\n0200\n1\nCH9206644232968897939\nS\nSociété Générale de Fribourg SA\nLöwenstrasse\n63\n1700\nFribourg\nCH\n\n\n\n\n\n\n\n182.57\nCHF\nS\nUeli Dubois\nChemin des Écoliers\n81\n2501\nBiel\nCH\nSCOR\nRF317DWXTYG\nAuftrag vom 10060\nEPD\n//S1/10/46329041/11/406533/30/617450494/32/8.1\neBill/B/peter.muster@example.com"
+      ],
+      "tier": "hard"
+    },
+    "qrbill-hard-04": {
+      "status": "pass",
+      "pass": true,
+      "found": 1,
+      "missed": 0,
+      "wrong": [],
+      "misplaced": 0,
+      "ms": 8.152,
+      "texts": [
+        "SPC\n0200\n1\nCH6708804532985077644\nS\nCafé Fässler\nAvenue de la Gare\n4\n2501\nBiel\nCH\n\n\n\n\n\n\n\n100.84\nCHF\nS\nNicolò Märki\nLöwenstrasse\n60\n8001\nZürich\nCH\nNON\n\nAbo 45035\nEPD"
+      ],
+      "tier": "hard"
+    },
+    "qrbill-hard-05": {
+      "status": "pass",
+      "pass": true,
+      "found": 1,
+      "missed": 0,
+      "wrong": [],
+      "misplaced": 0,
+      "ms": 2.98,
+      "texts": [
+        "SPC\r\n0200\r\n1\r\nCH7630040609787420448\r\nS\r\nMärki Logistik AG\r\nChemin des Écoliers\r\n24\r\n8640\r\nRapperswil\r\nCH\r\n\r\n\r\n\r\n\r\n\r\n\r\n\r\n1803.81\r\nCHF\r\nS\r\nJörg Kälin\r\nRue du Lac\r\n81\r\n8001\r\nZürich\r\nCH\r\nQRR\r\n936534126286279156041695805\r\nRechnung 70099\r\nEPD\r\neBill/B/peter.muster@example.com"
+      ],
+      "tier": "hard"
+    },
+    "qrbill-hard-06": {
+      "status": "pass",
+      "pass": true,
+      "found": 1,
+      "missed": 0,
+      "wrong": [],
+      "misplaced": 0,
+      "ms": 58.798,
+      "texts": [
+        "SPC\r\n0200\r\n1\r\nCH4931619595562400333\r\nS\r\nStiftung Bühl\r\nBahnhofstrasse\r\n71\r\n8001\r\nZürich\r\nCH\r\n\r\n\r\n\r\n\r\n\r\n\r\n\r\n3317.58\r\nCHF\r\nS\r\nJörg Bühler\r\nChemin des Écoliers\r\n51\r\n1700\r\nFribourg\r\nCH\r\nQRR\r\n672751762232105592426074534\r\nRechnung 27984\r\nEPD\r\n//S1/10/73119490/11/728181/30/193590273/32/8.1"
+      ],
+      "tier": "hard"
+    },
+    "qrbill-hard-07": {
+      "status": "pass",
+      "pass": true,
+      "found": 1,
+      "missed": 0,
+      "wrong": [],
+      "misplaced": 0,
+      "ms": 2.336,
+      "texts": [
+        "SPC\r\n0200\r\n1\r\nCH9830502233809296622\r\nS\r\nRösti & Söhne KG\r\nDorfstrasse\r\n76\r\n6003\r\nLuzern\r\nCH\r\n\r\n\r\n\r\n\r\n\r\n\r\n\r\n657.19\r\nCHF\r\nS\r\nJörg Schnyder\r\nChemin des Écoliers\r\n87\r\n1204\r\nGenève\r\nCH\r\nQRR\r\n510744277452583306623720383\r\nMitgliederbeitrag 28088\r\nEPD\r\n//S1/10/51649371/11/501295/30/719420616/32/8.1"
+      ],
+      "tier": "hard"
+    },
+    "qrbill-hard-08": {
+      "status": "pass",
+      "pass": true,
+      "found": 1,
+      "missed": 0,
+      "wrong": [],
+      "misplaced": 0,
+      "ms": 6.716,
+      "texts": [
+        "SPC\n0200\n1\nCH5202223435401992510\nS\nStiftung Bühl\nHauptstrasse\n21\n7000\nChur\nCH\n\n\n\n\n\n\n\n3971.70\nCHF\nS\nBéatrice Müller\nAvenue de la Gare\n43\n4051\nBasel\nCH\nSCOR\nRF978WGK3OKT8ZN67K\nAbo 01995\nEPD\n//S1/10/76643093/11/175319/30/557004773/32/8.1"
+      ],
+      "tier": "hard"
+    },
+    "qrbill-hard-09": {
+      "status": "pass",
+      "pass": true,
+      "found": 1,
+      "missed": 0,
+      "wrong": [],
+      "misplaced": 0,
+      "ms": 6.941,
+      "texts": [
+        "SPC\n0200\n1\nCH7100783362970805780\nS\nSchreinerei Würsch\nRue du Lac\n63\n7000\nChur\nCH\n\n\n\n\n\n\n\n1983.39\nCHF\nS\nNicolò Bühler\nBahnhofstrasse\n40\n2501\nBiel\nCH\nSCOR\nRF2153A7R1ZSFQ\nFacture 93696\nEPD\neBill/B/41010560425610173"
+      ],
+      "tier": "hard"
+    },
+    "qrbill-hard-10": {
+      "status": "pass",
+      "pass": true,
+      "found": 1,
+      "missed": 0,
+      "wrong": [],
+      "misplaced": 0,
+      "ms": 3.068,
+      "texts": [
+        "SPC\n0200\n1\nCH8401171429803267584\nS\nSchreinerei Würsch\nBahnhofstrasse\n11\n8001\nZürich\nCH\n\n\n\n\n\n\n\n119.96\nCHF\nS\nNoah Märki\nRue du Lac\n64\n1204\nGenève\nCH\nNON\n\nAbo 58928\nEPD\n//S1/10/43368115/11/496935/30/057840280/32/8.1"
+      ],
+      "tier": "hard"
+    },
+    "qrbill-hard-11": {
+      "status": "pass",
+      "pass": true,
+      "found": 1,
+      "missed": 0,
+      "wrong": [],
+      "misplaced": 0,
+      "ms": 17.64,
+      "texts": [
+        "SPC\n0200\n1\nCH0204748545959016773\nS\nStiftung Bühl\nChemin des Écoliers\n88\n3011\nBern\nCH\n\n\n\n\n\n\n\n3728.03\nCHF\nS\nSébastien Bühler\nChemin des Écoliers\n40\n3011\nBern\nCH\nNON\n\nMitgliederbeitrag 52999\nEPD"
+      ],
+      "tier": "hard"
+    },
+    "qrbill-hard-12": {
+      "status": "pass",
+      "pass": true,
+      "found": 1,
+      "missed": 0,
+      "wrong": [],
+      "misplaced": 0,
+      "ms": 1.926,
+      "texts": [
+        "SPC\r\n0200\r\n1\r\nCH7800626521370314078\r\nS\r\nRösti & Söhne KG\r\nSeeweg\r\n47\r\n7000\r\nChur\r\nCH\r\n\r\n\r\n\r\n\r\n\r\n\r\n\r\n2301.68\r\nCHF\r\nS\r\nBéatrice Häfeli\r\nChemin des Écoliers\r\n59\r\n9400\r\nRorschach\r\nCH\r\nSCOR\r\nRF29WE2EO8\r\nRechnung 84254\r\nEPD\r\n//S1/10/58532151/11/478615/30/103088726/32/8.1"
+      ],
+      "tier": "hard"
+    },
+    "qrbill-extreme-01": {
+      "status": "pass",
+      "pass": true,
+      "found": 1,
+      "missed": 0,
+      "wrong": [],
+      "misplaced": 0,
+      "ms": 3.46,
+      "texts": [
+        "SPC\r\n0200\r\n1\r\nCH3606191388183900240\r\nS\r\nElektro Brändli AG\r\nAvenue de la Gare\r\n16\r\n1204\r\nGenève\r\nCH\r\n\r\n\r\n\r\n\r\n\r\n\r\n\r\n2556.04\r\nCHF\r\nS\r\nNicolò Märki\r\nAvenue de la Gare\r\n10\r\n1204\r\nGenève\r\nCH\r\nSCOR\r\nRF84DXQ3G82\r\nAbo 76993\r\nEPD"
+      ],
+      "tier": "extreme"
+    },
+    "qrbill-extreme-02": {
+      "status": "fail",
+      "pass": false,
+      "found": 0,
+      "missed": 1,
+      "wrong": [],
+      "misplaced": 0,
+      "ms": 7.421,
+      "texts": [],
+      "tier": "extreme"
+    },
+    "qrbill-extreme-03": {
+      "status": "pass",
+      "pass": true,
+      "found": 1,
+      "missed": 0,
+      "wrong": [],
+      "misplaced": 0,
+      "ms": 24.248,
+      "texts": [
+        "SPC\n0200\n1\nCH7102688297415397634\nS\nHäfeli Treuhand AG\nChemin des Écoliers\n80\n6003\nLuzern\nCH\n\n\n\n\n\n\n\n204.69\nCHF\nS\nUeli Kälin\nVia Cantonale\n30\n8001\nZürich\nCH\nNON\n\nMitgliederbeitrag 53117\nEPD"
+      ],
+      "tier": "extreme"
+    },
+    "qrbill-extreme-04": {
+      "status": "pass",
+      "pass": true,
+      "found": 1,
+      "missed": 0,
+      "wrong": [],
+      "misplaced": 0,
+      "ms": 8.257,
+      "texts": [
+        "SPC\r\n0200\r\n1\r\nCH6707421348153238273\r\nS\r\nGenossenschaft Kälin\r\nBahnhofstrasse\r\n70\r\n8640\r\nRapperswil\r\nCH\r\n\r\n\r\n\r\n\r\n\r\n\r\n\r\n943.24\r\nCHF\r\nS\r\nNoah Gerber\r\nSeeweg\r\n36\r\n6900\r\nLugano\r\nCH\r\nNON\r\n\r\nMitgliederbeitrag 08978\r\nEPD"
+      ],
+      "tier": "extreme"
+    },
+    "qrbill-extreme-05": {
+      "status": "fail",
+      "pass": false,
+      "found": 0,
+      "missed": 1,
+      "wrong": [],
+      "misplaced": 0,
+      "ms": 16.299,
+      "texts": [],
+      "tier": "extreme"
+    },
+    "qrbill-extreme-06": {
+      "status": "pass",
+      "pass": true,
+      "found": 1,
+      "missed": 0,
+      "wrong": [],
+      "misplaced": 0,
+      "ms": 6.918,
+      "texts": [
+        "SPC\n0200\n1\nCH1231728881256374105\nS\nCafé Fässler\nDorfstrasse\n88\n9400\nRorschach\nCH\n\n\n\n\n\n\n\n2524.95\nCHF\nS\nSébastien Zürcher\nChemin des Écoliers\n39\n2501\nBiel\nCH\nQRR\n101236965071255982347753619\nMitgliederbeitrag 18685\nEPD\n//S1/10/30451885/11/225464/30/444053848/32/8.1"
+      ],
+      "tier": "extreme"
+    },
+    "label-common-01": {
+      "status": "pass",
+      "pass": true,
+      "found": 2,
+      "missed": 0,
+      "wrong": [],
+      "misplaced": 0,
+      "ms": 17.658,
+      "texts": [
+        "https://id.example.com/01/58463205446701/21/M5LKFDFSQE",
+        "67183080248327785616"
+      ],
+      "tier": "common"
+    },
+    "label-common-02": {
+      "status": "pass",
+      "pass": true,
+      "found": 2,
+      "missed": 0,
+      "wrong": [],
+      "misplaced": 0,
+      "ms": 4.352,
+      "texts": [
+        "https://id.example.com/01/80055483334496/21/ZNY0SLYKNG",
+        "HTTPS://GO.EXAMPLE.DE/JPAYTABFCDJJWE9QDP"
+      ],
+      "tier": "common"
+    },
+    "label-common-03": {
+      "status": "pass",
+      "pass": true,
+      "found": 1,
+      "missed": 0,
+      "wrong": [],
+      "misplaced": 0,
+      "ms": 17.717,
+      "texts": [
+        "https://id.example.com/01/63380747319749/21/ANM4VJU8R8"
+      ],
+      "tier": "common"
+    },
+    "label-common-04": {
+      "status": "pass",
+      "pass": true,
+      "found": 2,
+      "missed": 0,
+      "wrong": [],
+      "misplaced": 0,
+      "ms": 16.818,
+      "texts": [
+        "https://track.example.com/291114378592509401",
+        "HTTPS://GO.EXAMPLE.DE/QK3VNNTKXESSLBE06NY"
+      ],
+      "tier": "common"
+    },
+    "label-common-05": {
+      "status": "pass",
+      "pass": true,
+      "found": 1,
+      "missed": 0,
+      "wrong": [],
+      "misplaced": 0,
+      "ms": 19.851,
+      "texts": [
+        "https://track.example.com/833625736291815474"
+      ],
+      "tier": "common"
+    },
+    "label-common-06": {
+      "status": "pass",
+      "pass": true,
+      "found": 3,
+      "missed": 0,
+      "wrong": [],
+      "misplaced": 0,
+      "ms": 19.526,
+      "texts": [
+        "765944074659141230",
+        "39181846934896742",
+        "https://parcel.example.ch/187454494688116036"
+      ],
+      "tier": "common"
+    },
+    "label-common-07": {
+      "status": "pass",
+      "pass": true,
+      "found": 3,
+      "missed": 0,
+      "wrong": [],
+      "misplaced": 0,
+      "ms": 2.168,
+      "texts": [
+        "3433424588333",
+        "https://track.example.com/465367094219204943",
+        "29870011082801749672529"
+      ],
+      "tier": "common"
+    },
+    "label-common-08": {
+      "status": "pass",
+      "pass": true,
+      "found": 1,
+      "missed": 0,
+      "wrong": [],
+      "misplaced": 0,
+      "ms": 4.016,
+      "texts": [
+        "https://id.example.com/01/03148057030719/21/ZOJGM6QNK8"
+      ],
+      "tier": "common"
+    },
+    "label-common-09": {
+      "status": "pass",
+      "pass": true,
+      "found": 2,
+      "missed": 0,
+      "wrong": [],
+      "misplaced": 0,
+      "ms": 21.293,
+      "texts": [
+        "https://id.example.com/01/57684907444020/21/H9HTGYUVR3",
+        "HTTPS://T.EXAMPLE.CH/OFFK7ZH03UK4NVJNP76V"
+      ],
+      "tier": "common"
+    },
+    "label-hard-01": {
+      "status": "pass",
+      "pass": true,
+      "found": 2,
+      "missed": 0,
+      "wrong": [],
+      "misplaced": 0,
+      "ms": 40.907,
+      "texts": [
+        "HTTPS://T.EXAMPLE.CH/SA0RHBF5KS",
+        "https://track.example.com/816629412971135877"
+      ],
+      "tier": "hard"
+    },
+    "label-hard-02": {
+      "status": "pass",
+      "pass": true,
+      "found": 2,
+      "missed": 0,
+      "wrong": [],
+      "misplaced": 0,
+      "ms": 33.138,
+      "texts": [
+        "https://track.example.com/263775057126366895",
+        "HTTPS://GO.EXAMPLE.DE/K2FIOI949AA9NXU2IL"
+      ],
+      "tier": "hard"
+    },
+    "label-hard-03": {
+      "status": "pass",
+      "pass": true,
+      "found": 1,
+      "missed": 0,
+      "wrong": [],
+      "misplaced": 0,
+      "ms": 19.969,
+      "texts": [
+        "https://parcel.example.ch/725360369197458959"
+      ],
+      "tier": "hard"
+    },
+    "label-hard-04": {
+      "status": "pass",
+      "pass": true,
+      "found": 2,
+      "missed": 0,
+      "wrong": [],
+      "misplaced": 0,
+      "ms": 32.309,
+      "texts": [
+        "https://id.example.com/01/06343316612219/21/UGFPDRNT9Q",
+        "https://www.example.de/de/rechnung/fkvL"
+      ],
+      "tier": "hard"
+    },
+    "label-hard-05": {
+      "status": "pass",
+      "pass": true,
+      "found": 2,
+      "missed": 0,
+      "wrong": [],
+      "misplaced": 0,
+      "ms": 5.579,
+      "texts": [
+        "https://id.example.com/01/23248219976789/21/ELK8GG3MZM",
+        "https://www.example.ch/track/k7RN"
+      ],
+      "tier": "hard"
+    },
+    "label-hard-06": {
+      "status": "pass",
+      "pass": true,
+      "found": 2,
+      "missed": 0,
+      "wrong": [],
+      "misplaced": 0,
+      "ms": 7.706,
+      "texts": [
+        "https://www.example.ch/de/rechnung/dkuL",
+        "https://track.example.com/981847720760358667"
+      ],
+      "tier": "hard"
+    },
+    "label-hard-07": {
+      "status": "pass",
+      "pass": true,
+      "found": 3,
+      "missed": 0,
+      "wrong": [],
+      "misplaced": 0,
+      "ms": 23.427,
+      "texts": [
+        "087349812942902295275182789",
+        "https://parcel.example.ch/492100414989823725",
+        "96764123199787"
+      ],
+      "tier": "hard"
+    },
+    "label-hard-08": {
+      "status": "pass",
+      "pass": true,
+      "found": 2,
+      "missed": 0,
+      "wrong": [],
+      "misplaced": 0,
+      "ms": 42.303,
+      "texts": [
+        "https://id.example.com/01/27200339455560/21/689M4KA6I5",
+        "0522832206095867888617317310"
+      ],
+      "tier": "hard"
+    },
+    "label-extreme-01": {
+      "status": "pass",
+      "pass": true,
+      "found": 1,
+      "missed": 0,
+      "wrong": [],
+      "misplaced": 0,
+      "ms": 1.902,
+      "texts": [
+        "https://track.example.com/086936849374246268"
+      ],
+      "tier": "extreme"
+    },
+    "label-extreme-02": {
+      "status": "pass",
+      "pass": true,
+      "found": 2,
+      "missed": 0,
+      "wrong": [],
+      "misplaced": 0,
+      "ms": 8.214,
+      "texts": [
+        "https://id.example.com/01/21850887446055/21/XCT7ZBMDHX",
+        "HTTPS://QR.EXAMPLE.COM/S87L0BAXF0V5UNX"
+      ],
+      "tier": "extreme"
+    },
+    "label-extreme-03": {
+      "status": "pass",
+      "pass": true,
+      "found": 2,
+      "missed": 0,
+      "wrong": [],
+      "misplaced": 0,
+      "ms": 2.346,
+      "texts": [
+        "https://parcel.example.ch/122821268631731655",
+        "999500815077390"
+      ],
+      "tier": "extreme"
+    },
+    "label-extreme-04": {
+      "status": "pass",
+      "pass": true,
+      "found": 2,
+      "missed": 0,
+      "wrong": [],
+      "misplaced": 0,
+      "ms": 7.779,
+      "texts": [
+        "207731902324292",
+        "https://id.example.com/01/11011507175239/21/FUQV8GKX3S"
+      ],
+      "tier": "extreme"
+    },
+    "receipt-common-01": {
+      "status": "pass",
+      "pass": true,
+      "found": 1,
+      "missed": 0,
+      "wrong": [],
+      "misplaced": 0,
+      "ms": 3.242,
+      "texts": [
+        "https://portal.example.ch/go/gjXe_Q7WAYGVeCecnbj"
+      ],
+      "tier": "common"
+    },
+    "receipt-common-02": {
+      "status": "pass",
+      "pass": true,
+      "found": 1,
+      "missed": 0,
+      "wrong": [],
+      "misplaced": 0,
+      "ms": 16.534,
+      "texts": [
+        "https://www.example.de/fr/facture/qaS7BnhzJpJcf6dRPAC0VcipOJM9BakgQAxKz"
+      ],
+      "tier": "common"
+    },
+    "receipt-common-03": {
+      "status": "pass",
+      "pass": true,
+      "found": 1,
+      "missed": 0,
+      "wrong": [],
+      "misplaced": 0,
+      "ms": 3.86,
+      "texts": [
+        "https://www.shop.example.org/go/2Qr-"
+      ],
+      "tier": "common"
+    },
+    "receipt-common-04": {
+      "status": "pass",
+      "pass": true,
+      "found": 1,
+      "missed": 0,
+      "wrong": [],
+      "misplaced": 0,
+      "ms": 1.74,
+      "texts": [
+        "_R1-AT1_KASSE-59_ft8560#1_2026-09-03T12:14:10_34,23_0,00_0,00_0,00_0,00_pojQ2Tv50NAndFhULMjmdO==_F61D6746_qvt8Xm6om09=_i2Hty54BA2WoDLYsZ7AV1/gKBeAfPWlJ5dYcMy/qLu4uw69hqRHipLIawlB3HWfS+77z4iGDTLvYhfyHUDOaPL=="
+      ],
+      "tier": "common"
+    },
+    "receipt-common-05": {
+      "status": "pass",
+      "pass": true,
+      "found": 1,
+      "missed": 0,
+      "wrong": [],
+      "misplaced": 0,
+      "ms": 25.031,
+      "texts": [
+        "https://app.shop.example.org/de/rechnung/alMcqI"
+      ],
+      "tier": "common"
+    },
+    "receipt-common-06": {
+      "status": "pass",
+      "pass": true,
+      "found": 1,
+      "missed": 0,
+      "wrong": [],
+      "misplaced": 0,
+      "ms": 20.005,
+      "texts": [
+        "_R1-AT2_KASSE-34_ft6272#1_2026-03-28T10:24:07_258,21_0,00_0,00_0,00_0,00_tY3CEZ3GI+9f8wAkfkR4/J==_DB0282C4_TGhTGbUGAl4=_STZYo47gx1QRqTMbVD3GCtjza4RKMLwhFqOUnnzltQFiI+lzs+to4IbPIa17KR2e+AnCIzlXPsFAEObgh648EA=="
+      ],
+      "tier": "common"
+    },
+    "receipt-common-07": {
+      "status": "pass",
+      "pass": true,
+      "found": 1,
+      "missed": 0,
+      "wrong": [],
+      "misplaced": 0,
+      "ms": 7.721,
+      "texts": [
+        "_R1-AT2_KASSE-93_ft1822#1_2026-10-11T18:09:09_208,67_0,00_0,00_0,00_0,00_usAM1KMzCjT1I4DFh5J8Ip==_C2DEA24A_yjtWKuy0oDd=_JeUXuACqcW5kkcgg2xH8ma94XKJPhb3No8IMo7uYlU1/PB3ENb3QCZ1aikTDezhLtlBFgTsNJa3FXv83fbxYkA=="
+      ],
+      "tier": "common"
+    },
+    "receipt-common-08": {
+      "status": "pass",
+      "pass": true,
+      "found": 1,
+      "missed": 0,
+      "wrong": [],
+      "misplaced": 0,
+      "ms": 2.346,
+      "texts": [
+        "https://portal.shop.example.org/p/WCRw8GKKpOlGImMdkgVME"
+      ],
+      "tier": "common"
+    },
+    "receipt-hard-01": {
+      "status": "pass",
+      "pass": true,
+      "found": 1,
+      "missed": 0,
+      "wrong": [],
+      "misplaced": 0,
+      "ms": 19.549,
+      "texts": [
+        "_R1-AT2_KASSE-40_ft0332#1_2026-10-13T13:45:14_214,08_0,00_0,00_0,00_0,00_uXTzDggkgvK6wjqvz/9dUs==_D68436A8_bJ3SHY61i9s=_DSVVRQB/4EYDIRBR+btUM/3uAMrRGCwXuVigDuxPZrEnlx4x3yxYb/SLmfzv4YtyAiDW3MiCK2C/f+MsugoFLi=="
+      ],
+      "tier": "hard"
+    },
+    "receipt-hard-02": {
+      "status": "pass",
+      "pass": true,
+      "found": 1,
+      "missed": 0,
+      "wrong": [],
+      "misplaced": 0,
+      "ms": 20.151,
+      "texts": [
+        "_R1-AT3_KASSE-34_ft0317#1_2026-01-03T20:46:45_275,81_0,00_0,00_0,00_0,00_nwxqJStcIaDnvmtEqnidA0==_1D5EB3D1_6iNSmBMlz79=_07/rb72/JmpMD0U/M529VrrSmlUjQCmhbi9YmS/oXl1hcNicGIi8FQdgFWgyklduHVR/EiwBA8nvJNKalKAJ5n=="
+      ],
+      "tier": "hard"
+    },
+    "receipt-hard-03": {
+      "status": "pass",
+      "pass": true,
+      "found": 1,
+      "missed": 0,
+      "wrong": [],
+      "misplaced": 0,
+      "ms": 19.889,
+      "texts": [
+        "_R1-AT3_KASSE-21_ft4896#1_2026-06-13T15:52:38_280,73_0,00_0,00_0,00_0,00_Pi2NdmnlsDdgzcHts2gO4p==_97090676_w7L3PdmlXWu=_esj5//KT9CSk36oUsOeVfqcnMlUPOcyqrNIy2CFPyFtvIxJg/KHfNyuTrxAeEp4/THjlfJZns3tQSSVE0MmNkQ=="
+      ],
+      "tier": "hard"
+    },
+    "receipt-hard-04": {
+      "status": "pass",
+      "pass": true,
+      "found": 1,
+      "missed": 0,
+      "wrong": [],
+      "misplaced": 0,
+      "ms": 2.856,
+      "texts": [
+        "Prüfetikette 88952 – Prüfprotokoll bestanden ✓ – Genève"
+      ],
+      "tier": "hard"
+    },
+    "receipt-hard-05": {
+      "status": "pass",
+      "pass": true,
+      "found": 1,
+      "missed": 0,
+      "wrong": [],
+      "misplaced": 0,
+      "ms": 22.798,
+      "texts": [
+        "_R1-AT0_KASSE-71_ft5982#1_2026-12-09T08:26:13_78,02_0,00_0,00_0,00_0,00_TiAgRdg31Z62ezZgR4Lj1Z==_6236645D_/F4am1gjgMS=_U3UhydD9yy1ZuEsWnNzIJblD6bvuco5vhoStPpkFrKHKgghMV8anzLX4b27VREH98PQ3mwrWqF8vYrTLEjTzBx=="
+      ],
+      "tier": "hard"
+    },
+    "receipt-hard-06": {
+      "status": "pass",
+      "pass": true,
+      "found": 1,
+      "missed": 0,
+      "wrong": [],
+      "misplaced": 0,
+      "ms": 20.784,
+      "texts": [
+        "_R1-AT0_KASSE-73_ft6311#1_2026-04-20T18:12:03_137,56_0,00_0,00_0,00_0,00_npxowJrDECnVOrubdEu7rz==_B6CD88B2_K03EOML0lXR=_TP4Qr5xdLpYOzfEUhaW1x7tiafFsakSQGk/q+3v5uoCWLd3WFaOwWA2jDcSV0ZDTuIXoiJbP5tIdyp7zoBXmZ9=="
+      ],
+      "tier": "hard"
+    },
+    "receipt-hard-07": {
+      "status": "pass",
+      "pass": true,
+      "found": 1,
+      "missed": 0,
+      "wrong": [],
+      "misplaced": 0,
+      "ms": 20.077,
+      "texts": [
+        "https://www.beispiel.ch/p/9f-ZwaadeNq4DQ7c7TKAzT1XeiuLXbLZis5eMiiG"
+      ],
+      "tier": "hard"
+    },
+    "receipt-hard-08": {
+      "status": "pass",
+      "pass": true,
+      "found": 1,
+      "missed": 0,
+      "wrong": [],
+      "misplaced": 0,
+      "ms": 21.373,
+      "texts": [
+        "_R1-AT1_KASSE-45_ft5868#1_2026-08-26T09:12:25_185,17_0,00_0,00_0,00_0,00_2CwGALZtmkMw19Rn6l27ZC==_D69BF738_fmZgubfCS0u=_iR23BaTO4kkawJiD5N0i8qYV2J3Lqda07M+dcDdpm8lt9EV/k0NdKNuIT0HzanI9Yy4dh6D2jk9cMgl9xXhou6=="
+      ],
+      "tier": "hard"
+    },
+    "receipt-extreme-01": {
+      "status": "fail",
+      "pass": false,
+      "found": 0,
+      "missed": 1,
+      "wrong": [],
+      "misplaced": 0,
+      "ms": 0.602,
+      "texts": [],
+      "tier": "extreme"
+    },
+    "receipt-extreme-02": {
+      "status": "pass",
+      "pass": true,
+      "found": 1,
+      "missed": 0,
+      "wrong": [],
+      "misplaced": 0,
+      "ms": 31.316,
+      "texts": [
+        "_R1-AT0_KASSE-05_ft4845#1_2026-09-04T21:45:30_4,64_0,00_0,00_0,00_0,00_HwkH4/GCEFagEH/Wvua20g==_B8DE4997_61fhDSoHFwr=_egSE3NbYy9BPWdTBCTZkVsfjrOAXZjHXLjwKpDWwrIrsL+Ro+0/RmwTCCwLAA+HrUPQOIk7eAJ5I3JC7xRVebD=="
+      ],
+      "tier": "extreme"
+    },
+    "receipt-extreme-03": {
+      "status": "fail",
+      "pass": false,
+      "found": 0,
+      "missed": 1,
+      "wrong": [],
+      "misplaced": 0,
+      "ms": 4.388,
+      "texts": [],
+      "tier": "extreme"
+    },
+    "receipt-extreme-04": {
+      "status": "pass",
+      "pass": true,
+      "found": 1,
+      "missed": 0,
+      "wrong": [],
+      "misplaced": 0,
+      "ms": 6.692,
+      "texts": [
+        "https://www.example.de/track/8QK7KVkJ3p7BNgoyL6LlQlZcNr893pt3v6hCi2OJN14lu"
+      ],
+      "tier": "extreme"
+    },
+    "receipt-extreme-05": {
+      "status": "fail",
+      "pass": false,
+      "found": 0,
+      "missed": 1,
+      "wrong": [],
+      "misplaced": 0,
+      "ms": 2.388,
+      "texts": [],
+      "tier": "extreme"
+    },
+    "card-common-01": {
+      "status": "pass",
+      "pass": true,
+      "found": 1,
+      "missed": 0,
+      "wrong": [],
+      "misplaced": 0,
+      "ms": 58.252,
+      "texts": [
+        "BEGIN:VCARD\r\nVERSION:3.0\r\nN:Müller;Noah;;;\r\nFN:Noah Müller\r\nORG:Bäckerei Zürcher GmbH\r\nTITLE:Directrice\r\nTEL;TYPE=WORK,VOICE:+41 60 407 93 13\r\nEMAIL:noah.muller@portal.example.net\r\nADR;TYPE=WORK:;;Grosse Marktgasse 10;Luzern;;6003;Schweiz\r\nTEL;TYPE=CELL:+41 76 326 99 53\r\nEND:VCARD"
+      ],
+      "tier": "common"
+    },
+    "card-common-02": {
+      "status": "pass",
+      "pass": true,
+      "found": 1,
+      "missed": 0,
+      "wrong": [],
+      "misplaced": 0,
+      "ms": 3.293,
+      "texts": [
+        "BEGIN:VCARD\r\nVERSION:3.0\r\nN:Rutschmann-Schnyder;Béatrice;;;\r\nFN:Béatrice Rutschmann-Schnyder\r\nORG:Société Générale de Fribourg SA\r\nTITLE:Geschäftsführerin\r\nTEL;TYPE=WORK,VOICE:+41 23 742 22 11\r\nEMAIL:beatrice.rutschmannschnyder@shop.example.org\r\nADR;TYPE=WORK:;;Chemin des Écoliers 40;Lugano;;6900;Schweiz\r\nTEL;TYPE=CELL:+41 75 930 07 45\r\nURL:https://www.portal.example.net\r\nEND:VCARD"
+      ],
+      "tier": "common"
+    },
+    "card-common-03": {
+      "status": "pass",
+      "pass": true,
+      "found": 1,
+      "missed": 0,
+      "wrong": [],
+      "misplaced": 0,
+      "ms": 18.628,
+      "texts": [
+        "BEGIN:VCARD\r\nVERSION:3.0\r\nN:Rüegg;Françoise;;;\r\nFN:Françoise Rüegg\r\nORG:Société Générale de Fribourg SA\r\nTITLE:Buchhaltung\r\nTEL;TYPE=WORK,VOICE:+41 64 717 49 24\r\nEMAIL:francoise.ruegg@example.ch\r\nADR;TYPE=WORK:;;Chemin des Écoliers 10;Chur;;7000;Schweiz\r\nEND:VCARD"
+      ],
+      "tier": "common"
+    },
+    "card-common-04": {
+      "status": "pass",
+      "pass": true,
+      "found": 1,
+      "missed": 0,
+      "wrong": [],
+      "misplaced": 0,
+      "ms": 21.486,
+      "texts": [
+        "BEGIN:VCARD\r\nVERSION:3.0\r\nN:Bühler;Zoë;;;\r\nFN:Zoë Bühler\r\nORG:Schreinerei Würsch\r\nTITLE:Geschäftsführerin\r\nTEL;TYPE=WORK,VOICE:+41 60 801 61 25\r\nEMAIL:zoe.buhler@portal.example.net\r\nADR;TYPE=WORK:;;Via Cantonale 44;Bern;;3011;Schweiz\r\nTEL;TYPE=CELL:+41 77 879 77 15\r\nEND:VCARD"
+      ],
+      "tier": "common"
+    },
+    "card-common-05": {
+      "status": "pass",
+      "pass": true,
+      "found": 1,
+      "missed": 0,
+      "wrong": [],
+      "misplaced": 0,
+      "ms": 51.227,
+      "texts": [
+        "BEGIN:VCARD\r\nVERSION:3.0\r\nN:Würsch;Zoë;;;\r\nFN:Zoë Würsch\r\nORG:Rösti & Söhne KG\r\nTITLE:Directrice\r\nTEL;TYPE=WORK,VOICE:+41 82 236 84 52\r\nEMAIL:zoe.wursch@shop.example.org\r\nADR;TYPE=WORK:;;Avenue de la Gare 13;Bern;;3011;Schweiz\r\nEND:VCARD"
+      ],
+      "tier": "common"
+    },
+    "card-common-06": {
+      "status": "pass",
+      "pass": true,
+      "found": 1,
+      "missed": 0,
+      "wrong": [],
+      "misplaced": 0,
+      "ms": 2.396,
+      "texts": [
+        "BEGIN:VCARD\nVERSION:3.0\nN:Müller;Nicolò;;;\nFN:Nicolò Müller\nORG:Schreinerei Würsch\nTITLE:Verkaufsleiter\nTEL;TYPE=WORK,VOICE:+41 62 645 44 38\nEMAIL:nicolo.muller@example.de\nADR;TYPE=WORK:;;Chemin des Écoliers 68;Genève;;1204;Schweiz\nTEL;TYPE=CELL:+41 75 498 48 60\nURL:https://www.example.com\nEND:VCARD"
+      ],
+      "tier": "common"
+    },
+    "card-common-07": {
+      "status": "pass",
+      "pass": true,
+      "found": 1,
+      "missed": 0,
+      "wrong": [],
+      "misplaced": 0,
+      "ms": 37.28,
+      "texts": [
+        "BEGIN:VCARD\r\nVERSION:3.0\r\nN:Gerber;Françoise;;;\r\nFN:Françoise Gerber\r\nORG:Garage du Lac Sàrl\r\nTITLE:Buchhaltung\r\nTEL;TYPE=WORK,VOICE:+41 57 163 93 03\r\nEMAIL:francoise.gerber@shop.example.org\r\nADR;TYPE=WORK:;;Chemin des Écoliers 63;Lugano;;6900;Schweiz\r\nTEL;TYPE=CELL:+41 78 934 71 30\r\nEND:VCARD"
+      ],
+      "tier": "common"
+    },
+    "card-common-08": {
+      "status": "pass",
+      "pass": true,
+      "found": 1,
+      "missed": 0,
+      "wrong": [],
+      "misplaced": 0,
+      "ms": 39.747,
+      "texts": [
+        "BEGIN:VCARD\nVERSION:3.0\nN:Würsch;Elif;;;\nFN:Elif Würsch\nORG:Stiftung Bühl\nTITLE:Buchhaltung\nTEL;TYPE=WORK,VOICE:+41 28 258 45 80\nEMAIL:elif.wursch@portal.example.net\nADR;TYPE=WORK:;;Rue du Lac 120;Genève;;1204;Schweiz\nURL:https://www.shop.example.org\nEND:VCARD"
+      ],
+      "tier": "common"
+    },
+    "card-common-09": {
+      "status": "pass",
+      "pass": true,
+      "found": 1,
+      "missed": 0,
+      "wrong": [],
+      "misplaced": 0,
+      "ms": 23.137,
+      "texts": [
+        "BEGIN:VCARD\r\nVERSION:3.0\r\nN:Brändli;Jürg;;;\r\nFN:Jürg Brändli\r\nORG:Häfeli Treuhand AG\r\nTITLE:Buchhaltung\r\nTEL;TYPE=WORK,VOICE:+41 72 575 07 16\r\nEMAIL:jurg.brandli@example.com\r\nADR;TYPE=WORK:;;Via Cantonale 51;Lugano;;6900;Schweiz\r\nURL:https://www.example.ch\r\nEND:VCARD"
+      ],
+      "tier": "common"
+    },
+    "card-hard-01": {
+      "status": "pass",
+      "pass": true,
+      "found": 1,
+      "missed": 0,
+      "wrong": [],
+      "misplaced": 0,
+      "ms": 0.785,
+      "texts": [
+        "BEGIN:VCARD\r\nVERSION:3.0\r\nN:Gerber;Mia;;;\r\nFN:Mia Gerber\r\nORG:Elektro Brändli AG\r\nTITLE:Directrice\r\nTEL;TYPE=WORK,VOICE:+41 35 409 09 69\r\nEMAIL:mia.gerber@portal.example.net\r\nADR;TYPE=WORK:;;Hauptstrasse 80;Basel;;4051;Schweiz\r\nEND:VCARD"
+      ],
+      "tier": "hard"
+    },
+    "card-hard-02": {
+      "status": "fail",
+      "pass": false,
+      "found": 0,
+      "missed": 1,
+      "wrong": [],
+      "misplaced": 0,
+      "ms": 8.056,
+      "texts": [],
+      "tier": "hard"
+    },
+    "card-hard-03": {
+      "status": "pass",
+      "pass": true,
+      "found": 1,
+      "missed": 0,
+      "wrong": [],
+      "misplaced": 0,
+      "ms": 0.802,
+      "texts": [
+        "BEGIN:VCARD\r\nVERSION:3.0\r\nN:Kälin;Nicolò;;;\r\nFN:Nicolò Kälin\r\nORG:Müller Haustechnik AG\r\nTITLE:Geschäftsführerin\r\nTEL;TYPE=WORK,VOICE:+41 72 462 94 63\r\nEMAIL:nicolo.kalin@example.com\r\nADR;TYPE=WORK:;;Rämistrasse 119;Basel;;4051;Schweiz\r\nTEL;TYPE=CELL:+41 76 648 01 56\r\nEND:VCARD"
+      ],
+      "tier": "hard"
+    },
+    "card-hard-04": {
+      "status": "pass",
+      "pass": true,
+      "found": 1,
+      "missed": 0,
+      "wrong": [],
+      "misplaced": 0,
+      "ms": 1.559,
+      "texts": [
+        "BEGIN:VCARD\nVERSION:3.0\nN:Dubois;Noah;;;\nFN:Noah Dubois\nORG:Café Fässler\nTITLE:Verkaufsleiter\nTEL;TYPE=WORK,VOICE:+41 80 207 92 23\nEMAIL:noah.dubois@shop.example.org\nADR;TYPE=WORK:;;Chemin des Écoliers 66;Bern;;3011;Schweiz\nTEL;TYPE=CELL:+41 77 927 22 97\nEND:VCARD"
+      ],
+      "tier": "hard"
+    },
+    "card-hard-05": {
+      "status": "pass",
+      "pass": true,
+      "found": 1,
+      "missed": 0,
+      "wrong": [],
+      "misplaced": 0,
+      "ms": 15.207,
+      "texts": [
+        "BEGIN:VCARD\nVERSION:3.0\nN:Märki;Lukas;;;\nFN:Lukas Märki\nORG:Schreinerei Würsch\nTITLE:Buchhaltung\nTEL;TYPE=WORK,VOICE:+41 87 634 85 55\nEMAIL:lukas.marki@beispiel.ch\nADR;TYPE=WORK:;;Rämistrasse 100;Luzern;;6003;Schweiz\nURL:https://www.beispiel.ch\nEND:VCARD"
+      ],
+      "tier": "hard"
+    },
+    "card-hard-06": {
+      "status": "pass",
+      "pass": true,
+      "found": 1,
+      "missed": 0,
+      "wrong": [],
+      "misplaced": 0,
+      "ms": 41.958,
+      "texts": [
+        "BEGIN:VCARD\r\nVERSION:3.0\r\nN:Bühler;Mia;;;\r\nFN:Mia Bühler\r\nORG:Müller Haustechnik AG\r\nTITLE:Projektleiter\r\nTEL;TYPE=WORK,VOICE:+41 28 038 57 48\r\nEMAIL:mia.buhler@shop.example.org\r\nADR;TYPE=WORK:;;Avenue de la Gare 110;Rorschach;;9400;Schweiz\r\nEND:VCARD"
+      ],
+      "tier": "hard"
+    },
+    "card-hard-07": {
+      "status": "fail",
+      "pass": false,
+      "found": 0,
+      "missed": 1,
+      "wrong": [],
+      "misplaced": 0,
+      "ms": 1.184,
+      "texts": [],
+      "tier": "hard"
+    },
+    "card-extreme-01": {
+      "status": "fail",
+      "pass": false,
+      "found": 0,
+      "missed": 1,
+      "wrong": [],
+      "misplaced": 0,
+      "ms": 7.81,
+      "texts": [],
+      "tier": "extreme"
+    },
+    "card-extreme-02": {
+      "status": "fail",
+      "pass": false,
+      "found": 0,
+      "missed": 1,
+      "wrong": [],
+      "misplaced": 0,
+      "ms": 1.571,
+      "texts": [],
+      "tier": "extreme"
+    },
+    "card-extreme-03": {
+      "status": "fail",
+      "pass": false,
+      "found": 0,
+      "missed": 1,
+      "wrong": [],
+      "misplaced": 0,
+      "ms": 0.511,
+      "texts": [],
+      "tier": "extreme"
+    },
+    "card-extreme-04": {
+      "status": "fail",
+      "pass": false,
+      "found": 0,
+      "missed": 1,
+      "wrong": [],
+      "misplaced": 0,
+      "ms": 15.648,
+      "texts": [],
+      "tier": "extreme"
+    },
+    "ticket-common-01": {
+      "status": "pass",
+      "pass": true,
+      "found": 1,
+      "missed": 0,
+      "wrong": [],
+      "misplaced": 0,
+      "ms": 7.984,
+      "texts": [
+        "TKT:3959-M3CY8F:SEAT-B28:Si7FQ1E8ntdELj9SpJn6esCjG7wksfZ_jkbECeNY1ylxJKjvva9wRgSxtvygQraPk3lBUTHsBfzx"
+      ],
+      "tier": "common"
+    },
+    "ticket-common-02": {
+      "status": "pass",
+      "pass": true,
+      "found": 1,
+      "missed": 0,
+      "wrong": [],
+      "misplaced": 0,
+      "ms": 7.605,
+      "texts": [
+        "TbcEx8lOpMV2/Q+0DmVXcHrYMGViqoCGRQUWTpE5a8F8lupYDAAYjrJM6K6zTORn6xiRz0sAFj10vL4uvzfd+EW233ScGczkLSGCe1KKzOApgay+eZi+U4Yvz8GmqPlxxbAzjpzOKzka4HXJ1E+xYdMwDGvJlwZul+BKIFvU7/8KF+TK560fRrgQ2FVZaO7sjrdGQBb"
+      ],
+      "tier": "common"
+    },
+    "ticket-common-03": {
+      "status": "pass",
+      "pass": true,
+      "found": 1,
+      "missed": 0,
+      "wrong": [],
+      "misplaced": 0,
+      "ms": 17.448,
+      "texts": [
+        "TKT:7840-ETZ9HR:SEAT-D27:Q8hEQd6g1f-cQYRs0rtcn3I_s-Qd4j-5G169vkdeGGtKATR22fyS56"
+      ],
+      "tier": "common"
+    },
+    "ticket-common-04": {
+      "status": "pass",
+      "pass": true,
+      "found": 1,
+      "missed": 0,
+      "wrong": [],
+      "misplaced": 0,
+      "ms": 26.006,
+      "texts": [
+        "HTTPS://T.EXAMPLE.CH/G8QV4GHC6G"
+      ],
+      "tier": "common"
+    },
+    "ticket-common-05": {
+      "status": "pass",
+      "pass": true,
+      "found": 1,
+      "missed": 0,
+      "wrong": [],
+      "misplaced": 0,
+      "ms": 22.799,
+      "texts": [
+        "TKT:2898-GCGF0J:SEAT-C32:79Vea37EQIyfvjXVf-wBAEeixivV-XDxG1vVq7JEms0Tlgkp"
+      ],
+      "tier": "common"
+    },
+    "ticket-common-06": {
+      "status": "pass",
+      "pass": true,
+      "found": 1,
+      "missed": 0,
+      "wrong": [],
+      "misplaced": 0,
+      "ms": 171.517,
+      "texts": [
+        "HTTPS://QR.EXAMPLE.COM/05WRZERIT4XA89D5A1"
+      ],
+      "tier": "common"
+    },
+    "ticket-common-07": {
+      "status": "pass",
+      "pass": true,
+      "found": 1,
+      "missed": 0,
+      "wrong": [],
+      "misplaced": 0,
+      "ms": 29.446,
+      "texts": [
+        "HTTPS://T.EXAMPLE.CH/NPPGQID5KQIT7Y"
+      ],
+      "tier": "common"
+    },
+    "ticket-common-08": {
+      "status": "pass",
+      "pass": true,
+      "found": 1,
+      "missed": 0,
+      "wrong": [],
+      "misplaced": 0,
+      "ms": 27.065,
+      "texts": [
+        "Q17y5mesFjZwhPZV2FOPIvJZ4MQmoQvfOH67Ow0rB0ZE0J+nXHSaNjv7hpJwXKWWnPtNC0vJZxwLGUHvJgKet7fWMCWMp+yupwmKFfCIz"
+      ],
+      "tier": "common"
+    },
+    "ticket-hard-01": {
+      "status": "pass",
+      "pass": true,
+      "found": 1,
+      "missed": 0,
+      "wrong": [],
+      "misplaced": 0,
+      "ms": 25.159,
+      "texts": [
+        "SoJHuqjIWziaN1xHPSwhvg/d6EXKyX21dNyXP9JX/z9EOz0581cuPI+sj/B5VqAkOiYFS6s7p+2r8dWer7NJuMQaWBBVQBovDeizcnugli6DeX6bWUuZm0uVY7e4ubD7I2jabNQUvvsOX7nUEP1mI9C"
+      ],
+      "tier": "hard"
+    },
+    "ticket-hard-02": {
+      "status": "pass",
+      "pass": true,
+      "found": 1,
+      "missed": 0,
+      "wrong": [],
+      "misplaced": 0,
+      "ms": 1.288,
+      "texts": [
+        "HTTPS://QR.EXAMPLE.COM/D8E3GEFES"
+      ],
+      "tier": "hard"
+    },
+    "ticket-hard-03": {
+      "status": "pass",
+      "pass": true,
+      "found": 1,
+      "missed": 0,
+      "wrong": [],
+      "misplaced": 0,
+      "ms": 30.406,
+      "texts": [
+        "7WiWSathu/gmFIl99tgVXBDkhuWGDr8XcX4fMMp/2QLVWEglnbJ4kBqk1FPKqMKHG/2ZvafVr0toN/V1wnO7jKXvy/1clSZApW6++67Zf6TQ1sKy3isriMqwpc4Ijq7yNjGbIKmLhvDiX57Jds9A1"
+      ],
+      "tier": "hard"
+    },
+    "ticket-hard-04": {
+      "status": "pass",
+      "pass": true,
+      "found": 1,
+      "missed": 0,
+      "wrong": [],
+      "misplaced": 0,
+      "ms": 59.267,
+      "texts": [
+        "HTTPS://QR.EXAMPLE.COM/0KB3RI077OW"
+      ],
+      "tier": "hard"
+    },
+    "ticket-hard-05": {
+      "status": "pass",
+      "pass": true,
+      "found": 1,
+      "missed": 0,
+      "wrong": [],
+      "misplaced": 0,
+      "ms": 27.299,
+      "texts": [
+        "Iqf0jvRfhdwF4iiR/B6z99Df7VaEOt3/HuleznzlcZEkCGECqQHdAF7gKNi30zVUUeBKN0s2ZYMJe90V+mRcXuImjSqRzRhZ+V+RbMsnHPp"
+      ],
+      "tier": "hard"
+    },
+    "ticket-hard-06": {
+      "status": "pass",
+      "pass": true,
+      "found": 1,
+      "missed": 0,
+      "wrong": [],
+      "misplaced": 0,
+      "ms": 7.648,
+      "texts": [
+        "HTTPS://T.EXAMPLE.CH/TW02YM3V3EG6I6BMYYW6"
+      ],
+      "tier": "hard"
+    },
+    "ticket-extreme-01": {
+      "status": "pass",
+      "pass": true,
+      "found": 1,
+      "missed": 0,
+      "wrong": [],
+      "misplaced": 0,
+      "ms": 12.515,
+      "texts": [
+        "HTTPS://QR.EXAMPLE.COM/O65B5NCJSPTDFC16CQX"
+      ],
+      "tier": "extreme"
+    },
+    "ticket-extreme-02": {
+      "status": "pass",
+      "pass": true,
+      "found": 1,
+      "missed": 0,
+      "wrong": [],
+      "misplaced": 0,
+      "ms": 8.4,
+      "texts": [
+        "TKT:6387-GRM9D1:SEAT-C8:MnAljaa4eZtEjGxSGhxGWuepRUdXJsX9mWTuFBOdBM7Odt8tB"
+      ],
+      "tier": "extreme"
+    },
+    "ticket-extreme-03": {
+      "status": "pass",
+      "pass": true,
+      "found": 1,
+      "missed": 0,
+      "wrong": [],
+      "misplaced": 0,
+      "ms": 26.87,
+      "texts": [
+        "TKT:7200-8TG05B:SEAT-C38:8o3A5mv1s6zu85z53RAqBw2Wje-Va98ozvw9_90fQGkS03IyCQQw8XYgn_Af7DS7b_i"
+      ],
+      "tier": "extreme"
+    },
+    "multi-common-01": {
+      "status": "pass",
+      "pass": true,
+      "found": 2,
+      "missed": 0,
+      "wrong": [],
+      "misplaced": 0,
+      "ms": 38.793,
+      "texts": [
+        "https://app.portal.example.net/i/F0aO3ol3R4ZFOMNCoRdfn7mNkZ-q7y",
+        "SPC\n0200\n1\nCH7800545098558296103\nS\nSchreinerei Würsch\nRämistrasse\n34\n7000\nChur\nCH\n\n\n\n\n\n\n\n3924.69\nCHF\nS\nNicolò Fässler\nSeeweg\n39\n9400\nRorschach\nCH\nNON\n\nMitgliederbeitrag 50268\nEPD\n//S1/10/92805763/11/868500/30/495470158/32/8.1"
+      ],
+      "tier": "common"
+    },
+    "multi-common-02": {
+      "status": "pass",
+      "pass": true,
+      "found": 2,
+      "missed": 0,
+      "wrong": [],
+      "misplaced": 0,
+      "ms": 41.038,
+      "texts": [
+        "https://app.example.com/i/tviSsoGk8speJ6thco1k6zcvP8uvs",
+        "SPC\n0200\n1\nCH8031399004893467037\nS\nCafé Fässler\nChemin des Écoliers\n57\n2501\nBiel\nCH\n\n\n\n\n\n\n\n2579.04\nCHF\nS\nNoah Zürcher\nRämistrasse\n66\n9400\nRorschach\nCH\nQRR\n984099596390363152132783605\nRechnung 00839\nEPD\n//S1/10/75548146/11/625153/30/936704241/32/8.1\neBill/B/41010560425610173"
+      ],
+      "tier": "common"
+    },
+    "multi-common-03": {
+      "status": "pass",
+      "pass": true,
+      "found": 5,
+      "missed": 0,
+      "wrong": [],
+      "misplaced": 0,
+      "ms": 19.621,
+      "texts": [
+        "HTTPS://QR.EXAMPLE.COM/WSOCKEIBLD07X79G",
+        "Notiz 40127 – Grösse 42, Farbe Grün – Genève",
+        "2281723771050610929203996768318695657722898542270",
+        "https://app.example.de/de/rechnung/EJWs-qAcEm_AmHx",
+        "https://www.example.ch/p/G9Ut"
+      ],
+      "tier": "common"
+    },
+    "multi-common-04": {
+      "status": "pass",
+      "pass": true,
+      "found": 4,
+      "missed": 0,
+      "wrong": [],
+      "misplaced": 0,
+      "ms": 104.452,
+      "texts": [
+        "HTTPS://QR.EXAMPLE.COM/CTVCVGLB1E49OCG5RN7X",
+        "https://portal.beispiel.ch/go/doI79gI1TRDfP26BRjw6Re",
+        "https://portal.example.de/go/hcG_",
+        "https://portal.portal.example.net/p/Cbbb"
+      ],
+      "tier": "common"
+    },
+    "multi-common-05": {
+      "status": "pass",
+      "pass": true,
+      "found": 6,
+      "missed": 0,
+      "wrong": [],
+      "misplaced": 0,
+      "ms": 24.141,
+      "texts": [
+        "https://portal.example.ch/fr/facture/w3w3B4BL",
+        "https://www.shop.example.org/fr/facture/4HiqFm6e-94mJ",
+        "https://app.shop.example.org/de/rechnung/D1fb",
+        "Notiz 08024 – Ölwechsel fällig: 15 000 km – München",
+        "https://www.example.ch/p/OP-I",
+        "https://app.example.ch/invoice/hkhj"
+      ],
+      "tier": "common"
+    },
+    "multi-common-06": {
+      "status": "pass",
+      "pass": true,
+      "found": 5,
+      "missed": 0,
+      "wrong": [],
+      "misplaced": 0,
+      "ms": 7.664,
+      "texts": [
+        "050581891345755934084078404697487987001123223047138323533",
+        "Lieferschein 03659 – Lagerort Bühl, Regal Ä3 – Zürich",
+        "HTTPS://GO.EXAMPLE.DE/4ZZABWRKB6LIDNFUIF6F",
+        "00380004027676151380880",
+        "https://portal.portal.example.net/de/rechnung/a5eQ"
+      ],
+      "tier": "common"
+    },
+    "multi-common-07": {
+      "status": "pass",
+      "pass": true,
+      "found": 4,
+      "missed": 0,
+      "wrong": [],
+      "misplaced": 0,
+      "ms": 7.243,
+      "texts": [
+        "Prüfetikette 48251 – Pièce détachée n° 7 – Linz",
+        "https://www.portal.example.net/go/lwd8",
+        "https://app.example.de/fr/facture/YetB",
+        "HTTPS://GO.EXAMPLE.DE/1082FQ0MC7"
+      ],
+      "tier": "common"
+    },
+    "multi-common-08": {
+      "status": "partial",
+      "pass": false,
+      "found": 1,
+      "missed": 5,
+      "wrong": [],
+      "misplaced": 0,
+      "ms": 9.94,
+      "texts": [
+        "4696166961473546999395304277066"
+      ],
+      "tier": "common"
+    },
+    "multi-common-09": {
+      "status": "pass",
+      "pass": true,
+      "found": 4,
+      "missed": 0,
+      "wrong": [],
+      "misplaced": 0,
+      "ms": 17.329,
+      "texts": [
+        "HTTPS://T.EXAMPLE.CH/ZHCGWML38IJX0JLQ",
+        "3574904425070799672711747685772",
+        "HTTPS://GO.EXAMPLE.DE/VNJTNWG5X8CT",
+        "https://www.example.ch/fr/facture/e0XM0zzPaWP2j0oe9SC"
+      ],
+      "tier": "common"
+    },
+    "multi-common-10": {
+      "status": "pass",
+      "pass": true,
+      "found": 5,
+      "missed": 0,
+      "wrong": [],
+      "misplaced": 0,
+      "ms": 20.274,
+      "texts": [
+        "HTTPS://GO.EXAMPLE.DE/2AS09SJ4FMQ7A554",
+        "93681391903283389077152330328",
+        "Lieferschein 41730 – Pièce détachée n° 7 – Linz",
+        "HTTPS://QR.EXAMPLE.COM/8WXPOHM7BHR183EGAG",
+        "52592323021121701883"
+      ],
+      "tier": "common"
+    },
+    "multi-hard-01": {
+      "status": "pass",
+      "pass": true,
+      "found": 2,
+      "missed": 0,
+      "wrong": [],
+      "misplaced": 0,
+      "ms": 42.732,
+      "texts": [
+        "HTTPS://GO.EXAMPLE.DE/1ETBIDLFJ290KCJ",
+        "HTTPS://T.EXAMPLE.CH/QITBPJVROX"
+      ],
+      "tier": "hard"
+    },
+    "multi-hard-02": {
+      "status": "pass",
+      "pass": true,
+      "found": 6,
+      "missed": 0,
+      "wrong": [],
+      "misplaced": 0,
+      "ms": 7.847,
+      "texts": [
+        "Notiz 80002 – Café crème, 2× Croissant – Genève",
+        "Bon de livraison 50748 – Café crème, 2× Croissant – Linz",
+        "https://portal.beispiel.ch/i/dLimL2cJw",
+        "Inventar 94307 – Grösse 42, Farbe Grün – München",
+        "https://portal.beispiel.ch/go/tVZP",
+        "Lieferschein 14948 – Käse & Brötchen – Genève"
+      ],
+      "tier": "hard"
+    },
+    "multi-hard-03": {
+      "status": "pass",
+      "pass": true,
+      "found": 2,
+      "missed": 0,
+      "wrong": [],
+      "misplaced": 0,
+      "ms": 17.528,
+      "texts": [
+        "https://portal.shop.example.org/p/HYxLIget9N5K",
+        "https://portal.example.com/r/t8yb"
+      ],
+      "tier": "hard"
+    },
+    "multi-hard-04": {
+      "status": "pass",
+      "pass": true,
+      "found": 4,
+      "missed": 0,
+      "wrong": [],
+      "misplaced": 0,
+      "ms": 8.426,
+      "texts": [
+        "248350445860599475380",
+        "https://portal.example.ch/i/c_p5",
+        "https://portal.portal.example.net/track/0uehSQjW3n",
+        "Lieferschein 76141 – Grösse 42, Farbe Grün – Linz"
+      ],
+      "tier": "hard"
+    },
+    "multi-hard-05": {
+      "status": "pass",
+      "pass": true,
+      "found": 4,
+      "missed": 0,
+      "wrong": [],
+      "misplaced": 0,
+      "ms": 7.867,
+      "texts": [
+        "https://app.beispiel.ch/fr/facture/mi1j",
+        "HTTPS://T.EXAMPLE.CH/FYZ2V75X",
+        "HTTPS://T.EXAMPLE.CH/SVRJMSTLDUE6A",
+        "https://www.example.com/de/rechnung/7skG"
+      ],
+      "tier": "hard"
+    },
+    "multi-hard-06": {
+      "status": "pass",
+      "pass": true,
+      "found": 2,
+      "missed": 0,
+      "wrong": [],
+      "misplaced": 0,
+      "ms": 17.463,
+      "texts": [
+        "HTTPS://GO.EXAMPLE.DE/TL5HHDJUFJT3",
+        "1766384087714539313216395284486203304"
+      ],
+      "tier": "hard"
+    },
+    "multi-hard-07": {
+      "status": "fail",
+      "pass": false,
+      "found": 0,
+      "missed": 4,
+      "wrong": [],
+      "misplaced": 0,
+      "ms": 7.784,
+      "texts": [],
+      "tier": "hard"
+    },
+    "multi-hard-08": {
+      "status": "pass",
+      "pass": true,
+      "found": 5,
+      "missed": 0,
+      "wrong": [],
+      "misplaced": 0,
+      "ms": 7.169,
+      "texts": [
+        "4338672075831001275825810474517480048",
+        "HTTPS://T.EXAMPLE.CH/PEN2CCIDZLOJN",
+        "6990125411172356082629406772884750417",
+        "6306240801643026825020374987993549969984408",
+        "Bon de livraison 76860 – Käse & Brötchen – Genève"
+      ],
+      "tier": "hard"
+    },
+    "multi-extreme-01": {
+      "status": "pass",
+      "pass": true,
+      "found": 2,
+      "missed": 0,
+      "wrong": [],
+      "misplaced": 0,
+      "ms": 78.542,
+      "texts": [
+        "HTTPS://QR.EXAMPLE.COM/UYRXG2VMXN31",
+        "HTTPS://GO.EXAMPLE.DE/3KIKEJAD"
+      ],
+      "tier": "extreme"
+    },
+    "multi-extreme-02": {
+      "status": "fail",
+      "pass": false,
+      "found": 0,
+      "missed": 2,
+      "wrong": [],
+      "misplaced": 0,
+      "ms": 4.025,
+      "texts": [],
+      "tier": "extreme"
+    },
+    "multi-extreme-03": {
+      "status": "partial",
+      "pass": false,
+      "found": 5,
+      "missed": 1,
+      "wrong": [],
+      "misplaced": 0,
+      "ms": 5.968,
+      "texts": [
+        "14331542558697859285202041174365",
+        "HTTPS://QR.EXAMPLE.COM/8AUTP2ZSM",
+        "HTTPS://QR.EXAMPLE.COM/A6K1H3ML0QW3LP",
+        "6964346817861116756063184079859887",
+        "64304543318767749713816560154575128602667326751154950411"
+      ],
+      "tier": "extreme"
+    },
+    "multi-extreme-04": {
+      "status": "fail",
+      "pass": false,
+      "found": 0,
+      "missed": 2,
+      "wrong": [],
+      "misplaced": 0,
+      "ms": 5.957,
+      "texts": [],
+      "tier": "extreme"
+    },
+    "edge-common-01": {
+      "status": "pass",
+      "pass": true,
+      "found": 1,
+      "missed": 0,
+      "wrong": [],
+      "misplaced": 0,
+      "ms": 23.042,
+      "texts": [
+        "https://portal.example.de/go/3oQ8"
+      ],
+      "tier": "common"
+    },
+    "edge-common-02": {
+      "status": "pass",
+      "pass": true,
+      "found": 1,
+      "missed": 0,
+      "wrong": [],
+      "misplaced": 0,
+      "ms": 7.763,
+      "texts": [
+        "HTTPS://QR.EXAMPLE.COM/N332L3G0KT6TVFOL4"
+      ],
+      "tier": "common"
+    },
+    "edge-common-03": {
+      "status": "pass",
+      "pass": true,
+      "found": 1,
+      "missed": 0,
+      "wrong": [],
+      "misplaced": 0,
+      "ms": 20.849,
+      "texts": [
+        "HTTPS://GO.EXAMPLE.DE/T6CGHCUHOY7B"
+      ],
+      "tier": "common"
+    },
+    "edge-common-04": {
+      "status": "pass",
+      "pass": true,
+      "found": 1,
+      "missed": 0,
+      "wrong": [],
+      "misplaced": 0,
+      "ms": 19.64,
+      "texts": [
+        "HTTPS://QR.EXAMPLE.COM/TPUZUOIGOUYVR8HAY"
+      ],
+      "tier": "common"
+    },
+    "edge-common-05": {
+      "status": "pass",
+      "pass": true,
+      "found": 1,
+      "missed": 0,
+      "wrong": [],
+      "misplaced": 0,
+      "ms": 7.003,
+      "texts": [
+        "HTTPS://T.EXAMPLE.CH/E0UU31C45WE"
+      ],
+      "tier": "common"
+    },
+    "edge-common-06": {
+      "status": "pass",
+      "pass": true,
+      "found": 1,
+      "missed": 0,
+      "wrong": [],
+      "misplaced": 0,
+      "ms": 6.742,
+      "texts": [
+        "https://www.example.com/go/BHIu"
+      ],
+      "tier": "common"
+    },
+    "edge-common-07": {
+      "status": "pass",
+      "pass": true,
+      "found": 1,
+      "missed": 0,
+      "wrong": [],
+      "misplaced": 0,
+      "ms": 18.518,
+      "texts": [
+        "HTTPS://GO.EXAMPLE.DE/JZ1LOR2EB"
+      ],
+      "tier": "common"
+    },
+    "edge-hard-01": {
+      "status": "pass",
+      "pass": true,
+      "found": 1,
+      "missed": 0,
+      "wrong": [],
+      "misplaced": 0,
+      "ms": 32.252,
+      "texts": [
+        "42873406156095325097813117"
+      ],
+      "tier": "hard"
+    },
+    "edge-hard-02": {
+      "status": "pass",
+      "pass": true,
+      "found": 1,
+      "missed": 0,
+      "wrong": [],
+      "misplaced": 0,
+      "ms": 16.544,
+      "texts": [
+        "https://www.portal.example.net/fr/facture/12gm"
+      ],
+      "tier": "hard"
+    },
+    "edge-hard-03": {
+      "status": "pass",
+      "pass": true,
+      "found": 1,
+      "missed": 0,
+      "wrong": [],
+      "misplaced": 0,
+      "ms": 19.376,
+      "texts": [
+        "https://www.shop.example.org/go/Ah2R"
+      ],
+      "tier": "hard"
+    },
+    "edge-hard-04": {
+      "status": "pass",
+      "pass": true,
+      "found": 1,
+      "missed": 0,
+      "wrong": [],
+      "misplaced": 0,
+      "ms": 23.751,
+      "texts": [
+        "HTTPS://T.EXAMPLE.CH/KDUJTUV8Q5CXKGFK"
+      ],
+      "tier": "hard"
+    },
+    "edge-hard-05": {
+      "status": "pass",
+      "pass": true,
+      "found": 1,
+      "missed": 0,
+      "wrong": [],
+      "misplaced": 0,
+      "ms": 19.745,
+      "texts": [
+        "https://app.beispiel.ch/p/TwtL"
+      ],
+      "tier": "hard"
+    },
+    "edge-hard-06": {
+      "status": "pass",
+      "pass": true,
+      "found": 1,
+      "missed": 0,
+      "wrong": [],
+      "misplaced": 0,
+      "ms": 19.665,
+      "texts": [
+        "137784043560715090"
+      ],
+      "tier": "hard"
+    },
+    "edge-extreme-01": {
+      "status": "pass",
+      "pass": true,
+      "found": 1,
+      "missed": 0,
+      "wrong": [],
+      "misplaced": 0,
+      "ms": 9.401,
+      "texts": [
+        "https://www.example.de/fr/facture/_ytG"
+      ],
+      "tier": "extreme"
+    },
+    "edge-extreme-02": {
+      "status": "pass",
+      "pass": true,
+      "found": 1,
+      "missed": 0,
+      "wrong": [],
+      "misplaced": 0,
+      "ms": 20.817,
+      "texts": [
+        "https://portal.beispiel.ch/i/hoeo"
+      ],
+      "tier": "extreme"
+    },
+    "edge-extreme-03": {
+      "status": "fail",
+      "pass": false,
+      "found": 0,
+      "missed": 1,
+      "wrong": [],
+      "misplaced": 0,
+      "ms": 7.826,
+      "texts": [],
+      "tier": "extreme"
+    },
+    "fax-common-01": {
+      "status": "pass",
+      "pass": true,
+      "found": 1,
+      "missed": 0,
+      "wrong": [],
+      "misplaced": 0,
+      "ms": 7.14,
+      "texts": [
+        "HTTPS://QR.EXAMPLE.COM/O7GD88VQTNLMM"
+      ],
+      "tier": "common"
+    },
+    "fax-common-02": {
+      "status": "pass",
+      "pass": true,
+      "found": 1,
+      "missed": 0,
+      "wrong": [],
+      "misplaced": 0,
+      "ms": 7.886,
+      "texts": [
+        "SPC\r\n0200\r\n1\r\nCH3702770641130191586\r\nS\r\nGarage du Lac Sàrl\r\nRue du Lac\r\n2\r\n4051\r\nBasel\r\nCH\r\n\r\n\r\n\r\n\r\n\r\n\r\n\r\n3312.76\r\nCHF\r\nS\r\nJörg Dubois\r\nRämistrasse\r\n18\r\n1204\r\nGenève\r\nCH\r\nSCOR\r\nRF38UPJEE34OYOM7L2\r\nAbo 92565\r\nEPD\r\n//S1/10/73817521/11/942227/30/702345688/32/8.1"
+      ],
+      "tier": "common"
+    },
+    "fax-common-03": {
+      "status": "pass",
+      "pass": true,
+      "found": 1,
+      "missed": 0,
+      "wrong": [],
+      "misplaced": 0,
+      "ms": 15.348,
+      "texts": [
+        "https://portal.example.com/r/fzGF"
+      ],
+      "tier": "common"
+    },
+    "fax-common-04": {
+      "status": "pass",
+      "pass": true,
+      "found": 1,
+      "missed": 0,
+      "wrong": [],
+      "misplaced": 0,
+      "ms": 6.992,
+      "texts": [
+        "https://portal.shop.example.org/i/U4XN"
+      ],
+      "tier": "common"
+    },
+    "fax-common-05": {
+      "status": "pass",
+      "pass": true,
+      "found": 1,
+      "missed": 0,
+      "wrong": [],
+      "misplaced": 0,
+      "ms": 14.769,
+      "texts": [
+        "SPC\r\n0200\r\n1\r\nCH7731607369656055502\r\nS\r\nSchreinerei Würsch\r\nAvenue de la Gare\r\n33\r\n9400\r\nRorschach\r\nCH\r\n\r\n\r\n\r\n\r\n\r\n\r\n\r\n988.56\r\nCHF\r\nS\r\nBéatrice Rutschmann-Schnyder\r\nLöwenstrasse\r\n96\r\n1700\r\nFribourg\r\nCH\r\nQRR\r\n298164950386926882293347290\r\nAbo 08388\r\nEPD"
+      ],
+      "tier": "common"
+    },
+    "fax-common-06": {
+      "status": "pass",
+      "pass": true,
+      "found": 1,
+      "missed": 0,
+      "wrong": [],
+      "misplaced": 0,
+      "ms": 7.551,
+      "texts": [
+        "SPC\n0200\n1\nCH9230459041996770615\nS\nSchreinerei Würsch\nDorfstrasse\n87\n8001\nZürich\nCH\n\n\n\n\n\n\n\n1056.07\nCHF\nS\nJörg Schnyder\nLöwenstrasse\n50\n4051\nBasel\nCH\nQRR\n731783492109535785093756470\nRechnung 58144\nEPD\neBill/B/peter.muster@example.com"
+      ],
+      "tier": "common"
+    },
+    "fax-hard-01": {
+      "status": "pass",
+      "pass": true,
+      "found": 1,
+      "missed": 0,
+      "wrong": [],
+      "misplaced": 0,
+      "ms": 15.784,
+      "texts": [
+        "SPC\r\n0200\r\n1\r\nCH3607129886247019686\r\nS\r\nElektro Brändli AG\r\nBahnhofstrasse\r\n68\r\n1204\r\nGenève\r\nCH\r\n\r\n\r\n\r\n\r\n\r\n\r\n\r\n3964.44\r\nCHF\r\nS\r\nJürg Häfeli\r\nChemin des Écoliers\r\n5\r\n6900\r\nLugano\r\nCH\r\nSCOR\r\nRF51SSFL5SP9E2F4\r\nFacture 28633\r\nEPD"
+      ],
+      "tier": "hard"
+    },
+    "fax-hard-02": {
+      "status": "pass",
+      "pass": true,
+      "found": 1,
+      "missed": 0,
+      "wrong": [],
+      "misplaced": 0,
+      "ms": 3.344,
+      "texts": [
+        "53660015029559102701461382"
+      ],
+      "tier": "hard"
+    },
+    "fax-hard-03": {
+      "status": "pass",
+      "pass": true,
+      "found": 1,
+      "missed": 0,
+      "wrong": [],
+      "misplaced": 0,
+      "ms": 7.252,
+      "texts": [
+        "Lieferschein 98898 – Größe XL – Blau – München"
+      ],
+      "tier": "hard"
+    },
+    "fax-hard-04": {
+      "status": "pass",
+      "pass": true,
+      "found": 1,
+      "missed": 0,
+      "wrong": [],
+      "misplaced": 0,
+      "ms": 3.669,
+      "texts": [
+        "40119198481781913624704621155"
+      ],
+      "tier": "hard"
+    },
+    "fax-hard-05": {
+      "status": "pass",
+      "pass": true,
+      "found": 1,
+      "missed": 0,
+      "wrong": [],
+      "misplaced": 0,
+      "ms": 7.207,
+      "texts": [
+        "SPC\r\n0200\r\n1\r\nCH0500319171212418009\r\nS\r\nElektro Brändli AG\r\nAvenue de la Gare\r\n3\r\n2501\r\nBiel\r\nCH\r\n\r\n\r\n\r\n\r\n\r\n\r\n\r\n3999.45\r\nCHF\r\nS\r\nAnna-Lena Dubois\r\nChemin des Écoliers\r\n32\r\n3011\r\nBern\r\nCH\r\nNON\r\n\r\nRechnung 61202\r\nEPD\r\n//S1/10/55430001/11/053296/30/419072224/32/8.1\r\neBill/B/peter.muster@example.com"
+      ],
+      "tier": "hard"
+    },
+    "fax-hard-06": {
+      "status": "pass",
+      "pass": true,
+      "found": 1,
+      "missed": 0,
+      "wrong": [],
+      "misplaced": 0,
+      "ms": 7.041,
+      "texts": [
+        "Notiz 78274 – Grösse 42, Farbe Grün – Zürich"
+      ],
+      "tier": "hard"
+    },
+    "fax-hard-07": {
+      "status": "pass",
+      "pass": true,
+      "found": 1,
+      "missed": 0,
+      "wrong": [],
+      "misplaced": 0,
+      "ms": 7.442,
+      "texts": [
+        "https://portal.shop.example.org/fr/facture/cLd5"
+      ],
+      "tier": "hard"
+    },
+    "fax-hard-08": {
+      "status": "pass",
+      "pass": true,
+      "found": 1,
+      "missed": 0,
+      "wrong": [],
+      "misplaced": 0,
+      "ms": 3.393,
+      "texts": [
+        "55336371545143090689279354281683"
+      ],
+      "tier": "hard"
+    },
+    "fax-hard-09": {
+      "status": "pass",
+      "pass": true,
+      "found": 1,
+      "missed": 0,
+      "wrong": [],
+      "misplaced": 0,
+      "ms": 7.334,
+      "texts": [
+        "129220169696333579161622471225403"
+      ],
+      "tier": "hard"
+    },
+    "fax-hard-10": {
+      "status": "pass",
+      "pass": true,
+      "found": 1,
+      "missed": 0,
+      "wrong": [],
+      "misplaced": 0,
+      "ms": 3.597,
+      "texts": [
+        "Bon de livraison 57445 – Café crème, 2× Croissant – Genève"
+      ],
+      "tier": "hard"
+    },
+    "fax-extreme-01": {
+      "status": "pass",
+      "pass": true,
+      "found": 1,
+      "missed": 0,
+      "wrong": [],
+      "misplaced": 0,
+      "ms": 7.073,
+      "texts": [
+        "https://app.example.de/fr/facture/QB-P"
+      ],
+      "tier": "extreme"
+    },
+    "fax-extreme-02": {
+      "status": "fail",
+      "pass": false,
+      "found": 0,
+      "missed": 1,
+      "wrong": [],
+      "misplaced": 0,
+      "ms": 3.29,
+      "texts": [],
+      "tier": "extreme"
+    },
+    "fax-extreme-03": {
+      "status": "pass",
+      "pass": true,
+      "found": 1,
+      "missed": 0,
+      "wrong": [],
+      "misplaced": 0,
+      "ms": 6.532,
+      "texts": [
+        "HTTPS://T.EXAMPLE.CH/G9R9QN65"
+      ],
+      "tier": "extreme"
+    },
+    "fax-extreme-04": {
+      "status": "pass",
+      "pass": true,
+      "found": 1,
+      "missed": 0,
+      "wrong": [],
+      "misplaced": 0,
+      "ms": 7.338,
+      "texts": [
+        "0484178558531862422980497127989473"
+      ],
+      "tier": "extreme"
+    },
+    "fax-extreme-05": {
+      "status": "pass",
+      "pass": true,
+      "found": 1,
+      "missed": 0,
+      "wrong": [],
+      "misplaced": 0,
+      "ms": 7.31,
+      "texts": [
+        "SPC\n0200\n1\nCH9131768148618118208\nS\nElektro Brändli AG\nAvenue de la Gare\n68\n1700\nFribourg\nCH\n\n\n\n\n\n\n\n2967.54\nCHF\nS\nUeli Würsch\nRue du Lac\n24\n8001\nZürich\nCH\nQRR\n613969740272578256951289761\nFacture 91383\nEPD"
+      ],
+      "tier": "extreme"
+    },
+    "fax-extreme-06": {
+      "status": "fail",
+      "pass": false,
+      "found": 0,
+      "missed": 1,
+      "wrong": [],
+      "misplaced": 0,
+      "ms": 3.531,
+      "texts": [],
+      "tier": "extreme"
+    },
+    "large-common-01": {
+      "status": "pass",
+      "pass": true,
+      "found": 1,
+      "missed": 0,
+      "wrong": [],
+      "misplaced": 0,
+      "ms": 67.67,
+      "texts": [
+        "eyJhbGciOiJSUzI1NiIsImtpZCI6IjQ0NDQwNUM3ODFFNDgyNTA3MkIzNENBNEY4QkRDNjA2Qzg2QjU3MjAiLCJ0eXAiOiJKV1QifQ.ha4OP0itoAp3C6ejXQz_5MkibW4E3_AF5q6OHvpxU2Ho8P5WMKLBDEjIIw7X4roAVODVY2X3zVW91dFX6LSaQXNJtBrZQU6Po7lY0SAShwRrz4CGyKAoxQPd3cIALmq-gnJVSBEtQmBr3sanqqVCu5weEpzZM6ZR2GYwCNb5Nj6DmB73gDCPCj-EyZcDZRtSgZPNJPMca9bfB-HzfWJgjQofmT3GeMEz3ZSvattIRoMK0jTzJ8BSUrvd81XMR2fJ1KJZxYkiB9YjghAq28jHpTLFLPLeFbkBvxj2ONnZhyeUEn44Sc9oaETQ5cqbQcy-1YLqkuL42pUVSqroGvHn48GPSy2FmhTMvYqBH0Pl_zB2bJUSbihroo3Z8GXAyjZaBGAvgQZzX9ayCOAQUnpD-4O4oqSneTVTiUXIlLRfc9HAua1KB3vull9Jvt6Drd5oCIi07ZX_UQpURz2ubEc4h9ttNC8hwOrwP7VcMlbuypRTSNajXwP9-LnDpxByN1rA3hPN3zXzSTBgPu8W-9D7FvSK_H5SuOiETDuw8SPhtRmJ5noFia8yJNO54699RlX8mj41wn0L-LVdFcbqBoqF43T7jSw-MmisS-aEoCS3vkb9XDMACGim5UOHKPgV8eOlYuwT9SnZ1xA7YRFG-J1zXO9MDm_ct65Arq54zyJUf9yARSDSAqr60WjaGmZS6Hj-SCPhGw38KJGbAoDJMF6HSWP5i_rByOlX7p7Ws5DlxeKCvzbKODeE7iPZoGF6hFnQ69A5cqY9AFTznkOFmBDyGolZT1AkZZfatHjxyl8waaVVXRjKeYBl3uaxAoXyCwg0MfwuvvKUDlojOYRY2jY-CKVWazc1KEV440ezdDz526_rz3yhtLyuYmzjLfdYRfATzZK-U0qdCeYBsz3NqMEMA_Jp2Hp1X7c77nih5KB0sznAqNV3UbmiwSNMBZPELTLniYmKqcWMW3Gz_7yCJD3tU4FWZimsdLh3J7Kfnv770Nx0j9av-FMw4_cXKGhNKV5XSHXaDQiwuE4dv51W911HQ4silJV82lFd4iBQt1xuRqOqr5KBAaq1Chq8AEFETv2aS3H-47GJdku4HZ_ez73pz6YXt5ZoM2re4bDcsE3TVChgeE4e7CqPcdOKgA8IG2aEsruWdqsrvYqbBG5lNOBejnxHJXb9mPW8yTmk1SM7HWwYAEMb79CtBE6FzSlkw3d-sW-wO1mxY7QWxSZ27Oxc3YFOJvKYS0X7DDIVSbf8fVSDPFOLUvIMVlO4E7PIHQ_6og5fTLULzAkENHzgTS5T9CySK1ejmXS9vFPfiXxKiSBXITw3d3zVCxRXqXRbVU9gk6DAN-Iyi-ycu5UWFnlT9vPC8EcRTX2Ywwh5Jw9HG69VIVLTHff9nJlmqKMlDOlo9taYiIm0bID1RELFMz8PDuaEOokntnwR-gSyUETj1jK2nzgBIB5vZmRb9R7QuBwUVESstzDGwtKxbl5n9_7AVMf9L7orOeNwCWtbJAYQkxcJgqF6cLMt9Td27Up67N613OU7b-Fx2FaMvUK0JoycLf4xLSHoSNNAXp0jKuXWHOllw1-bmDWNlSN7Thkh28ivYQ5bR6lL2BvuPljSbU-4vTcs1T7u5STykXi4x1zcZuaLILOg8C91SaamH4RjDK0zf3o7tYk8Wp2a7TOzXUqHj47tUHAIH0wfoDARit-VTq96XLB65vj.r53YJMvzLWNwzfRilTg6CnI2oyui_uhfAENIrHb7c_WkujHBxfyhJ4FqUnzzIB5bgfMuMwJjifRJz9jJ_pfbxnPdKd3qoL32iGnhyxH46fuGHd1126TsNu1BKtrdcjNYPoL_GdNazSt93wrvuunMWrOzWctsfheb_4zqezMnJN1rqHNcBITHqyuuvqAgKSzp8ZiSlzizSLaHJcDYevJwDlg0UZYQmQr2P5GFt1gp6abYup-b1GXeQDawgcpNpQqJOTUw3Z24r5TMB-6zr_Ayy_Pi3D1iftDfHIWciBPWWjIFqzC20L2NXYgFV-OFG4Jae7Go8l2he3yxI4ujZAksF5"
+      ],
+      "tier": "common"
+    },
+    "large-common-02": {
+      "status": "pass",
+      "pass": true,
+      "found": 1,
+      "missed": 0,
+      "wrong": [],
+      "misplaced": 0,
+      "ms": 21.236,
+      "texts": [
+        "eyJhbGciOiJSUzI1NiIsImtpZCI6IjQ0NDQwNUM3ODFFNDgyNTA3MkIzNENBNEY4QkRDNjA2Qzg2QjU3MjAiLCJ0eXAiOiJKV1QifQ.KxbZ6R9xp7-fZfURYDwqJkMqOTsautlvvRaRjYY9_dMu4DIKJ0cJDJHrAzX3gemOSpunsqdys_25xeHo2pVXrUKTVZ2OL0QOdpvPElJrCKL5veFVFcsyVMvHg4rIZzj8uHgYp5186gaAs1GdE82Aw4kYEmWtN5B_k-n5GvoHF2XEVubXcG5jx2HQMsUfdeWkn6fvUs8xFMLpZ1Puu5_e9PDFcm0X1JjWe4EfL9YtgJMjcRTzZ4dSCnLrMG9nOioX9feyneSs6jbMB1FcA11IKuES-LY5c-aN4M4cj2umeNA8PZxtxFuxcPS7ULeHoNWK5VIMUJHrGiHOsPA1ybhbSg8LSQqcdHlEg4r0c1sF1LHfsgytq3Kakt0ZVW5_D6fGys5YFrbg5JFpgSoGbXYY9YXewqYcxXqOfYQ2LKr7cYGUkZ4q-P2le2g0_Gg8r5fHPjlLXib8-IGmzgeLgtJhzY3mkfc5OTzzvxMimEnW8fMEV_65xaVv_D9jgIciw-nlafRs2LuiCYf2CUGg9vDIaLrh5UW82De5XmjAJ9V25hr1zJ2xUxDETshaaCOG_0_nGLioKKZRSnB6eKeWo0GcofHx659gPDC7lnLUxhcb5MeGkXZ2A9Z0E6-1BYIMYSr91zv5I4dQMBXfBuSZIH-_xtJgHqSzgABolVPSh14vn6HlhMDpUGJfXGsfzoVKFLGDrYRsFbps1CUt2mSjzvlhYY998r812SnIIcy98cWCqPdK02svUbUN0hkDywU6cCoPDmRd33xExnu6Hr2SIvhCvXuN_AnG3EwYp3Tmyn2wW2PvSNsVqoHP7CBCTTmLKA-GZ0xCpDcrLhtNXvnBKewpSzm90-B_qZskw5P4GEYKh9rlC4obZAjfM16vuHMHpah2Qfy6lWpO3f6mv2mBhMbQXEc4iyI-O9QDKD6kdtBI307glyyy4oNorU4PhfH5wCqkv5kXUIDuOGUMWscyWtjWarVJCJlhbFe_eX5jz0Pb9nJusBhS6rONAVcZmr5neiIsPI-LP7jZwqP0QLvgsjJiLIP5t.cnt8GOQHk_GHhyUZFI7hWYw4EXnJMAkGtqQlToPfByQ6afAD_jp03POa6etOugHwGG0ee_dovLqjrp3NH-a0cX5r1XkJPXGXebgYJjSlqeIuJQ8mgLGKdgEpGyLNhO1ZQBu7PUs1q0zCZ2aBbDsRU1KyOzR9pROxQFOCQbfGjlZeTKpct3wld2RGeNFIWS0s_dL0ifcUH11d2NXfeHAAmzUOyC2vUITSPxUgqtUaiXXUUq3F-F5xLbL-IJO6EAJX3D3D-8Lv7dfBhzcOqNVIXyfS4sYYWRp7z-rnJhLkG25ypKLjehJEgw-OhPLFCt5vdLPVkErj2Gs1K7XOGobIMn"
+      ],
+      "tier": "common"
+    },
+    "large-common-03": {
+      "status": "pass",
+      "pass": true,
+      "found": 1,
+      "missed": 0,
+      "wrong": [],
+      "misplaced": 0,
+      "ms": 20.653,
+      "texts": [
+        "eyJhbGciOiJSUzI1NiIsImtpZCI6IjQ0NDQwNUM3ODFFNDgyNTA3MkIzNENBNEY4QkRDNjA2Qzg2QjU3MjAiLCJ0eXAiOiJKV1QifQ.HLl5b-QAcZhR7eDmke-Vi819kBPQANXsC0AB6J-9UruNLNBBzCfjv5ROfUIVlA7ZsjQATrdEJ6gJzHJDMgE5794LiAcrHSpdvRy7gXehprE2kL6Y8g91dspv44RZKnj01Ed6tgCGczdOJ7fhzOhmgaDJGbDLSJKgptyb8CdvS2oalmCuwS1XZjLIhV5b975VrERySRPRMC-Lfy6_xdX3kfd77HfTKVvjcNIVvMhAjg3UMCD2kBp4F-xZ4yXLF6-cN2TfWlAiI_EXRifAR1Wa1cGx2R2iFd4hwTUT2G_MxyARAF0vKwprOekXv7W1Kgl8IjMEczZYoB3cQBcHDvu8aJSXk-WKfUy5zN5jcRqlR_NmYP-4p68GYCOONQkhofI1NcM42AQRS3GVeioKjT2gOK3njFnPea3OEP84WP0osOtlDR7TiNOsMmQCkp0Qq50SAtA9waWV38BM4MXU2Mq2hT5nStKCAMFV-Mct8P7pgjqykRkhJTIjT7X5AYPV5YDfxBWYuubF_VHfQ-iwUL0vAGlRzZrWNrUU5LTra6GdhqjMkJnz7VnW4MZEaNq4PxRMwT_LiNHhEcYDsHWur_bcwHhglPO_T4d_NqrX7URdlCZcb8k8Sii1g5OkN4RpZ0jGPN1cDogDTud7nWHFClo-gAhzAJ32hWLkYeky_wYABnXnl-6t5ni1f5weRpDY9xXBP_9SrLE1teMuF8-IjhMD51Vhcv39PBsnQUSohe_9pKBGtVKYVITuFzwGfdrNP4b_IPboA641HTLTsQ-jyPW3eEGgiK0V_U5-i9GWtKESxQ6Vjp8c609cjOFStHNJFbjpqpy2Ep-3TjuhbBPdgrZ0-STLlgODN14Npfo1vdrh00aQXdI0DRA49YIP3-o2x2mFY44gmWBYzFY9AilpiwiPoKo4ErCfZYGHdRk-zv8gz5gzHND8q7V3dVC8mZCWnA3H-PEqmVXaKKRCixDYd9L-b1qGBOy24q02IVGzbLiZiHspN9aly3odndcoRCDGb9LJL4wIkeww8SbLZ5QII_JhAo9NTv3Y5vMHZQOUNtk5q4Um09eD7vPNYDKWkN9jDi-lDtyypB_E9xmLhqR8Nu3MBwzfzWOdDubvQkVN2W8dkbLS67VgA_5xTIElpUmGui0JtW88Ag6SfR6a-4GydwVHPTY0_J1GXtUfsYkF9m6d2_Y-XZ15xhC9AQXPh2UD6LrJak9ENefwv3FKfRi8Mt-QMnihLq9j9uheAfmtjFeQK8ayr1KQgK6G3NWoCgzOE0Pr1y_S7ZMYsLaRgbj68UC1sQiUqzMyVMfbtrz9Jj6bi7VWRykoJSf38En-9RN9biJ4Kivyc2d1c_v7QXazR6SNejLLvKB8xrM8pvUu04zREcBw3RqRHr2MW29LRyOIK7cv3UVjfzk5erqartnriF0LLDAPwwNuWKwUDy0dF3GuALKHhrZePLwKYkE1m-qBTH_tk7-LXdtW7pPw2s40k4Exd8WKw_8rW.JSDJkrgvnrTCOOZPrjsVvRnvK8rh2zTK41KStBQGDajlyp126P4cryNVgS_DYV2IeeVLm7F5mxc_OCLYbtPSl8hEuEcrINJ8cZ7y6Dqhc92Jxd82n1YsW-yBAblreSTOM7F3ZMDk-7O50Q5aAtfVOL-xGvUcdrB_GdfLlHLiTZdVOMBf4ER3uOpORIuQ0d0QnNVXW66cx57BE7gm71Eg5sm89QVCoatx3HvT-BzGH-OyCw0pJtGqtU2rvX3kVO5vWihUS_QNf7y0SCie9OFGE3yNmpWIv7opj68Hb3On69QyKwePcHFeChMs1TsV1X9Fs2lWJDP4sipXBGuCyj80MH"
+      ],
+      "tier": "common"
+    },
+    "large-common-04": {
+      "status": "pass",
+      "pass": true,
+      "found": 1,
+      "missed": 0,
+      "wrong": [],
+      "misplaced": 0,
+      "ms": 22.937,
+      "texts": [
+        "eyJhbGciOiJSUzI1NiIsImtpZCI6IjQ0NDQwNUM3ODFFNDgyNTA3MkIzNENBNEY4QkRDNjA2Qzg2QjU3MjAiLCJ0eXAiOiJKV1QifQ.AvEy3wQaq2e-Q0U1JWGb_9_IQdS0L8-oHjkGkXr0bRhxDnhsZpOCFdQLuK2uFcQayabRTCDOy9hvad61KUz8-XTy8FLMiG7W5K7QuF7GocheGOkOzEkZ44nN0dlST7yb9qCOfVNTpguy7l_CjQyMKtBU0zs0gAbn1P3usR7voEZuoSt2Mz_N_Np6z3Y5Q6BwMaX0XEO1n6cZTjMZwO4cc99sqqQOsq3dqX-ya1BG4MbLqRTYPZn78x0tt0Ye2LuS_Feq6AyiaalmXj8OQ6bg3dVX3z3cSAJOph6P4cSui1361bwITwCAKF52kvlgkWhaZyiVL4Gn_1tXwparKtmWYSDhvwikfU-WkvlEDWZMRuTD_2FnOfpRDM2jsff1BhTRU-lHAt7OoNHINmjKIDDrmSBJSNmQ71xYcweDXaaBQIXKImyelY6CyebNC1qc-8F3L9Ngz7pNycBUXKVPeh52WWG4hKQSnDSGaKa1vgEnusxqiC0Y8FIvY2dEKgRbFkFgGGcjqzuYkjvtyCwUVv5TL3tNAmsvp2OZNQBMObBlmQ6jQxLKeLz0IrVdsHit5_doeHSn7TBBM9Pk-aPX3rD3QT7b9mzHMtPITXkZwtPZMdnf7Evvnlw0fmTenOiVuEMjxOcaouqUziqrpHvwKuP33g7EcuWXPrDZiRkJqzvfkJjXW0k_KkwNjEWTqlni70QAW0gbcUta0vKRsPDUlFsRHq4EYZULDoVsq4RlW9dcPBWbpzTX3llbhV4r-z0oQMLqwm6MY1fJJaR3Z-uPKhhXWVStrqNWgvWf9y7PGjvG_ZRhNC7v6op4EaZrINot_pfgnRBkJ34_-r6VtqmXFDhCv9BEUPq0KQBafD2xAXcKD2dT0zYpGFcllBV9ZqPTXhIlF2G-ZxaDqG085v1hW1EQJkOqdC_lXv92qQIjZDupeC2R4eWVqSDetuG_vGtZN_k41xNK0WY2HnF6tepGx1aDtV915glSj9TV0ud1kxwKr-wxD8YuUFlKxI8GVcdAS1MPogVcit5y91zozI4ZuUaNXSIAq7eRDbr7VQeV8P6ox0voR4DFm5iknmQqYwtlf-DhbzOHaqDkq0Jkt-qfpz1TG03L7mULEKrzcZSii3_oNSbp6SHIRFaV6wj1GQ7Y2yS5_44EmOZFCBBKIgB7YlVYjgqykXMU_yu2cYDPVpuGxlBNlGwF-VkiMO2Qq2pKfHOnPhfw5kA9suJEu4nHtJG7eg_jAzWt-abOerE0wZgKzCUIDuX9pl2OHLkTvOcSYd8lBkihHOMle3ab4HpbQAEJoJYn7CLnAxmIdCq3FZxRfaQgHACjZbeetQ2wr4PB6KZYtgDGfk8qbxGGEhiPZgqfwTzT9YHVmPPyCTxrF9ckDw1aMSy5GDBz4AMJNVQOMFTz_usDT06I2wPsrzrxyahLujD8duVrpJEifACzxvdXq3At4tv8vS4YieKVs04EXRBycw_EGjPkdhKTCP1OP27xMRAtHovLihVTtOYV6agC8lgorEdH9A55c9decIBJlBkHHbPlNsdsNcHMFrrwhfrhpgTbUzH_hdOoJVTLpNsQCwWwRE0Toywj0hS8bz6WGzDvelAyNIfkZgtPNMfskdeRnppPtTy7hnN_yg45nOVdl4lzlfN0ul2Wnf7rWsoRC6FM0W3wFYMeKM8FNkVcmhH7L4Ewe6yl4PRE6KHLCuAoT1zjiut5TyBUR28BzGJNCBEcOg9Xn2sSBVHNqhQbWX0_HeNmPSO9j5I4rQDn8sui7ARS_t_C7EnWpHn3HQ0BED5fh2jdLtu8jQe9DP3gza9oVtHQeHgLlXne3gk5e_LP90b059ZRPysANj6I0t8vkKgYJso05_63CDDS5BUN3Qm-VQlNhOZckf663JMHEqSEF_NBoPCfF8sVMIp83fX_mQDHdSSf7CnaNHWwFQHpS80ZjcWGYcAD6qXNHU3u8s05L_mEqeMfY1kJoBQP2Aobgkf828yVbS5aSqrRs5GvAjrEBBOwN9eIydRSgI7Iy4IEPafgeRJX9e1lMyVFy_nXiV5cTtH5OF7454ILLaroUGS2vQjx1Qk3hH7l-qzdTHsFVezxUC5no0H13FI6OgtfBvSGQHWTgZ3coeVnT-NZuQeGmBkxXgNAR17EVAtxIWU49guZgqjLXkbiD2IGNlOT2YZzkDJUw2TEjxtT7xw2rdDt5sn4NKR2cthKFyd4HzuhWlDrUdImmnivWRllnp2v313I0qQhKJF0inRnBZs8mIuJQ-2vd1UaJOizP9cLwJd1MjwWFRMnvnBCWgN9k8OvxSAQ1yN_dIQnCZEfipr6YVwrECCRcuQz-vBVvEowckHW7OUbXuh9fUbRq3KfYSErGDaETr2pvgYVpMIFZDH4mUM6muNCJj0BtgNKDCTARRuXQcS-14VZdRMJ0vOkZjmuchFSm.e5Dv3KLO5SIy5eCWpvW2GUEnvghGt1rgG4qpuPKBT9KoqeUWp-dJEQ1T6BoMyuPVVweckKnvkom9KFMt2bjd0G57nxQdmk19MN-7Pdj3_6-K5dWp2BqF7-DafnbOIKSGIay02s08QpDeHzh3FcSyrRnHupXv04T8Ly6sQGOuQ6l0-nHI74MzOkwnyQtcbbshTLlzqBYCCZe_qG1KwQ3KJBd5oThdGvu-4FKflcbWm4QLYBdzc3yN1qhleMCQ3Gq6gVf4fdGm4tVPbul4N-5xqXWfGbEaemDi22wsMwugggSWupoqQGCCdJyrKGUUXF0mpX9BoX-Ut79_8n6_dKs6g1"
+      ],
+      "tier": "common"
+    },
+    "large-common-05": {
+      "status": "pass",
+      "pass": true,
+      "found": 1,
+      "missed": 0,
+      "wrong": [],
+      "misplaced": 0,
+      "ms": 68.211,
+      "texts": [
+        "eyJhbGciOiJSUzI1NiIsImtpZCI6IjQ0NDQwNUM3ODFFNDgyNTA3MkIzNENBNEY4QkRDNjA2Qzg2QjU3MjAiLCJ0eXAiOiJKV1QifQ.V8EKpZ1gWqgn9c-cLJVnsCcLjOVMSlnS2Fok2r1ufjvdn7go0rb91q7Z4ocfRRYQnfE6t1f20pxXomQSpV7qjP1meud3u73y_lrKdUgxei2BZWK1iSg3Hgd4_nIPKrqSeEjC1TPepFJ8MzcCohbxcrCLqHCb5he814yo0rwhox-bbgVEzLtUeLHwur33ASZhvCkuVKIQcWssZW_A7GQGwtFvyEaDybLFjVmD2afTPwkSrgugzR3G_8f1W2K_YFCWO8I_Yjrhfv2VC__dNTRJJzpBufbkA7MEr5fH6cudBTu4jgT1U7-DF97guwzPVZ9vaJ91fnhrq0QBSw7H2rFSqEoFmjYp5pG5DCpDltNViOpir1HAipBfJPsGw96p_z5MhvwwiXZay2I94zC-b6icLpj-nYmffgRWQMJBGSLmXeZb4nvpj58kLTebY5GBwAZcgAWnC8X7XrGbBrRPlck4PVhXsnOaj9EIH8iFMDRgerTaPVLzUM8t9qE0XFhLQX5LEhVbEz_y8uRGxi9z1MTHm9QPRoxT1ZqcMb0wi3NUzWJaVaLoYKe5w3qkv-czwX6ZCa2wNcJcQq4OPLAdNbSeIpH_LreXJYxQl_LFv-UKlQJ5QirXryCvelURtaOXo13MZrqeeulk4kqBUg6tXydCeMTOl7-Dd3KmBT3Qn9sL8mxmvtX6sJbv_Wm5e8V5TS-XiFYZsl_ZjIihrZpIsHjYVDnb18duEeA0YNDbjzT7GD4xG2gH5DQtL55yU9ZgC5CY5PDPy0AMfAAOcMoujnEOoa-cuHH4Eu_VTgO12yjW4zZzVG-dLx2l0NQF6-Xcpefo1Gct513evDa7Mx8rAclyicEhuoHChdS4V9YHw3Mi-1z2oeLl2-QXax006e4-Ozvu-Iqgf5v581h8ixn-Xqi0B7qpx_PVL28sCJbr2jvxErlMJ_KbBzNWGSbinkLoWKjyc0ldzVhdhL8ox3h2sSa6ErhbBjfr0TQ00qV9eaEO7sq4VuKScv0DsJmkD_4bbTMRHNXnGGmyumezAU_1nOA5b5ubJIIZwpJ9CcCOLNTVzzoirg6JBqwsqvLO1HTEJXqItj0dGZOaJlSuIZbUU0gsu04crrVAgtBHZexp2gNjLzt_Xkm8dfmJ8h8vcATF4oymOLpPIfZu7hQ4f5FxFSUqY9gM0f5-3F5dkW50XUSvG_yaTYK1smVrcvrUrW2eAcw-xNUJZM8yF2RXT0dxSzT7XhF8NWbQaUe-uwo0ejrKrMV1BUyZL9JnN0gZNx4zAqo2m_DMCUfHOVFI5sJJZgItBMC3Nf_nmyfa33RgeeRA5FWmMzuTZ-HXUkuZwY4rQac6XkGtfHqfnmc7Cc2DIxLSinrxazOeXTqK7GFREx8xPn5Y12J_bThW7Onvetjnp8QrzoH3hPS6aNiGsXBHGPZtEvJ_yMY_5z8e7x5L7RS7dHKVay0VJVn-YxJM6b_4L6Fhp1UrOP.O0ZPSR4DN8Y63F4c3WsNJ8BIjJxDveOO8v0v_P83bWH-8hjcx54jHzHCnYiw7H6xoA5xVrKH2xkZewQ8eRvVcXjl2hmcz9rbJF41KnsF6W0eWDnO7ICyfM9E6tvz8p81HxtKejMC5nMkuiq3aB1cr16WJpcNu8p_bXpuCRYWa49twDMEZlI2V38Baqi8cGxljdSMlXnLTkJSNSoECX8-ugrBRQd4UlmEiZ-zWodlooywnbwrrp3jrmbA5qoBxzkImcZYpLpBlh2dKJDvxRQgULkUsl7vVJNl0meW4QNWPjDij3a_XYHKddAe46s9dWAmwn3kImuuC_Aa6hgHrwkYcB"
+      ],
+      "tier": "common"
+    },
+    "large-hard-01": {
+      "status": "fail",
+      "pass": false,
+      "found": 0,
+      "missed": 1,
+      "wrong": [],
+      "misplaced": 0,
+      "ms": 12.444,
+      "texts": [],
+      "tier": "hard"
+    },
+    "large-hard-02": {
+      "status": "fail",
+      "pass": false,
+      "found": 0,
+      "missed": 1,
+      "wrong": [],
+      "misplaced": 0,
+      "ms": 8.969,
+      "texts": [],
+      "tier": "hard"
+    },
+    "large-hard-03": {
+      "status": "fail",
+      "pass": false,
+      "found": 0,
+      "missed": 1,
+      "wrong": [],
+      "misplaced": 0,
+      "ms": 9.779,
+      "texts": [],
+      "tier": "hard"
+    },
+    "large-hard-04": {
+      "status": "pass",
+      "pass": true,
+      "found": 1,
+      "missed": 0,
+      "wrong": [],
+      "misplaced": 0,
+      "ms": 20.11,
+      "texts": [
+        "eyJhbGciOiJSUzI1NiIsImtpZCI6IjQ0NDQwNUM3ODFFNDgyNTA3MkIzNENBNEY4QkRDNjA2Qzg2QjU3MjAiLCJ0eXAiOiJKV1QifQ.4cP85lAtsffZw-OM_DeNq4F0pX5Fi8AYF-o3Tk6Sa82O9IbnFdsJfKrycTdCQ3UNLpvPfsN4gfZPFozG4SKhhmlb-I9Vo6t8bfR0zEJb7kFLMOPc5CW4Ibyh0Q-Ec8AK7JDRrZPVdD4GZpaFgvkYdee9Q2wjaZhwDA95lZXlnpPV3vK0tZeifTp2adQbBLn6HiQWW89xYZJVeCHCayt82n76FvHNoG-8OvOjlNVDB-F3YltCax-jilVvdjHI2P2D5IEd-WCk0_M1KtJYJyvhwJ9rJpuQFyiaGv70QGXciRc4L8Uv6v_EX9WxrwsDqtVWUSmIDxKNIERjLZ96VqDyXVM_42H209wp_dEuPGOohr8DZ3BvHXe4SloQ7O2Jo7XfXI8HIzszpFzrM0evXC3CUJT8GF8r9CWVFIVVL7SJ5nPp3QR8s0ECE-hXsMhict1SQ6q1mx1jb1ZtpnL9FgiChzIDzsroLSdvG7VAT3dzXGcZpyxC-JmJEuf-RysATUcNuwh_Z5oWPMMlkPn_eEV4QBAuhLTYZQhjHnDI9oZBnpNNetK4QYY5M72Bpcdktu_dzdZQgDlK690d6xKERg6jsU4YPpb5eySRrF5120NMz_8IsNgAivnpO_2-VOczMyKRFcgX2pFpKohGgNxD1Ssjzr9YB2Obq99IwDAtwHy6eEELqJnk2Ax1Uq76H6abWCTTctrFuLD1CLIcJpwEkH8AYyECIOHDcCexoi6UkolOwEB010j9BWhTPZ7PNXZ_4AN4Giq3o2bA6rq_51Ge5CHK_NAXlUT49zvCunJHT-SGjtZuGeDrXYMjSgZ7bhzMezWv29y2WNvyGzmOyeUBB5DsN5IT8jFI7b3VXPBe-sr6Rp7Xngib2nmdg66wLVICdf8Xe-H3hKQwSJOidwT_uJugocTr4OGkUP9Am8xYjSzn59f2C-u4DQ7V9uDEoMFp7SWXOFriX6g8Z0h4RzvtOdUkLjXauOKUJTG9Qp-8LCHEVCtqZAlNkWD7s4I7BL5UqaaKYfu6fHOT6OkGmDZYXSe6dKRfunq1b8GvIos0SOLhdxnRVN3h_lvDiBy9flTgKv_05JjPXA6x5DOe7e0O-0dBR9lATQOCbAub7l4sZCjG1vX4bQDhmaeJG3QM5rKpIRRy5RFiw9TarAwkwDKmQHLIQ2QEXQrd3HKjdCn3js18S-FKYPyRcbVZToxnRGuQH_OZp1TJBU-6MgX_vPJe3qLh7z9ttaTgeWMYqvZqyGHH2fy8bCI6Rb6KyTyW9BsmNvN8YraNiqW3hdNtxHB120cJvzwn53TMwXamc_negpPcxZ4YRZI5mIeMq_1FdHjzDZiv4TtynDzjKtJUxUtaVMwle0fnd8JHd1VEdlwuNlOab8_BZUCfi1Cs1wZU5IKMcSqmlzpJz6iHgIw9lz0NGGMJYBLNGo3Mp62nm15AssH3XBr5mhH1IbVFv3G__dhR-gkU9C2cyEmxeh_TRX39FRQZ3mwSeU06RFap-hJAN1H0FAyXjglALtIfNLyfZ-FgwB7V2374Mpv-K0aA7fn8D4NeLp5g8mM-yyUomoZVJKDS2kyIPkCruQae9J71upwCllw85-wlKxYkNBbRoHF2Z0uKoVg9Ea68u8Yt0YX8TUlXaOZSPQTOvxIjxgVqs0kiks3j-ZAANKzIw-GboaWV2QtVzIsxkmSk3N5YQyxb-Hsz2fDhHhs1NDjiT-3EZ8zKJuUDNB3Gs9t6oH3WzgG2neCrWyt-5snMbDP-esCNGionpWRcX_0e3WLRaXE-18598EatLbgiV_.4_QY3C2aXB6h4fPEJ0_iJ6kYw7oP2Am3GckKBVXhEiE08vEKkfQfCmBU9LVTwMQZX1nzITB_ZXTaQA9hxG0SEverkhy-kM_V0HOc_ZBMWxnSaqsT4eBfJ2PM7pRJUCwzIDgTVHr1riT7Oo0KtxKkpAxPOf4qjwIT9XKCKiXo6sZkhMgQWo6MYRZYa9c4T60c-C1GeV6Q_MYCT0dssxw74xdAQgPWLnZCu9er2dt1BGo12hyXPKKF6ZgyIpliYlbzWU9w-FXcPSpkuVhp7V28zjT7ixU9VOL3gCuxpNVFy2v1jE2CFhH31eNRhDFeRh-cAivFlqvKjvhI6OiKcmpBVM"
+      ],
+      "tier": "hard"
+    },
+    "large-hard-05": {
+      "status": "pass",
+      "pass": true,
+      "found": 1,
+      "missed": 0,
+      "wrong": [],
+      "misplaced": 0,
+      "ms": 26.681,
+      "texts": [
+        "eyJhbGciOiJSUzI1NiIsImtpZCI6IjQ0NDQwNUM3ODFFNDgyNTA3MkIzNENBNEY4QkRDNjA2Qzg2QjU3MjAiLCJ0eXAiOiJKV1QifQ.Bi4Mawi_bqDnHUAzHCclCFiNUDH6SJCwVqFHQ74_omOs7CfvFLCK7DtO8EbYLDM7Z38MEHLxnUyudiTxW3UptJbQqcGU_XYQQHUhKLmqH1cN6sYh0MuRQNxZ3BXytbsqjU4mUn0kNg05m0NSzCNJCegt2HNAV6W4ImpOUuIVlV2mMy7G_yjQNemdEA8wlscN0js2Z0v66efrJTC1WKRHdhjaNktM0pKl9_X0oNId59pVVhWRObE27CJScXb2HfF9d19eYP94JE-yPiOXY3SwHnDkJ57rmvZtdH5Ya9oVlY6hRYXs-zS-ssNADu4gge8sWQDtglufqWmOeplW_eO8I6L1eu-3BUyMOA29oxxsc55IAfRf-uk40bhVBZiENFGHTu8li-6rTeSRzoehrlTzAAXu6t-idU2wncmUxc0UN0reqP4QMbIaIFMIMIH7W3S9LaRiw3Exwg0IwEtOlv6t4e-O8BUOJjzp8vZh3TKNlcHh34m7dPsPy30FQBQVynyI-woEXunKnkI8dN_Lnk704VoCf4Q6Iyzg8roIGXqI4J-A1F1pSgu6va0mwylUG8gIsV-hX1m9HRn61aSVOmnvD7GIv6md9HqHf4iHROd5nEfRrRY5pOphHdoV1fYTKqU-M09niBIrWGDn2FW3ejq5_LSjGAJxVBMHrGhUCvNQO229H4oZqkDIk95bxMt3tm8Uze0sKWI9cba4qs04HnqggZf8bYGlkc-ET5fySnOMy-WYI0XQB_CowqyPoAOX3waeeA7PF6l1h_b-dGDILZYy_NneKDApOhkUbSSmZ1IOhdkrHTcFNcfdf-BUBYXfqm3-oxKkx0Y4eMwoN5JMOE0LnGiJWXMpcS99SNipcRAZtp0vex8vCShkpdEmvwh2ZD2wzDhz6aU_AP4tK1LKtNJnOcsO98ZPbnRiB65L0OOZnsYzUo97ujUx1QydAN_e92d9VzlSsbaeNDOZtIjZpTksk51fpE5y4_qiCE0lKaZlt9dP1P0JwGKo_Pyp8QUKYGQv-GjLeDQMSUERgWIfqO_LYTi3t6X9QXJMGcoBIn0WFP6_rTXNTsYDrYFRXwRktkvn8dvcpKGPrvCBrTC9f_85gRy4ZbXgqSlhTq-d-jcpjGc8sLDgZsOvLaYjrNxQVOpJzSLRzy-rsfA6EXv2jRhqMxi3kpYhGjayy2fBJQe_ET9CJxkL-HRdlniH3-HEk7fDWFeEBMwC2kaIjdTTpWc-Gg_QEWQ1AMcIgwW7gYp4GBSCsHfqePYWyZh0aHwQ_k6OO70xTHbyVlCwHqD_ZeGlovcQ_Qlz2GQRfxQRBC6GEBlVC29U_BHrVndHyalxpVDKk5XO6V0MP2s-rNQdLQdUvKJR0e06oi3fIcRkm1-yK9-1lp7tuqajbSpY3rl4S6Tz-GzVCXkLGi3CAzKxt2J8lfr1BCuCeuQWWl2H25CoKQfsguOM1X3sqDVGJzaUWMv-YsKR9Megmm3n8rZpA22BeLwQ1yPwO49Q7-E2E1bTzvhSaN5g-_Z3SE0dV_2NB-e0chlLR6AUzaUZnSNSfIb8SmEv_bs1fQVtFMpeGS4XYwhx2WdmG-rdk9fHBcPQ7rG_Jg7uCQSOGbf_A7yCtWrJh136C8mPWhpndFwJWxq3p7pw4gsJucgPbprqYXiRqFFWRj3gDjNuXin13dNrsytlKsNmKWSEwJwZn5lutSvTIBIX4-h9zq41C2JHoEUsnX36oRw3WwBmv_DOIl4BeF_B6QGpAcR0LunY8if6ulQ4m87eoP5ANsH3Xfz8jIa85n907TBVirSTH9hrXdAh-i2UY0AhKFzzc7Rah8JfGhDxLJ1.8C-5TyTikE3JIOkGR0NHs5EHNb6sdWw_PktPYTtEVmH_CxWrvGjCriWAdrUGcDshWuyrxm_Lyx2jZiTVQ0VT8nQcJMOOLiB9f03hSG2oqx38tRbNZDPaojpucUXLCIZUKGT1xNo_CmIxn4_B6K8LgqhdDVaDis6LLU5WYDfuZHBLuCees02qXpTyPI8Bt_TTMyfDLX_r3HojcgAZ1vJGrSEhtv2CS9Dqy627CWWLQmpWe41nWJjwWIC_mFDC4JgpQfL_HxaJZFF_YgEIpsCQZyCMicEjRMx8r-Rodmgbt1JOKJzR3GnzsBg62Xr892fZJR9G_Hk--mN9L_HQwtNsUi"
+      ],
+      "tier": "hard"
+    },
+    "large-extreme-01": {
+      "status": "fail",
+      "pass": false,
+      "found": 0,
+      "missed": 1,
+      "wrong": [],
+      "misplaced": 0,
+      "ms": 5.093,
+      "texts": [],
+      "tier": "extreme"
+    },
+    "large-extreme-02": {
+      "status": "fail",
+      "pass": false,
+      "found": 0,
+      "missed": 1,
+      "wrong": [],
+      "misplaced": 0,
+      "ms": 6.248,
+      "texts": [],
+      "tier": "extreme"
+    },
+    "large-extreme-03": {
+      "status": "fail",
+      "pass": false,
+      "found": 0,
+      "missed": 1,
+      "wrong": [],
+      "misplaced": 0,
+      "ms": 7.629,
+      "texts": [],
+      "tier": "extreme"
+    },
+    "magazine-common-01": {
+      "status": "pass",
+      "pass": true,
+      "found": 1,
+      "missed": 0,
+      "wrong": [],
+      "misplaced": 0,
+      "ms": 72.029,
+      "texts": [
+        "https://www.beispiel.ch/track/d-rn9s1E5dL86zOBKwe4"
+      ],
+      "tier": "common"
+    },
+    "magazine-common-02": {
+      "status": "pass",
+      "pass": true,
+      "found": 1,
+      "missed": 0,
+      "wrong": [],
+      "misplaced": 0,
+      "ms": 91.094,
+      "texts": [
+        "https://www.beispiel.ch/track/qpEiumPr"
+      ],
+      "tier": "common"
+    },
+    "magazine-common-03": {
+      "status": "pass",
+      "pass": true,
+      "found": 1,
+      "missed": 0,
+      "wrong": [],
+      "misplaced": 0,
+      "ms": 27.506,
+      "texts": [
+        "https://app.beispiel.ch/go/VCd7t1"
+      ],
+      "tier": "common"
+    },
+    "magazine-common-04": {
+      "status": "pass",
+      "pass": true,
+      "found": 1,
+      "missed": 0,
+      "wrong": [],
+      "misplaced": 0,
+      "ms": 20.105,
+      "texts": [
+        "HTTPS://GO.EXAMPLE.DE/0MQ8VOLS260XFZCL5V0"
+      ],
+      "tier": "common"
+    },
+    "magazine-hard-01": {
+      "status": "pass",
+      "pass": true,
+      "found": 1,
+      "missed": 0,
+      "wrong": [],
+      "misplaced": 0,
+      "ms": 28.804,
+      "texts": [
+        "HTTPS://T.EXAMPLE.CH/PGTJPDT6RRK"
+      ],
+      "tier": "hard"
+    },
+    "magazine-hard-02": {
+      "status": "pass",
+      "pass": true,
+      "found": 1,
+      "missed": 0,
+      "wrong": [],
+      "misplaced": 0,
+      "ms": 6.884,
+      "texts": [
+        "https://portal.example.com/go/ixID"
+      ],
+      "tier": "hard"
+    },
+    "magazine-hard-03": {
+      "status": "pass",
+      "pass": true,
+      "found": 1,
+      "missed": 0,
+      "wrong": [],
+      "misplaced": 0,
+      "ms": 52.733,
+      "texts": [
+        "HTTPS://QR.EXAMPLE.COM/W0F46083K"
+      ],
+      "tier": "hard"
+    },
+    "magazine-hard-04": {
+      "status": "pass",
+      "pass": true,
+      "found": 1,
+      "missed": 0,
+      "wrong": [],
+      "misplaced": 0,
+      "ms": 20.255,
+      "texts": [
+        "HTTPS://QR.EXAMPLE.COM/76BDVXPQXVZ"
+      ],
+      "tier": "hard"
+    },
+    "magazine-hard-05": {
+      "status": "pass",
+      "pass": true,
+      "found": 1,
+      "missed": 0,
+      "wrong": [],
+      "misplaced": 0,
+      "ms": 16.791,
+      "texts": [
+        "https://app.example.de/track/3m5Y"
+      ],
+      "tier": "hard"
+    },
+    "magazine-hard-06": {
+      "status": "pass",
+      "pass": true,
+      "found": 1,
+      "missed": 0,
+      "wrong": [],
+      "misplaced": 0,
+      "ms": 40.534,
+      "texts": [
+        "HTTPS://GO.EXAMPLE.DE/3MVD5KZJPLYYDB"
+      ],
+      "tier": "hard"
+    },
+    "magazine-extreme-01": {
+      "status": "pass",
+      "pass": true,
+      "found": 1,
+      "missed": 0,
+      "wrong": [],
+      "misplaced": 0,
+      "ms": 14.718,
+      "texts": [
+        "https://app.shop.example.org/track/UcNxtya04YqsU5K"
+      ],
+      "tier": "extreme"
+    },
+    "magazine-extreme-02": {
+      "status": "pass",
+      "pass": true,
+      "found": 1,
+      "missed": 0,
+      "wrong": [],
+      "misplaced": 0,
+      "ms": 16.402,
+      "texts": [
+        "HTTPS://T.EXAMPLE.CH/TD7KLVKK4S8KQMV"
+      ],
+      "tier": "extreme"
+    },
+    "magazine-extreme-03": {
+      "status": "pass",
+      "pass": true,
+      "found": 1,
+      "missed": 0,
+      "wrong": [],
+      "misplaced": 0,
+      "ms": 20.922,
+      "texts": [
+        "HTTPS://T.EXAMPLE.CH/6I3NKJBL8D"
+      ],
+      "tier": "extreme"
+    },
+    "magazine-extreme-04": {
+      "status": "pass",
+      "pass": true,
+      "found": 1,
+      "missed": 0,
+      "wrong": [],
+      "misplaced": 0,
+      "ms": 7.221,
+      "texts": [
+        "HTTPS://QR.EXAMPLE.COM/WNMNDNNLKRQ6NHT8YNKGE"
+      ],
+      "tier": "extreme"
+    },
+    "photocopy-common-01": {
+      "status": "pass",
+      "pass": true,
+      "found": 1,
+      "missed": 0,
+      "wrong": [],
+      "misplaced": 0,
+      "ms": 16.251,
+      "texts": [
+        "BCD\n002\n1\nSCT\nBFSWDE33BER\nGenossenschaft Kälin\nDE77239447954656178103\nEUR1735.02\n\n\nRechnung 729183 vom 13.6.2026"
+      ],
+      "tier": "common"
+    },
+    "photocopy-common-02": {
+      "status": "pass",
+      "pass": true,
+      "found": 1,
+      "missed": 0,
+      "wrong": [],
+      "misplaced": 0,
+      "ms": 7.093,
+      "texts": [
+        "SPC\r\n0200\r\n1\r\nCH7608636139967700839\r\nS\r\nStiftung Bühl\r\nAvenue de la Gare\r\n13\r\n1700\r\nFribourg\r\nCH\r\n\r\n\r\n\r\n\r\n\r\n\r\n\r\n2609.25\r\nCHF\r\nS\r\nUeli Rüegg\r\nGrosse Marktgasse\r\n55\r\n9400\r\nRorschach\r\nCH\r\nNON\r\n\r\nFacture 53150\r\nEPD\r\n//S1/10/55488453/11/248865/30/099311052/32/8.1"
+      ],
+      "tier": "common"
+    },
+    "photocopy-common-03": {
+      "status": "pass",
+      "pass": true,
+      "found": 1,
+      "missed": 0,
+      "wrong": [],
+      "misplaced": 0,
+      "ms": 26.608,
+      "texts": [
+        "BCD\n002\n1\nSCT\nINGDDEFFXXX\nMärki Logistik AG\nDE34247177685568483093\nEUR1869.95\n\n\nRechnung 668413 vom 22.10.2026"
+      ],
+      "tier": "common"
+    },
+    "photocopy-hard-01": {
+      "status": "pass",
+      "pass": true,
+      "found": 1,
+      "missed": 0,
+      "wrong": [],
+      "misplaced": 0,
+      "ms": 7.032,
+      "texts": [
+        "BCD\n002\n1\nSCT\nINGDDEFFXXX\nCafé Fässler\nDE74681157787747349230\nEUR2117.49\n\n\nRechnung 537380 vom 17.1.2026"
+      ],
+      "tier": "hard"
+    },
+    "photocopy-hard-02": {
+      "status": "pass",
+      "pass": true,
+      "found": 1,
+      "missed": 0,
+      "wrong": [],
+      "misplaced": 0,
+      "ms": 19.241,
+      "texts": [
+        "BCD\n002\n1\nSCT\nBFSWDE33BER\nStiftung Bühl\nDE55354525067047662128\nEUR1126.10\n\n\nRechnung 534834 vom 15.7.2026"
+      ],
+      "tier": "hard"
+    },
+    "photocopy-hard-03": {
+      "status": "pass",
+      "pass": true,
+      "found": 1,
+      "missed": 0,
+      "wrong": [],
+      "misplaced": 0,
+      "ms": 9.847,
+      "texts": [
+        "BCD\n002\n1\nSCT\nINGDDEFFXXX\nSchreinerei Würsch\nDE88663184820760693934\nEUR852.73\n\n\nRechnung 002726 vom 7.10.2026"
+      ],
+      "tier": "hard"
+    },
+    "photocopy-hard-04": {
+      "status": "pass",
+      "pass": true,
+      "found": 1,
+      "missed": 0,
+      "wrong": [],
+      "misplaced": 0,
+      "ms": 19.356,
+      "texts": [
+        "SPC\n0200\n1\nCH5701103121410594029\nS\nHäfeli Treuhand AG\nDorfstrasse\n49\n6900\nLugano\nCH\n\n\n\n\n\n\n\n3203.92\nCHF\nS\nSébastien Fässler\nDorfstrasse\n61\n6900\nLugano\nCH\nSCOR\nRF61FXN89AXUR2PCA5\nFacture 67832\nEPD\n//S1/10/86308396/11/569282/30/264009172/32/8.1"
+      ],
+      "tier": "hard"
+    },
+    "photocopy-hard-05": {
+      "status": "pass",
+      "pass": true,
+      "found": 1,
+      "missed": 0,
+      "wrong": [],
+      "misplaced": 0,
+      "ms": 18.241,
+      "texts": [
+        "BCD\n002\n1\nSCT\nGENODEF1S04\nHäfeli Treuhand AG\nDE62827404358183233755\nEUR321.67\n\n\nRechnung 191369 vom 12.10.2026"
+      ],
+      "tier": "hard"
+    },
+    "photocopy-hard-06": {
+      "status": "pass",
+      "pass": true,
+      "found": 1,
+      "missed": 0,
+      "wrong": [],
+      "misplaced": 0,
+      "ms": 8.147,
+      "texts": [
+        "BCD\n002\n1\nSCT\nBFSWDE33BER\nRösti & Söhne KG\nDE52748449329585646837\nEUR2370.87\n\n\nRechnung 393952 vom 10.7.2026"
+      ],
+      "tier": "hard"
+    },
+    "photocopy-extreme-01": {
+      "status": "pass",
+      "pass": true,
+      "found": 1,
+      "missed": 0,
+      "wrong": [],
+      "misplaced": 0,
+      "ms": 8.382,
+      "texts": [
+        "SPC\n0200\n1\nCH6331734366177432688\nS\nGenossenschaft Kälin\nBahnhofstrasse\n8\n1700\nFribourg\nCH\n\n\n\n\n\n\n\n61.76\nCHF\nS\nRuth Müller\nRämistrasse\n28\n8640\nRapperswil\nCH\nQRR\n284892655067039570483930497\nAbo 51840\nEPD\n//S1/10/24010713/11/247137/30/663873129/32/8.1"
+      ],
+      "tier": "extreme"
+    },
+    "photocopy-extreme-02": {
+      "status": "pass",
+      "pass": true,
+      "found": 1,
+      "missed": 0,
+      "wrong": [],
+      "misplaced": 0,
+      "ms": 7.446,
+      "texts": [
+        "https://app.shop.example.org/p/vo6IKQ"
+      ],
+      "tier": "extreme"
+    },
+    "photocopy-extreme-03": {
+      "status": "pass",
+      "pass": true,
+      "found": 1,
+      "missed": 0,
+      "wrong": [],
+      "misplaced": 0,
+      "ms": 6.806,
+      "texts": [
+        "BCD\n002\n1\nSCT\nBFSWDE33BER\nGarage du Lac Sàrl\nDE46217411447233685410\nEUR1504.00\n\n\nRechnung 988959 vom 8.5.2026"
+      ],
+      "tier": "extreme"
+    },
+    "photocopy-extreme-04": {
+      "status": "pass",
+      "pass": true,
+      "found": 1,
+      "missed": 0,
+      "wrong": [],
+      "misplaced": 0,
+      "ms": 21.051,
+      "texts": [
+        "SPC\r\n0200\r\n1\r\nCH3907632286958944539\r\nS\r\nSociété Générale de Fribourg SA\r\nLöwenstrasse\r\n20\r\n9400\r\nRorschach\r\nCH\r\n\r\n\r\n\r\n\r\n\r\n\r\n\r\n3937.12\r\nCHF\r\nS\r\nSébastien Fässler\r\nLöwenstrasse\r\n34\r\n8640\r\nRapperswil\r\nCH\r\nNON\r\n\r\nMitgliederbeitrag 26898\r\nEPD\r\n//S1/10/63062359/11/622441/30/183376984/32/8.1"
+      ],
+      "tier": "extreme"
+    }
+  }
+}

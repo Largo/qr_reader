@@ -16,6 +16,7 @@
 #   --baseline [FILE]         compare with the zxing-cpp baseline (default bench/baselines/zxcpp.json)
 #   --verbose                 print every case with its time and result
 #   --no-try-harder           pass try_harder: false to QrReader.read_all
+#   --min-pass N              exit with status 1 when fewer than N cases pass (for CI)
 #   --reference               run zxing-cpp (bench/reference/zxcpp.py, TextMode Plain) instead of
 #                             qr_reader; regenerate the baseline with
 #                             bundle exec ruby bench/corpus.rb --reference --json bench/baselines/zxcpp.json
@@ -39,7 +40,7 @@ module CorpusBench
 
   def parse_options(argv)
     options = { rotations: ALL_ROTATIONS, only: [], try_harder: true }
-    OptionParser.new do |o|
+    parser = OptionParser.new do |o|
       o.banner = "Usage: bundle exec ruby [--yjit] bench/corpus.rb [options]"
       o.on("--rotations LIST", "comma-separated, e.g. 0,90") do |v|
         options[:rotations] = v.split(",").map { |r| Integer(r.strip, 10) % 360 }.uniq
@@ -54,7 +55,9 @@ module CorpusBench
       o.on("--verbose") { options[:verbose] = true }
       o.on("--no-try-harder") { options[:try_harder] = false }
       o.on("--reference") { options[:reference] = true }
-    end.parse!(argv)
+      o.on("--min-pass N", Integer) { |v| options[:min_pass] = v }
+    end
+    BenchSupport.parse!(parser, argv)
     options
   end
 
@@ -77,6 +80,7 @@ module CorpusBench
     BenchSupport.write_json(options[:json], json) if options[:json]
     BenchSupport.compare_reports(options[:compare], json, "vs #{options[:compare]}") if options[:compare]
     BenchSupport.compare_reports(options[:baseline], json, "vs zxing-cpp baseline", baseline: true) if options[:baseline]
+    BenchSupport.check_limits(json["summary"]["passed"], min_pass: options[:min_pass])
   end
 
   def case_id(kase, rotation)

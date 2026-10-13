@@ -44,6 +44,8 @@ module QrReader
 
         best = nil
         best_score = Float::INFINITY
+        # Rows through the same pattern confirm the same centre: verify once.
+        verified = {}
         mid = y.floor.clamp(y0, y1)
         max_offset = [mid - y0, y1 - mid].max
         offset = 0
@@ -55,6 +57,10 @@ module QrReader
               centre = confirm(cx, row, module_size)
               next unless centre
 
+              key = ((centre[1] * 2).round << 24) | (centre[0] * 2).round
+              next if verified.key?(key)
+
+              verified[key] = true
               mismatches = verify(centre[0], centre[1], ux, uy, vx, vy)
               next if mismatches > MAX_MISMATCHES
 
@@ -110,11 +116,13 @@ module QrReader
         h = @height
         max = module_size * 1.6 + 1
         min = module_size * 0.4 - 1
-        # Vertical: dark centre, light above/below, dark ring beyond.
+        # Vertical: dark centre, light above/below, dark ring beyond. The
+        # walks stop just past the longest acceptable run, so a long dark
+        # column (page border, large dark area) costs nothing extra.
         top = y
-        top -= 1 while top.positive? && bits.getbyte((top - 1) * w + x) == 1
+        top -= 1 while top > 0 && y - top <= max && bits.getbyte((top - 1) * w + x) == 1
         bottom = y
-        bottom += 1 while bottom < h - 1 && bits.getbyte((bottom + 1) * w + x) == 1
+        bottom += 1 while bottom < h - 1 && bottom - y <= max && bits.getbyte((bottom + 1) * w + x) == 1
         centre_v = bottom - top + 1
         return if centre_v > max || centre_v < min
 
@@ -149,14 +157,28 @@ module QrReader
 
       # Number of cells of the 5x5 pattern centred at (x, y) that have the
       # wrong colour (out of 25), sampling along the module vectors.
+      # Stops counting past MAX_MISMATCHES.
       def verify(x, y, ux, uy, vx, vy)
         bits = @bits
         w = @width
         h = @height
-        wrong = 0
-        wrong += 1 unless dark_at?(bits, w, h, x, y)
-        LIGHT_RING.each { |i, j| wrong += 1 if dark_at?(bits, w, h, x + i * ux + j * vx, y + i * uy + j * vy) }
-        DARK_RING.each { |i, j| wrong += 1 unless dark_at?(bits, w, h, x + i * ux + j * vx, y + i * uy + j * vy) }
+        wrong = dark_at?(bits, w, h, x, y) ? 0 : 1
+        k = 0
+        while k < 8
+          i, j = LIGHT_RING[k]
+          wrong += 1 if dark_at?(bits, w, h, x + i * ux + j * vx, y + i * uy + j * vy)
+          k += 1
+        end
+        return wrong if wrong > MAX_MISMATCHES
+
+        k = 0
+        while k < 16
+          i, j = DARK_RING[k]
+          wrong += 1 unless dark_at?(bits, w, h, x + i * ux + j * vx, y + i * uy + j * vy)
+          return wrong if wrong > MAX_MISMATCHES
+
+          k += 1
+        end
         wrong
       end
 

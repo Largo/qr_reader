@@ -6,8 +6,9 @@ module QrReader
     # Decoder.decode turns it into a nil result.
     class FormatError < Error; end
 
-    # Decoded data of one symbol, before it is wrapped into a Result.
-    Content = Data.define(:text, :bytes, :segments, :eci, :fnc1, :structured_append, :symbology_identifier)
+    # Decoded data of one symbol, before it is wrapped into a Result (same
+    # meaning as the Result attributes of the same names).
+    Content = Data.define(:text, :raw_bytes, :segments, :eci, :fnc1, :structured_append, :symbology_identifier)
 
     # Parses the data codewords of a symbol (ISO/IEC 18004 §7.4): a sequence
     # of segments, each a 4-bit mode indicator followed by mode-specific data,
@@ -129,7 +130,7 @@ module QrReader
       # 3 digits per 10 bits; a remainder of 2 digits takes 7 bits, 1 digit 4 bits.
       def numeric(count)
         require_bits(count / 3 * 10 + [0, 4, 7][count % 3])
-        out = String.new(capacity: count, encoding: Encoding::BINARY)
+        out = "".b
         while count >= 3
           value = read_bits(10)
           raise FormatError, "invalid numeric group #{value}" if value >= 1000
@@ -155,7 +156,7 @@ module QrReader
       # in effect, "%%" stands for "%" and a lone "%" for the GS separator.
       def alphanumeric(count, fnc1)
         require_bits(count / 2 * 11 + (count.odd? ? 6 : 0))
-        out = String.new(capacity: count, encoding: Encoding::BINARY)
+        out = "".b
         while count >= 2
           value = read_bits(11)
           raise FormatError, "invalid alphanumeric pair #{value}" if value >= 2025
@@ -188,12 +189,13 @@ module QrReader
       # high byte times 0xC0 plus low byte.
       def kanji(count)
         require_bits(count * 13)
-        out = String.new(capacity: count * 2, encoding: Encoding::BINARY)
-        count.times do
+        out = "".b
+        while count.positive?
           value = read_bits(13)
           code = ((value / 0xC0) << 8) | (value % 0xC0)
           code += code < 0x1F00 ? 0x8140 : 0xC140
           out << (code >> 8) << (code & 0xFF)
+          count -= 1
         end
         out
       end
@@ -202,12 +204,13 @@ module QrReader
       # high byte times 0x60 plus low byte.
       def hanzi(count)
         require_bits(count * 13)
-        out = String.new(capacity: count * 2, encoding: Encoding::BINARY)
-        count.times do
+        out = "".b
+        while count.positive?
           value = read_bits(13)
           code = ((value / 0x60) << 8) | (value % 0x60)
           code += code < 0x0A00 ? 0xA1A1 : 0xA6A1
           out << ((code >> 8) & 0xFF) << (code & 0xFF)
+          count -= 1
         end
         out
       end
@@ -245,7 +248,7 @@ module QrReader
           [mode, bytes, eci, segment_encoding(mode, eci, first_eci, guessed)]
         end
         text = +""
-        bytes = String.new(encoding: Encoding::BINARY)
+        bytes = "".b
         segment_list = []
         run_start = 0
         resolved.each_with_index do |(mode, data, eci, encoding), i|
@@ -263,7 +266,7 @@ module QrReader
                   end
           run_start = i + 1
         end
-        Content.new(text: text, bytes: bytes, segments: segment_list.freeze, eci: first_eci, fnc1: fnc1,
+        Content.new(text: text, raw_bytes: bytes, segments: segment_list.freeze, eci: first_eci, fnc1: fnc1,
                     structured_append: structured_append,
                     symbology_identifier: "]Q#{symbology_modifier(first_eci, fnc1)}")
       end

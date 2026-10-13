@@ -73,8 +73,9 @@ module QrReader
           if @interlaced
             out = deinterlace(inflate(ADAM7.sum { |pass| pass_size(pass)[2] }))
           else
+            raw = inflate(h * (1 + row_bytes(w))) # before allocating: it may be truncated
             out = Support.buffer(w * h)
-            decode_rows(inflate(h * (1 + row_bytes(w))), 0, w, h, out)
+            decode_rows(raw, 0, w, h, out)
           end
           Support.translate!(out, @tr_from, @tr_to) if @tr_from
           Image.new(w, h, out)
@@ -152,7 +153,10 @@ module QrReader
         # Inflates the concatenated IDAT payload; returns at least +expected+ bytes.
         def inflate(expected)
           zstream = Zlib::Inflate.new
-          out = Support.buffer(expected)
+          # Deflate expands at most 1032:1, so a few bytes of data that
+          # claim a huge image never reserve (and touch) the claimed size.
+          compressed = @idat.sum { |_, length| length }
+          out = Support.buffer([expected, compressed * 1032 + 1024].min)
           @idat.each do |pos, length|
             stop = pos + length
             while pos < stop && out.bytesize < expected
@@ -205,6 +209,7 @@ module QrReader
           when 4 then @row_kind = depth == 8 ? :gray_alpha8 : :gray_alpha16
           when 6 then @row_kind = depth == 8 ? :rgba8 : :rgba16
           end
+          @alpha_table = Support.over_white_table if @color_type >= 4
         end
 
         # Adam7: decodes each pass into its own buffer and scatters the pixels.
@@ -280,8 +285,8 @@ module QrReader
             start = out.bytesize
             Rows.rgb(row, 0, width, out)
             mark_transparent(row, 3, start, out) if @trns_key
-          when :rgba8 then Rows.rgba(row, 0, width, out)
-          when :gray_alpha8 then Rows.gray_alpha(row, 0, width, out)
+          when :rgba8 then Rows.rgba(row, 0, width, out, @alpha_table)
+          when :gray_alpha8 then Rows.gray_alpha(row, 0, width, out, @alpha_table)
           when :gray16
             start = out.bytesize
             Rows.high_bytes(row, 0, width, out)
@@ -290,8 +295,8 @@ module QrReader
             start = out.bytesize
             Rows.rgb(row, 0, width, out, 0, 2, 4, 6)
             mark_transparent(row, 6, start, out) if @trns_key
-          when :rgba16 then Rows.rgba(row, 0, width, out, 0, 2, 4, 6, 8)
-          when :gray_alpha16 then Rows.gray_alpha(row, 0, width, out, 2, 4)
+          when :rgba16 then Rows.rgba(row, 0, width, out, @alpha_table, 0, 2, 4, 6, 8)
+          when :gray_alpha16 then Rows.gray_alpha(row, 0, width, out, @alpha_table, 2, 4)
           end
         end
 
@@ -363,6 +368,7 @@ module QrReader
         def average(raw, ri, prev, len, bpp)
           case bpp
           when 1 then average1(raw, ri, prev, len)
+          when 2 then average2(raw, ri, prev, len)
           when 3 then average3(raw, ri, prev, len)
           when 4 then average4(raw, ri, prev, len)
           else average_n(raw, ri, prev, len, bpp)
@@ -391,6 +397,19 @@ module QrReader
             a = (raw.getbyte(ri + k) + ((a + prev.getbyte(k)) >> 1)) & 0xff
             cur << a
             k += 1
+          end
+          cur
+        end
+
+        def average2(raw, ri, prev, len)
+          cur = Support.buffer(len)
+          a0 = a1 = 0
+          k = 0
+          while k < len
+            a0 = (raw.getbyte(ri + k) + ((a0 + prev.getbyte(k)) >> 1)) & 0xff
+            a1 = (raw.getbyte(ri + k + 1) + ((a1 + prev.getbyte(k + 1)) >> 1)) & 0xff
+            cur << a0 << a1
+            k += 2
           end
           cur
         end
@@ -430,6 +449,7 @@ module QrReader
         def paeth(raw, ri, prev, len, bpp)
           case bpp
           when 1 then paeth1(raw, ri, prev, len, PAETH)
+          when 2 then paeth2(raw, ri, prev, len, PAETH)
           when 3 then paeth3(raw, ri, prev, len, PAETH)
           when 4 then paeth4(raw, ri, prev, len, PAETH)
           else paeth_n(raw, ri, prev, len, bpp, PAETH)
@@ -462,6 +482,23 @@ module QrReader
             cur << a
             c = b
             k += 1
+          end
+          cur
+        end
+
+        def paeth2(raw, ri, prev, len, table)
+          cur = Support.buffer(len)
+          a0 = a1 = c0 = c1 = 0
+          k = 0
+          while k < len
+            b = prev.getbyte(k)
+            a0 = (raw.getbyte(ri + k) + c0 + table[(b - c0) * 511 + a0 - c0 + PAETH_CENTER]) & 0xff
+            c0 = b
+            b = prev.getbyte(k + 1)
+            a1 = (raw.getbyte(ri + k + 1) + c1 + table[(b - c1) * 511 + a1 - c1 + PAETH_CENTER]) & 0xff
+            c1 = b
+            cur << a0 << a1
+            k += 2
           end
           cur
         end

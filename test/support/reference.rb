@@ -42,12 +42,15 @@ module QrReference
     return [] if paths.empty?
     raise Error, "zxing-cpp reference venv not available (#{python})" unless available?
 
+    # A path starting with "-" would be taken for an option.
+    paths = paths.map { |path| path.to_s.start_with?("-") ? File.join(".", path.to_s) : path.to_s }
+
     args = [python, "-I", SCRIPT, "--rotate-cw", rotate_cw.to_s, "--text-mode", text_mode]
     args << "--pure" if pure
     out, err, status = Open3.capture3(*args, *paths)
     raise Error, "zxcpp.py failed: #{err}" unless status.success?
 
-    out.each_line.map { |line| JSON.parse(line) }
+    lines(out, paths.size, "zxcpp.py")
   end
 
   # Encodes texts with zxing-cpp's writer (zint), an encoder independent of
@@ -62,6 +65,19 @@ module QrReference
     out, err, status = Open3.capture3(python, "-I", WRITER_SCRIPT, stdin_data: "#{input}\n")
     raise Error, "zxcpp_write.py failed: #{err}" unless status.success?
 
-    out.each_line.map { |line| JSON.parse(line)["rows"] }
+    lines(out, requests.size, "zxcpp_write.py").map { |row| row["rows"] }
   end
+
+  # One parsed JSON line per input; anything else means the script broke
+  # (results must never be silently paired with the wrong input).
+  def lines(out, count, script)
+    parsed = out.each_line.map { |line| JSON.parse(line) }
+    raise Error, "#{script} returned #{parsed.size} results for #{count} inputs" unless parsed.size == count
+
+    parsed
+  rescue JSON::ParserError => e
+    raise Error, "#{script} printed invalid JSON: #{e.message}"
+  end
+
+  private_class_method :lines
 end

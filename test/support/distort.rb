@@ -5,7 +5,7 @@ require "open3"
 
 # Deterministic image distortions for robustness tests and benchmarks. Every
 # function takes a QrReader::Image and returns a new one; randomness comes
-# only from the given +seed+.
+# only from the given +seed+. Invalid parameters raise ArgumentError.
 #
 #   img = QrTestEncoder.build("HELLO").to_image(module_size: 6)
 #   img = Distort.perspective_tilt(img, strength: 0.2, seed: 3)
@@ -15,6 +15,10 @@ require "open3"
 # Geometric warps use inverse mapping with bilinear sampling and treat the
 # area outside the source as +background+. The perspective convention (corner
 # order TL, TR, BR, BL; pixel centres at +0.5) matches QrTestHelper.warp.
+#
+# Per-pixel work runs in per-row helper methods: YJIT compiles a method only
+# after it has been called a few times, so a loop over the whole image inside
+# a single call would stay in the interpreter.
 module Distort
   # Raised when an optional dev tool (ImageMagick for JPEG) is missing.
   class Unavailable < StandardError; end
@@ -22,45 +26,165 @@ module Distort
   IDENTITY_TABLE = QrReader::Image::TR_ESCAPE.call((0..255).to_a)
   private_constant :IDENTITY_TABLE
 
-  # Bilinear sampling of an image at pixel-centre coordinates (u, v), in
-  # 1/256 gray levels; +background+ (also 1/256 units) when more than half a
-  # pixel outside. Clamping is done in Float only, which keeps the call
-  # sites monomorphic (noticeably faster under YJIT).
-  class BilinearSampler
-    attr_reader :background
+  # Largest output image any distortion creates (512 megapixels, 15 A4
+  # pages at 600 DPI); more is a parameter mistake, not a test case.
+  MAX_PIXELS = 1 << 29
 
+  # Bilinear sampling of an image at pixel-centre coordinates, in 1/256 gray
+  # levels; +background+ when a coordinate is more than half a pixel outside
+  # the image or NaN. Callers compute a whole row of coordinates first and
+  # then sample it with one #sample_row call.
+  class BilinearSampler
     def initialize(image, background)
       @src = image.data
       @width = image.width
       @max_x = image.width - 1
-      @max_y = image.height - 1
-      @max_u = @max_x.to_f
-      @max_v = @max_y.to_f
+      @last_row = (image.height - 1) * image.width
+      # Largest coordinates in 1/256 pixels (clamping after the conversion
+      # gives the same result as clamping the Float first).
+      @max_ui = @max_x * 256
+      @max_vi = (image.height - 1) * 256
       @u_limit = image.width - 0.5
       @v_limit = image.height - 0.5
       @background = background * 256
     end
 
-    def at(u, v)
-      # Written so that NaN coordinates also yield the background.
-      return @background unless u >= -0.5 && v >= -0.5 && u <= @u_limit && v <= @v_limit
-
-      ui = ((u < 0.0 ? 0.0 : (u > @max_u ? @max_u : u)) * 256.0).to_i
-      vi = ((v < 0.0 ? 0.0 : (v > @max_v ? @max_v : v)) * 256.0).to_i
+    # For x = 0...count, writes (+round+ + the sum of the +group+ samples at
+    # (us[k], vs[k]), k = group * x ...) / +divisor+ to out[off + x].
+    def sample_row(us, vs, out, off, count, group, round, divisor)
       src = @src
-      x0 = ui >> 8
-      fx = ui & 255
-      fy = vi & 255
-      x1 = x0 < @max_x ? x0 + 1 : x0
-      y0 = vi >> 8
-      r0 = y0 * @width
-      r1 = y0 < @max_y ? r0 + @width : r0
-      top = src.getbyte(r0 + x0) * (256 - fx) + src.getbyte(r0 + x1) * fx
-      bottom = src.getbyte(r1 + x0) * (256 - fx) + src.getbyte(r1 + x1) * fx
-      (top * (256 - fy) + bottom * fy) >> 8
+      width = @width
+      max_x = @max_x
+      last_row = @last_row
+      max_ui = @max_ui
+      max_vi = @max_vi
+      u_limit = @u_limit
+      v_limit = @v_limit
+      background = @background
+      k = 0
+      x = 0
+      while x < count
+        sum = round
+        stop = k + group
+        while k < stop
+          u = us[k]
+          v = vs[k]
+          # Written so that NaN coordinates also yield the background.
+          if u >= -0.5 && v >= -0.5 && u <= u_limit && v <= v_limit
+            ui = (u * 256.0).to_i
+            ui = ui < 0 ? 0 : (ui > max_ui ? max_ui : ui)
+            vi = (v * 256.0).to_i
+            vi = vi < 0 ? 0 : (vi > max_vi ? max_vi : vi)
+            x0 = ui >> 8
+            fx = ui & 255
+            fy = vi & 255
+            x1 = x0 < max_x ? x0 + 1 : x0
+            r0 = (vi >> 8) * width
+            r1 = r0 < last_row ? r0 + width : r0
+            top = src.getbyte(r0 + x0) * (256 - fx) + src.getbyte(r0 + x1) * fx
+            bottom = src.getbyte(r1 + x0) * (256 - fx) + src.getbyte(r1 + x1) * fx
+            sum += (top * (256 - fy) + bottom * fy) >> 8
+          else
+            sum += background
+          end
+          k += 1
+        end
+        out.setbyte(off + x, sum / divisor)
+        x += 1
+      end
     end
   end
-  private_constant :BilinearSampler
+
+  # Perspective warp by inverse mapping, one output row at a time, with
+  # +supersample+ x +supersample+ samples per output pixel.
+  class Warp
+    def initialize(image, inverse, out_w, supersample, background)
+      sw = image.width
+      sh = image.height
+      a, b, c, d, e, f, g, h, i = inverse
+      # Fold the unit-square -> pixel scaling into the inverse transform.
+      @b = b * sw
+      @c = c * sw
+      @e = e * sh
+      @f = f * sh
+      @h = h
+      @i = i
+      @ss = supersample
+      @offsets = Array.new(supersample) { |k| (k + 0.5) / supersample }
+      # Products with the x coordinate of every sample column, tabulated once.
+      columns = out_w * supersample
+      sub_xs = Array.new(columns) { |j| (j / supersample) + @offsets[j % supersample] }
+      @ax = sub_xs.map { |px| a * sw * px }
+      @dx = sub_xs.map { |px| d * sh * px }
+      @gx = sub_xs.map { |px| g * px }
+      # Affine maps have den == 1.0 exactly (x / 1.0 == x): skipping the
+      # divisions does not change a single bit.
+      @affine = g == 0.0 && h == 0.0 && i == 1.0
+      # Coordinates are stored pixel by pixel: the samples of output pixel x
+      # occupy slots x * ss**2 ... (sub-row by sub-row).
+      @slots = Array.new(columns) { |j| (j / supersample) * supersample * supersample + j % supersample }
+      @us = Array.new(columns * supersample, 0.0)
+      @vs = Array.new(columns * supersample, 0.0)
+      @out_w = out_w
+      @sampler = BilinearSampler.new(image, background)
+    end
+
+    # Writes output row +y+ into +out+.
+    def row(y, out)
+      ss = @ss
+      oy = 0
+      while oy < ss
+        coordinates(y + @offsets[oy], oy * ss)
+        oy += 1
+      end
+      samples = ss * ss
+      @sampler.sample_row(@us, @vs, out, y * @out_w, @out_w, samples, samples * 128, samples * 256)
+    end
+
+    private
+
+    # Source coordinates of the samples on the sub-row at height +py+ (slots
+    # +base+ + @slots[j]); NaN where the point lies on or behind the camera's
+    # horizon (den <= 0).
+    def coordinates(py, base)
+      us = @us
+      vs = @vs
+      ax = @ax
+      dx = @dx
+      slots = @slots
+      n = ax.size
+      bpy = @b * py
+      epy = @e * py
+      c = @c
+      f = @f
+      j = 0
+      if @affine
+        while j < n
+          k = slots[j] + base
+          us[k] = ax[j] + bpy + c - 0.5
+          vs[k] = dx[j] + epy + f - 0.5
+          j += 1
+        end
+      else
+        gx = @gx
+        hpy = @h * py
+        i = @i
+        while j < n
+          k = slots[j] + base
+          den = gx[j] + hpy + i
+          if den <= 0
+            us[k] = Float::NAN
+            vs[k] = Float::NAN
+          else
+            us[k] = (ax[j] + bpy + c) / den - 0.5
+            vs[k] = (dx[j] + epy + f) / den - 0.5
+          end
+          j += 1
+        end
+      end
+    end
+  end
+  private_constant :BilinearSampler, :Warp
 
   module_function
 
@@ -93,15 +217,18 @@ module Distort
 
   # Linear contrast reduction: black becomes +low+, white becomes +high+.
   def contrast(image, low: 64, high: 192)
+    check_finite(low: low, high: high)
     lut(image, (0..255).map { |v| low + (high - low) * v / 255.0 })
   end
 
   # Brightness offset (positive = lighter), clamped.
   def brightness(image, offset)
+    check_finite(offset: offset)
     lut(image, (0..255).map { |v| v + offset })
   end
 
   def gamma(image, value)
+    check_finite(gamma: value)
     lut(image, (0..255).map { |v| 255.0 * ((v / 255.0)**value) })
   end
 
@@ -116,6 +243,7 @@ module Distort
   # Multiplicative illumination falling linearly from +from+ to +to+ along
   # the direction +angle+ (degrees, 0 = left to right, 90 = top to bottom).
   def gradient(image, from: 1.0, to: 0.4, angle: 0)
+    check_finite(from: from, to: to, angle: angle)
     w = image.width
     h = image.height
     rad = angle * Math::PI / 180
@@ -129,13 +257,21 @@ module Distort
     step_x = ((to - from) * dx / span * 65_536).round
     step_y = ((to - from) * dy / span * 65_536).round
     base = ((from - (to - from) * pmin / span) * 65_536).round
-    scale_pixels(image) { |y| [base + step_y * y, step_x] }
+    src = image.data
+    out = "\0".b * (w * h)
+    y = 0
+    while y < h
+      scale_row(src, out, y * w, w, base + step_y * y, step_x)
+      y += 1
+    end
+    QrReader::Image.new(w, h, out)
   end
 
   # Radial darkening towards the corners: the factor is 1 at the centre and
   # 1 - +strength+ at the corners (quadratic falloff; negative strengths
   # brighten). Results are clamped to 0..255.
   def vignette(image, strength: 0.5)
+    check_finite(strength: strength)
     w = image.width
     h = image.height
     src = image.data
@@ -148,16 +284,7 @@ module Distort
     y = 0
     while y < h
       dy = 2 * y - cy2
-      dy2 = dy * dy
-      x = 0
-      off = y * w
-      while x < w
-        dx = 2 * x - cx2
-        f = 65_536 - k * (dx * dx + dy2) / r2max
-        v = (src.getbyte(off + x) * f) >> 16
-        out.setbyte(off + x, v.negative? ? 0 : (v > 255 ? 255 : v))
-        x += 1
-      end
+      vignette_row(src, out, y * w, w, cx2, dy * dy, k, r2max)
       y += 1
     end
     QrReader::Image.new(w, h, out)
@@ -167,6 +294,7 @@ module Distort
   # random line are multiplied by 1 - +darkness+, with a linear penumbra of
   # +softness+ (fraction of the image diagonal). Results are clamped to 0..255.
   def shadow(image, darkness: 0.5, softness: 0.05, seed: 0)
+    check_finite(darkness: darkness, softness: softness)
     rng = Random.new(seed)
     w = image.width
     h = image.height
@@ -183,24 +311,11 @@ module Distort
     # Signed distance d from the line; factor = dark for d <= -soft/2, lit for
     # d >= soft/2, linear in between. Computed per pixel in 1/65536 units.
     slope = (lit - dark) / soft
-    w_dist = lambda { |x, y| (x - px) * nx + (y - py) * ny }
     src = image.data
     out = "\0".b * (w * h)
     y = 0
     while y < h
-      d = w_dist.call(0, y)
-      x = 0
-      off = y * w
-      while x < w
-        f = if d <= -soft / 2 then dark
-            elsif d >= soft / 2 then lit
-            else dark + ((d + soft / 2) * slope).to_i
-            end
-        v = (src.getbyte(off + x) * f) >> 16
-        out.setbyte(off + x, v.negative? ? 0 : (v > 255 ? 255 : v))
-        d += nx
-        x += 1
-      end
+      shadow_row(src, out, y * w, w, (0 - px) * nx + (y - py) * ny, nx, soft / 2, dark, lit, slope)
       y += 1
     end
     QrReader::Image.new(w, h, out)
@@ -208,27 +323,32 @@ module Distort
 
   # Additive gaussian noise with standard deviation +sigma+ (gray levels).
   def gaussian_noise(image, sigma: 10, seed: 0)
+    check_finite(sigma: sigma)
     rng = Random.new(seed)
     table = Array.new(65_536) do
       # Box-Muller; 1 - rand avoids log(0).
       (Math.sqrt(-2 * Math.log(1 - rng.rand)) * Math.cos(2 * Math::PI * rng.rand) * sigma).round
     end
-    n = image.size
-    picks = rng.bytes(2 * n).unpack("v*") # little-endian: identical on every platform
+    w = image.width
+    h = image.height
     src = image.data
-    out = "\0".b * n
-    i = 0
-    while i < n
-      v = src.getbyte(i) + table[picks[i]]
-      out.setbyte(i, v.negative? ? 0 : (v > 255 ? 255 : v))
-      i += 1
+    out = "\0".b * (w * h)
+    y = 0
+    while y < h
+      rows = h - y < 2 ? 1 : 2
+      # Two rows per draw: 4w bytes, a multiple of 4, so the byte stream is
+      # the same as from one big rng.bytes(2 * w * h) call. Little-endian
+      # picks: identical on every platform.
+      noise_span(src, out, y * w, rng.bytes(2 * w * rows).unpack("v*"), table)
+      y += rows
     end
-    QrReader::Image.new(image.width, image.height, out)
+    QrReader::Image.new(w, h, out)
   end
 
   # Sets a fraction +amount+ (0..1) of the pixels to black or white at
   # random (positions may repeat).
   def salt_pepper(image, amount: 0.02, seed: 0)
+    check_finite(amount: amount)
     rng = Random.new(seed)
     n = image.size
     out = image.data.dup
@@ -239,36 +359,30 @@ module Distort
   # Gaussian-like blur: three successive box blurs approximating standard
   # deviation +sigma+ (pixels). Edges are clamped.
   def blur(image, sigma)
-    raise ArgumentError, "blur sigma must be finite, got #{sigma.inspect}" unless sigma.finite?
+    check_finite(sigma: sigma)
     return image if sigma <= 0
 
     box_sizes(sigma, 3).reduce(image) { |img, size| box_blur(img, (size - 1) / 2) }
   end
 
-  # Separable box blur with the given radius (window 2r+1), edges clamped.
+  # Separable box blur with the given Integer radius (window 2r+1), edges clamped.
   def box_blur(image, radius)
+    raise ArgumentError, "box blur radius must be an Integer, got #{radius.inspect}" unless radius.is_a?(Integer)
     return image if radius < 1
 
     vertical_box(horizontal_box(image, radius), radius)
   end
 
-  # Linear motion blur: average of +length+ samples along +angle+ (degrees).
+  # Linear motion blur: average of +length+ (Integer) samples along +angle+ (degrees).
   def motion_blur(image, length: 7, angle: 0)
+    raise ArgumentError, "motion blur length must be an Integer, got #{length.inspect}" unless length.is_a?(Integer)
+
+    check_finite(angle: angle)
     return image if length < 2
 
     w = image.width
     h = image.height
-    rad = angle * Math::PI / 180
-    # Whole-pixel steps -length/2 ... (length - 1)/2: centring an even
-    # length at half-pixel positions and rounding half away from zero would
-    # skip the centre pixel (-4, -3, -2, -1, 1, 2, 3, 4 for length 8).
-    # Offsets beyond the image size all land on the replicated edge, so
-    # they are clamped (bounding the padding) and equal ones are merged
-    # into weights (bounding the work per pixel).
-    offsets = Array.new(length) do |i|
-      t = i - length / 2
-      [(t * Math.cos(rad)).round.clamp(-w, w), (t * Math.sin(rad)).round.clamp(-h, h)]
-    end.tally
+    offsets = motion_offsets(length, angle * Math::PI / 180, w, h)
     margin = offsets.keys.flatten.map(&:abs).max
     padded = pad_replicate(image, margin)
     pw = w + 2 * margin
@@ -276,23 +390,9 @@ module Distort
     weights = offsets.values
     src = padded.data
     out = "\0".b * (w * h)
-    count = deltas.size
-    half = length / 2
     y = 0
     while y < h
-      base = (y + margin) * pw + margin
-      off = y * w
-      x = 0
-      while x < w
-        s = 0
-        k = 0
-        while k < count
-          s += src.getbyte(base + x + deltas[k]) * weights[k]
-          k += 1
-        end
-        out.setbyte(off + x, (s + half) / length)
-        x += 1
-      end
+      motion_row(src, out, (y + margin) * pw + margin, y * w, w, deltas, weights, length)
       y += 1
     end
     QrReader::Image.new(w, h, out)
@@ -303,7 +403,9 @@ module Distort
   # Resamples by +factor+ (e.g. 0.25 turns 6 px/module into 1.5 px/module):
   # area averaging when shrinking, bilinear interpolation when enlarging.
   def scale(image, factor)
-    raise ArgumentError, "scale factor must be positive and finite, got #{factor.inspect}" unless factor.positive? && factor.finite?
+    check_finite(factor: factor)
+    raise ArgumentError, "scale factor must be positive, got #{factor.inspect}" unless factor.positive?
+    raise ArgumentError, "scale factor #{factor} gives more than #{MAX_PIXELS} pixels" if image.size * factor * factor > MAX_PIXELS
 
     out_w = [(image.width * factor).round, 1].max
     out_h = [(image.height * factor).round, 1].max
@@ -311,9 +413,7 @@ module Distort
   end
 
   def resize(image, out_w, out_h)
-    unless out_w.is_a?(Integer) && out_h.is_a?(Integer) && out_w.positive? && out_h.positive?
-      raise ArgumentError, "invalid output size #{out_w.inspect}x#{out_h.inspect}"
-    end
+    check_size(out_w, out_h)
 
     xw = resample_weights(image.width, out_w)
     yw = resample_weights(image.height, out_h)
@@ -324,111 +424,38 @@ module Distort
     tmp = Array.new(out_w * h, 0)
     y = 0
     while y < h
-      off = y * w
-      toff = y * out_w
-      x = 0
-      while x < out_w
-        idx, wts = xw[x]
-        s = 0
-        k = 0
-        n = idx.size
-        while k < n
-          s += src.getbyte(off + idx[k]) * wts[k]
-          k += 1
-        end
-        tmp[toff + x] = s
-        x += 1
-      end
+      resample_row(src, y * w, tmp, y * out_w, out_w, xw)
       y += 1
     end
     out = "\0".b * (out_w * out_h)
-    round = 1 << 23
     y = 0
     while y < out_h
       idx, wts = yw[y]
-      n = idx.size
-      off = y * out_w
-      x = 0
-      while x < out_w
-        s = 0
-        k = 0
-        while k < n
-          s += tmp[idx[k] * out_w + x] * wts[k]
-          k += 1
-        end
-        v = (s + round) >> 24
-        out.setbyte(off + x, v > 255 ? 255 : v)
-        x += 1
-      end
+      resample_column_row(tmp, idx.map { |j| j * out_w }, wts, out, y * out_w, out_w)
       y += 1
     end
     QrReader::Image.new(out_w, out_h, out)
   end
 
   # Maps the source image's corners to +corners+ ([[x, y]] * 4: TL, TR, BR,
-  # BL) on an +out_w+ x +out_h+ canvas. Same geometry as QrTestHelper.warp.
-  #
-  # The products a * px, d * px, g * px are tabulated once per column; the
-  # arithmetic (and so every output byte) is the same as evaluating the
-  # transform per sample, about 20 % faster with and without YJIT.
+  # BL) on an +out_w+ x +out_h+ canvas, sampling +supersample+ x +supersample+
+  # points per output pixel. Same geometry as QrTestHelper.warp.
   def perspective(image, corners, out_w, out_h, background: 255, supersample: 1)
-    inv = invert3(square_to_quad(corners))
-    sw = image.width
-    sh = image.height
-    a, b, c, d, e, f, g, hh, i = inv
-    # Fold the unit-square -> pixel scaling into the inverse transform.
-    a *= sw
-    b *= sw
-    c *= sw
-    d *= sh
-    e *= sh
-    f *= sh
-    sampler = BilinearSampler.new(image, background)
-    bg = sampler.background
-    ss = supersample
-    offsets = Array.new(ss) { |k| (k + 0.5) / ss }
-    samples = ss * ss
-    round = samples * 128
-    divisor = samples * 256
-    # Column tables, indexed by x * ss + ox.
-    sub_xs = Array.new(out_w * ss) { |k| (k / ss) + offsets[k % ss] }
-    ax = sub_xs.map { |px| a * px }
-    dx = sub_xs.map { |px| d * px }
-    gx = sub_xs.map { |px| g * px }
-    acc = Array.new(out_w, 0)
+    unless corners.is_a?(Array) && corners.size == 4 && corners.all? { |p| p.is_a?(Array) && p.size == 2 }
+      raise ArgumentError, "corners must be four [x, y] pairs, got #{corners.inspect}"
+    end
+    corners.each { |x, y| check_finite(x: x, y: y) }
+    check_size(out_w, out_h)
+    check_byte(background: background)
+    unless supersample.is_a?(Integer) && supersample.between?(1, 16)
+      raise ArgumentError, "supersample must be an Integer 1..16, got #{supersample.inspect}"
+    end
+
+    warp = Warp.new(image, invert3(square_to_quad(corners)), out_w, supersample, background)
     out = "\0".b * (out_w * out_h)
     y = 0
     while y < out_h
-      acc.fill(0)
-      oy = 0
-      while oy < ss
-        py = y + offsets[oy]
-        bpy = b * py
-        epy = e * py
-        hpy = hh * py
-        k = 0
-        x = 0
-        while x < out_w
-          sum = 0
-          ox = 0
-          while ox < ss
-            den = gx[k] + hpy + i
-            # den <= 0: the point lies on or behind the camera's horizon.
-            sum += den <= 0 ? bg : sampler.at((ax[k] + bpy + c) / den - 0.5, (dx[k] + epy + f) / den - 0.5)
-            k += 1
-            ox += 1
-          end
-          acc[x] += sum
-          x += 1
-        end
-        oy += 1
-      end
-      off = y * out_w
-      x = 0
-      while x < out_w
-        out.setbyte(off + x, (acc[x] + round) / divisor)
-        x += 1
-      end
+      warp.row(y, out)
       y += 1
     end
     QrReader::Image.new(out_w, out_h, out)
@@ -437,6 +464,7 @@ module Distort
   # Random perspective tilt: each corner moves inwards by up to +strength+ of
   # the image size; the canvas keeps the input size.
   def perspective_tilt(image, strength: 0.2, seed: 0, background: 255)
+    check_finite(strength: strength)
     rng = Random.new(seed)
     w = image.width
     h = image.height
@@ -451,6 +479,9 @@ module Distort
   # Rotation by an arbitrary angle (degrees, counter-clockwise) onto a canvas
   # that holds the whole result plus +margin+, like QrTestHelper.rotate.
   def rotate(image, degrees, margin: 10, background: 255)
+    check_finite(degrees: degrees)
+    raise ArgumentError, "margin must be a non-negative Integer, got #{margin.inspect}" unless margin.is_a?(Integer) && margin >= 0
+
     rad = degrees * Math::PI / 180
     cos = Math.cos(rad)
     sin = Math.sin(rad)
@@ -471,7 +502,10 @@ module Distort
   # 0 leaves the image flat). +bulge+ adds the vertical magnification of
   # the nearer middle part.
   def cylinder(image, arc: 90, bulge: 0.05, background: 255)
-    raise ArgumentError, "arc must be 0..360 degrees, got #{arc.inspect}" unless arc.between?(0, 360)
+    raise ArgumentError, "arc must be 0..360 degrees, got #{arc.inspect}" unless arc.is_a?(Numeric) && arc.between?(0, 360)
+
+    check_finite(bulge: bulge)
+    check_byte(background: background)
     return image if arc.zero?
 
     w = image.width
@@ -482,9 +516,8 @@ module Distort
     cy = h / 2.0
     # Half width of the visible (front) side in the output.
     limit = half_arc >= Math::PI / 2 ? radius : radius * Math.sin(half_arc)
-    # Per output column: source x and vertical scale (source x is nil off
-    # the cylinder).
-    us = Array.new(w)
+    # Per output column: source x (NaN off the cylinder) and vertical scale.
+    us = Array.new(w, Float::NAN)
     scales = Array.new(w, 1.0)
     w.times do |x|
       px = x + 0.5 - cx
@@ -495,17 +528,12 @@ module Distort
       scales[x] = 1 + bulge * (Math.cos(theta) - Math.cos(half_arc))
     end
     sampler = BilinearSampler.new(image, background)
+    vs = Array.new(w, 0.0)
     out = "\0".b * (w * h)
     y = 0
     while y < h
-      dy = y + 0.5 - cy
-      off = y * w
-      x = 0
-      while x < w
-        u = us[x]
-        out.setbyte(off + x, u ? (sampler.at(u, cy + dy / scales[x] - 0.5) + 128) >> 8 : background)
-        x += 1
-      end
+      cylinder_coordinates(vs, scales, w, cy, y + 0.5 - cy)
+      sampler.sample_row(us, vs, out, y * w, w, 1, 128, 256)
       y += 1
     end
     QrReader::Image.new(w, h, out)
@@ -514,26 +542,23 @@ module Distort
   # Radial lens distortion: k > 0 gives barrel distortion (straight lines bow
   # outwards), k < 0 pincushion. k is relative to the half diagonal.
   def barrel(image, k: 0.1, background: 255)
+    check_finite(k: k)
+    check_byte(background: background)
     w = image.width
     h = image.height
     cx = w / 2.0
     cy = h / 2.0
-    r2max = cx * cx + cy * cy
-    kr = k / r2max
+    kr = k / (cx * cx + cy * cy)
+    dxs = Array.new(w) { |x| x + 0.5 - cx }
+    dx2s = dxs.map { |dx| dx * dx }
     sampler = BilinearSampler.new(image, background)
+    us = Array.new(w, 0.0)
+    vs = Array.new(w, 0.0)
     out = "\0".b * (w * h)
     y = 0
     while y < h
-      dy = y + 0.5 - cy
-      dy2 = dy * dy
-      off = y * w
-      x = 0
-      while x < w
-        dx = x + 0.5 - cx
-        s = 1 + kr * (dx * dx + dy2)
-        out.setbyte(off + x, (sampler.at(cx + dx * s - 0.5, cy + dy * s - 0.5) + 128) >> 8)
-        x += 1
-      end
+      barrel_coordinates(us, vs, dxs, dx2s, cx, cy, y + 0.5 - cy, kr)
+      sampler.sample_row(us, vs, out, y * w, w, 1, 128, 256)
       y += 1
     end
     QrReader::Image.new(w, h, out)
@@ -541,6 +566,10 @@ module Distort
 
   # Surrounds the image with a border of +margin+ pixels of +value+.
   def pad(image, margin, value: 255)
+    raise ArgumentError, "margin must be a non-negative Integer, got #{margin.inspect}" unless margin.is_a?(Integer) && margin >= 0
+
+    check_byte(value: value)
+    check_size(image.width + 2 * margin, image.height + 2 * margin)
     w = image.width
     nw = w + 2 * margin
     fill = value.chr.b
@@ -553,10 +582,13 @@ module Distort
     QrReader::Image.new(nw, image.height + 2 * margin, out)
   end
 
-  # Pastes +placements+ ([[image, x, y], ...]) onto a new canvas.
+  # Pastes +placements+ ([[image, x, y], ...], Integer positions) onto a new canvas.
   def compose(width, height, placements, background: 255)
+    check_size(width, height)
+    check_byte(background: background)
     out = background.chr.b * (width * height)
     placements.each do |img, x0, y0|
+      raise ArgumentError, "placement positions must be Integers, got #{[x0, y0].inspect}" unless x0.is_a?(Integer) && y0.is_a?(Integer)
       raise ArgumentError, "placement outside canvas" if x0.negative? || y0.negative? || x0 + img.width > width || y0 + img.height > height
 
       img.height.times { |y| out.bytesplice((y0 + y) * width + x0, img.width, img.row(y)) }
@@ -577,9 +609,11 @@ module Distort
     end
   end
 
-  # JPEG-compresses the image with ImageMagick. +color+ writes a 3-component
-  # YCbCr JPEG with 4:2:0 chroma subsampling instead of a grayscale one.
+  # JPEG-compresses the image with ImageMagick (+quality+ 1..100). +color+
+  # writes a 3-component YCbCr JPEG with 4:2:0 chroma subsampling instead of
+  # a grayscale one.
   def jpeg_bytes(image, quality: 75, color: false, progressive: false)
+    raise ArgumentError, "JPEG quality must be an Integer 1..100, got #{quality.inspect}" unless quality.is_a?(Integer) && quality.between?(1, 100)
     raise Unavailable, "ImageMagick (magick) is not installed" unless jpeg_available?
 
     args = ["magick", "pgm:-", "-quality", quality.to_s]
@@ -620,30 +654,187 @@ module Distort
     QrReader::Image.new(w, h, data)
   end
 
+  # --- validation ------------------------------------------------------------
+
+  def check_finite(**values)
+    values.each do |name, value|
+      raise ArgumentError, "#{name} must be a finite number, got #{value.inspect}" unless value.is_a?(Numeric) && value.real? && value.finite?
+    end
+  end
+
+  def check_byte(**values)
+    values.each do |name, value|
+      raise ArgumentError, "#{name} must be an Integer 0..255, got #{value.inspect}" unless value.is_a?(Integer) && value.between?(0, 255)
+    end
+  end
+
+  def check_size(width, height)
+    unless width.is_a?(Integer) && height.is_a?(Integer) && width.positive? && height.positive?
+      raise ArgumentError, "invalid output size #{width.inspect}x#{height.inspect}"
+    end
+    raise ArgumentError, "output size #{width}x#{height} exceeds #{MAX_PIXELS} pixels" if width * height > MAX_PIXELS
+  end
+
+  # --- per-row kernels ---------------------------------------------------------
+
+  # Multiplies the +w+ pixels at +off+ by a factor (1/65536 units) starting
+  # at +f+ and growing by +step+ per pixel.
+  def scale_row(src, out, off, w, f, step)
+    x = 0
+    while x < w
+      v = (src.getbyte(off + x) * (f < 0 ? 0 : f)) >> 16
+      out.setbyte(off + x, v > 255 ? 255 : v)
+      f += step
+      x += 1
+    end
+  end
+
+  def vignette_row(src, out, off, w, cx2, dy2, k, r2max)
+    x = 0
+    while x < w
+      dx = 2 * x - cx2
+      v = (src.getbyte(off + x) * (65_536 - k * (dx * dx + dy2) / r2max)) >> 16
+      out.setbyte(off + x, v < 0 ? 0 : (v > 255 ? 255 : v))
+      x += 1
+    end
+  end
+
+  # +d+ is the signed distance of the row's first pixel from the shadow line;
+  # it grows by +nx+ per pixel.
+  def shadow_row(src, out, off, w, d, nx, half_soft, dark, lit, slope)
+    x = 0
+    while x < w
+      f = if d <= -half_soft then dark
+          elsif d >= half_soft then lit
+          else dark + ((d + half_soft) * slope).to_i
+          end
+      v = (src.getbyte(off + x) * f) >> 16
+      out.setbyte(off + x, v < 0 ? 0 : (v > 255 ? 255 : v))
+      d += nx
+      x += 1
+    end
+  end
+
+  def noise_span(src, out, off, picks, table)
+    n = picks.size
+    i = 0
+    while i < n
+      v = src.getbyte(off + i) + table[picks[i]]
+      out.setbyte(off + i, v < 0 ? 0 : (v > 255 ? 255 : v))
+      i += 1
+    end
+  end
+
+  # Weighted sum of +length+ samples (+deltas+ / +weights+ around +base+ in
+  # the edge-padded source) for each of the +w+ pixels of one output row.
+  def motion_row(src, out, base, off, w, deltas, weights, length)
+    count = deltas.size
+    half = length / 2
+    x = 0
+    while x < w
+      s = 0
+      k = 0
+      p = base + x
+      while k < count
+        s += src.getbyte(p + deltas[k]) * weights[k]
+        k += 1
+      end
+      out.setbyte(off + x, (s + half) / length)
+      x += 1
+    end
+  end
+
+  # Horizontal resampling pass for one source row into +tmp+ (scaled by 2**12).
+  def resample_row(src, off, tmp, toff, out_w, xw)
+    x = 0
+    while x < out_w
+      idx, wts = xw[x]
+      s = 0
+      k = 0
+      n = idx.size
+      while k < n
+        s += src.getbyte(off + idx[k]) * wts[k]
+        k += 1
+      end
+      tmp[toff + x] = s
+      x += 1
+    end
+  end
+
+  # Vertical resampling pass for one output row: +rows+ are the offsets in
+  # +tmp+ of the contributing rows, +wts+ their weights (scaled by 2**12).
+  def resample_column_row(tmp, rows, wts, out, off, out_w)
+    n = rows.size
+    x = 0
+    while x < out_w
+      s = 0
+      k = 0
+      while k < n
+        s += tmp[rows[k] + x] * wts[k]
+        k += 1
+      end
+      v = (s + 8_388_608) >> 24
+      out.setbyte(off + x, v > 255 ? 255 : v)
+      x += 1
+    end
+  end
+
+  def cylinder_coordinates(vs, scales, w, cy, dy)
+    x = 0
+    while x < w
+      vs[x] = cy + dy / scales[x] - 0.5
+      x += 1
+    end
+  end
+
+  # +dxs+: horizontal distance of every column from the centre, +dx2s+ its square.
+  def barrel_coordinates(us, vs, dxs, dx2s, cx, cy, dy, kr)
+    dy2 = dy * dy
+    w = dxs.size
+    x = 0
+    while x < w
+      dx = dxs[x]
+      s = 1 + kr * (dx2s[x] + dy2)
+      us[x] = cx + dx * s - 0.5
+      vs[x] = cy + dy * s - 0.5
+      x += 1
+    end
+  end
+
   # --- helpers -------------------------------------------------------------
 
-  # Multiplies each pixel by a per-pixel factor (1/65536 units) that starts
-  # at row_start and grows by step per column: the block returns
-  # [row_start, step] for row y.
-  def scale_pixels(image)
-    w = image.width
-    h = image.height
-    src = image.data
-    out = "\0".b * (w * h)
-    y = 0
-    while y < h
-      f, step = yield(y)
-      off = y * w
-      x = 0
-      while x < w
-        v = (src.getbyte(off + x) * (f.negative? ? 0 : f)) >> 16
-        out.setbyte(off + x, v > 255 ? 255 : v)
-        f += step
-        x += 1
+  # {[dx, dy] => weight} for a motion blur of +length+ samples at whole-pixel
+  # steps t = -length/2 ... (length - 1)/2 along +rad+ (centring an even
+  # length at half-pixel positions and rounding half away from zero would
+  # skip the centre pixel: -4, -3, -2, -1, 1, 2, 3, 4 for length 8).
+  # Offsets beyond the image size all land on the replicated edge, so they
+  # are clamped (bounding the padding) and equal ones are merged into
+  # weights (bounding the work per pixel). Both coordinates are monotone in
+  # t, so every offset covers one interval of t: a binary search finds its
+  # end, which keeps huge lengths cheap (O(w + h) offsets, not O(length)).
+  def motion_offsets(length, rad, w, h)
+    cos = Math.cos(rad)
+    sin = Math.sin(rad)
+    offset = ->(t) { [(t * cos).round.clamp(-w, w), (t * sin).round.clamp(-h, h)] }
+    weights = {}
+    t = -(length / 2)
+    last = length - 1 - length / 2
+    while t <= last
+      current = offset.(t)
+      lo = t
+      hi = last
+      while lo < hi
+        mid = (lo + hi + 1) / 2
+        if offset.(mid) == current
+          lo = mid
+        else
+          hi = mid - 1
+        end
       end
-      y += 1
+      weights[current] = lo - t + 1
+      t = lo + 1
     end
-    QrReader::Image.new(w, h, out)
+    weights
   end
 
   # Source indices and weights (summing to 4096) for each output sample of
@@ -687,35 +878,38 @@ module Distort
     h = image.height
     src = image.data
     out = "\0".b * (w * h)
-    size = 2 * r + 1
-    half = size / 2
-    last = w - 1
     y = 0
-    # The window starts at -r: r copies of the first pixel, then pixels
-    # 0...r (clamped to the last one), summed in O(min(r, w)).
-    head = r < w ? r : w
     while y < h
-      off = y * w
-      first_v = src.getbyte(off)
-      last_v = src.getbyte(off + last)
-      s = first_v * r + (r - head) * last_v
-      k = 0
-      while k < head
-        s += src.getbyte(off + k)
-        k += 1
-      end
-      x = 0
-      while x < w
-        add = x + r
-        s += add > last ? last_v : src.getbyte(off + add)
-        out.setbyte(off + x, (s + half) / size)
-        sub = x - r
-        s -= sub.negative? ? first_v : src.getbyte(off + sub)
-        x += 1
-      end
+      horizontal_box_row(src, out, y * w, w, r)
       y += 1
     end
     QrReader::Image.new(w, h, out)
+  end
+
+  # The window starts at -r: r copies of the first pixel, then pixels
+  # 0...r (clamped to the last one), summed in O(min(r, w)).
+  def horizontal_box_row(src, out, off, w, r)
+    size = 2 * r + 1
+    half = size / 2
+    last = w - 1
+    head = r < w ? r : w
+    first_v = src.getbyte(off)
+    last_v = src.getbyte(off + last)
+    s = first_v * r + (r - head) * last_v
+    k = 0
+    while k < head
+      s += src.getbyte(off + k)
+      k += 1
+    end
+    x = 0
+    while x < w
+      add = x + r
+      s += add > last ? last_v : src.getbyte(off + add)
+      out.setbyte(off + x, (s + half) / size)
+      sub = x - r
+      s -= sub < 0 ? first_v : src.getbyte(off + sub)
+      x += 1
+    end
   end
 
   def vertical_box(image, r)
@@ -723,40 +917,43 @@ module Distort
     h = image.height
     src = image.data
     out = "\0".b * (w * h)
-    size = 2 * r + 1
-    half = size / 2
     last = h - 1
-    sums = Array.new(w, 0)
     head = r < h ? r : h
     last_off = last * w
-    x = 0
-    while x < w
-      s = src.getbyte(x) * r + (r - head) * src.getbyte(last_off + x)
-      k = 0
-      while k < head
-        s += src.getbyte(k * w + x)
-        k += 1
-      end
-      sums[x] = s
-      x += 1
+    # Running column sums of the window for row 0, minus its newest row.
+    sums = Array.new(w) { |x| src.getbyte(x) * r + (r - head) * src.getbyte(last_off + x) }
+    k = 0
+    while k < head
+      add_row(sums, src, k * w, w)
+      k += 1
     end
     y = 0
     while y < h
       add = y + r
-      add_off = (add > last ? last : add) * w
       sub = y - r
-      sub_off = (sub.negative? ? 0 : sub) * w
-      off = y * w
-      x = 0
-      while x < w
-        s = sums[x] + src.getbyte(add_off + x)
-        out.setbyte(off + x, (s + half) / size)
-        sums[x] = s - src.getbyte(sub_off + x)
-        x += 1
-      end
+      vertical_box_row(src, out, sums, y * w, w, (add > last ? last : add) * w, (sub < 0 ? 0 : sub) * w, 2 * r + 1)
       y += 1
     end
     QrReader::Image.new(w, h, out)
+  end
+
+  def add_row(sums, src, off, w)
+    x = 0
+    while x < w
+      sums[x] += src.getbyte(off + x)
+      x += 1
+    end
+  end
+
+  def vertical_box_row(src, out, sums, off, w, add_off, sub_off, size)
+    half = size / 2
+    x = 0
+    while x < w
+      s = sums[x] + src.getbyte(add_off + x)
+      out.setbyte(off + x, (s + half) / size)
+      sums[x] = s - src.getbyte(sub_off + x)
+      x += 1
+    end
   end
 
   # Copy of +image+ with +margin+ pixels of replicated edge on every side.
@@ -807,6 +1004,9 @@ module Distort
   STEPS = %i[lut contrast brightness gamma invert mirror gradient vignette shadow gaussian_noise salt_pepper
              blur box_blur motion_blur scale resize perspective perspective_tilt rotate cylinder barrel pad jpeg].freeze
 
-  private_class_method :scale_pixels, :resample_weights, :box_sizes, :horizontal_box,
-                       :vertical_box, :pad_replicate, :square_to_quad, :invert3
+  private_class_method :check_finite, :check_byte, :check_size, :scale_row, :vignette_row, :shadow_row,
+                       :noise_span, :motion_row, :resample_row, :resample_column_row, :cylinder_coordinates,
+                       :barrel_coordinates, :motion_offsets, :resample_weights, :box_sizes, :horizontal_box,
+                       :horizontal_box_row, :vertical_box, :add_row, :vertical_box_row, :pad_replicate,
+                       :square_to_quad, :invert3
 end

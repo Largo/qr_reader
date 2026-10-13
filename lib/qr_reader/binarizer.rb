@@ -39,17 +39,30 @@ module QrReader
     class << self
       # Local-threshold binarization. The image is divided into blocks of
       # 8x8 pixels. A block with contrast gets the threshold
-      # (min + max) / 2, a flat block none; each block's threshold is then
-      # the mean over the 5x5 blocks around it that have one, and blocks in
-      # large flat areas take the nearest threshold in scan order. Pixels at
-      # or below their block's threshold become dark. Unlike local_mean, a
-      # flat area (quiet zone, large modules) does not drag its neighbours'
-      # thresholds down, which matters for low-contrast symbols.
+      # (min + max) / 2, a flat block none - unless an edge runs exactly
+      # along its border: two neighbouring flat blocks whose luminance
+      # ranges lie more than MIN_DYNAMIC_RANGE apart both get the threshold
+      # halfway between them (crisp generated images whose module size is a
+      # multiple of 8 have no edge inside any block). Each block's threshold
+      # is then the mean over the 5x5 blocks around it that have one, and
+      # blocks in large flat areas take the nearest threshold in scan
+      # order. Pixels at or below their block's threshold become dark.
+      # Unlike local_mean, a flat area (quiet zone, large modules) does not
+      # drag its neighbours' thresholds down, which matters for low-contrast
+      # symbols.
       def hybrid(image)
         local_threshold(image) do |data, width, height, sub_width, sub_height|
-          block = Array.new(sub_width * sub_height, 0)
+          size = sub_width * sub_height
+          block = Array.new(size, 0)
+          lows = Array.new(size, 0)
+          highs = Array.new(size, 0)
           each_block_row(height, sub_height) do |by, y0|
-            block_row_midranges(data, width, y0 * width, block, by * sub_width, sub_width)
+            block_row_midranges(data, width, y0 * width, block, lows, highs, by * sub_width, sub_width)
+          end
+          by = 0
+          while by < sub_height
+            bridge_flat_edges(block, lows, highs, by * sub_width, sub_width, by + 1 < sub_height)
+            by += 1
           end
           smooth_midranges(block, sub_width, sub_height)
         end
@@ -178,7 +191,7 @@ module QrReader
             # A flat block is assumed to be background (white it out) unless
             # its neighbours suggest it lies inside a dark area.
             black_point = min >> 1
-            if base.positive? && bx.positive?
+            if base > 0 && bx > 0
               up = base - sub_width + bx
               neighbours = (black_points[up] + 2 * black_points[base + bx - 1] + black_points[up - 1]) >> 2
               black_point = neighbours if min < neighbours
@@ -189,10 +202,11 @@ module QrReader
         end
       end
 
-      # (min + max) / 2 of each block of one block row, 0 for flat blocks.
-      # Min and max of each 8 pixel row segment come from pairwise
-      # comparisons (12 instead of 16 per segment).
-      def block_row_midranges(data, width, off0, out, base, sub_width)
+      # (min + max) / 2 of each block of one block row, 0 for flat blocks;
+      # the minima and maxima go to +lows+ and +highs+. Min and max of each
+      # 8 pixel row segment come from pairwise comparisons (12 instead of 16
+      # per segment).
+      def block_row_midranges(data, width, off0, out, lows, highs, base, sub_width)
         max_x = width - 8
         bx = 0
         while bx < sub_width
@@ -243,85 +257,168 @@ module QrReader
             max = hi if hi > max
             off += width
           end
-          out[base + bx] = max - min > MIN_DYNAMIC_RANGE ? (max + min) >> 1 : 0
+          i = base + bx
+          lows[i] = min
+          highs[i] = max
+          out[i] = max - min > MIN_DYNAMIC_RANGE ? (max + min) >> 1 : 0
           bx += 1
         end
+      end
+
+      # Gives flat blocks of the block row starting at +base+ a threshold
+      # when an edge runs along their border: a flat right (or lower)
+      # neighbour whose luminance range is more than MIN_DYNAMIC_RANGE away
+      # from theirs. Both blocks get the threshold halfway across the gap
+      # (blocks that already have one keep it). A smooth gradient never
+      # qualifies: neighbouring ranges of flat blocks overlap or touch.
+      def bridge_flat_edges(block, lows, highs, base, sub_width, below)
+        i = base
+        last = base + sub_width - 1
+        while i <= last
+          lo = lows[i]
+          hi = highs[i]
+          if hi - lo <= MIN_DYNAMIC_RANGE
+            bridge_pair(block, lows, highs, i, i + 1, lo, hi) if i < last
+            bridge_pair(block, lows, highs, i, i + sub_width, lo, hi) if below
+          end
+          i += 1
+        end
+      end
+
+      # bridge_flat_edges for flat block i (range lo..hi) and block j.
+      def bridge_pair(block, lows, highs, i, j, lo, hi)
+        lo2 = lows[j]
+        hi2 = highs[j]
+        return if hi2 - lo2 > MIN_DYNAMIC_RANGE
+
+        t = if lo2 - hi > MIN_DYNAMIC_RANGE
+              (hi + lo2) >> 1
+            elsif lo - hi2 > MIN_DYNAMIC_RANGE
+              (hi2 + lo) >> 1
+            else
+              return
+            end
+        block[i] = t if block[i] == 0
+        block[j] = t if block[j] == 0
       end
 
       # Mean over the 5x5 blocks around each block of the thresholds that
       # are set (the block itself counts twice), via separable box sums of
       # the thresholds and of an is-set indicator; then gap filling in scan
-      # order for blocks without any contrast around them.
+      # order for blocks without any contrast around them. One method call
+      # per block row, so that YJIT compiles the loops.
       def smooth_midranges(block, sub_width, sub_height)
         size = sub_width * sub_height
         hsum = Array.new(size, 0)
         hcount = Array.new(size, 0)
         by = 0
         while by < sub_height
-          base = by * sub_width
-          bx = 0
-          while bx < sub_width
-            i = base + bx.clamp(2, sub_width - 3) - 2
-            stop = i + 5
-            sum = 0
-            count = 0
-            while i < stop
-              t = block[i]
-              if t.positive?
-                sum += t
-                count += 1
-              end
-              i += 1
-            end
-            hsum[base + bx] = sum
-            hcount[base + bx] = count
-            bx += 1
-          end
+          window_row_sums(block, hsum, hcount, by * sub_width, sub_width)
           by += 1
         end
         out = Array.new(size, 0)
         by = 0
         while by < sub_height
-          top = (by.clamp(2, sub_height - 3) - 2) * sub_width
-          base = by * sub_width
-          bx = 0
-          while bx < sub_width
-            i = top + bx
-            sum = hsum[i] + hsum[i + sub_width] + hsum[i + 2 * sub_width] + hsum[i + 3 * sub_width] +
-                  hsum[i + 4 * sub_width]
-            count = hcount[i] + hcount[i + sub_width] + hcount[i + 2 * sub_width] + hcount[i + 3 * sub_width] +
-                    hcount[i + 4 * sub_width]
-            centre = block[base + bx]
-            if centre.positive?
-              sum += 2 * centre
-              count += 2
-            end
-            out[base + bx] = count.positive? ? sum / count : 0
-            bx += 1
-          end
+          window_column_means(block, hsum, hcount, out, by * sub_width,
+                              (by.clamp(2, sub_height - 3) - 2) * sub_width, sub_width)
           by += 1
         end
-        fill_gaps(out)
+        fill_gaps(out, sub_width)
       end
 
-      # Sets every 0 entry to the previous non-zero one (or the first one).
-      # All zero (no contrast anywhere) becomes -1: everything light.
-      def fill_gaps(values)
+      # Sums and counts of the set (positive) thresholds over the 5 blocks
+      # around each block of one block row (window clamped to the row).
+      def window_row_sums(block, hsum, hcount, base, sub_width)
+        last = sub_width - 3
+        bx = 0
+        while bx < sub_width
+          # Window start, clamped to the row (no Integer#clamp: slow in loops).
+          i = base + (bx < 2 ? 0 : (bx > last ? last - 2 : bx - 2))
+          a = block[i]
+          b = block[i + 1]
+          c = block[i + 2]
+          d = block[i + 3]
+          e = block[i + 4]
+          sum = 0
+          count = 0
+          if a > 0
+            sum += a
+            count += 1
+          end
+          if b > 0
+            sum += b
+            count += 1
+          end
+          if c > 0
+            sum += c
+            count += 1
+          end
+          if d > 0
+            sum += d
+            count += 1
+          end
+          if e > 0
+            sum += e
+            count += 1
+          end
+          hsum[base + bx] = sum
+          hcount[base + bx] = count
+          bx += 1
+        end
+      end
+
+      # 5x5 means of one block row from the row sums of the 5 block rows
+      # starting at +top+ (0 where no threshold is set nearby).
+      def window_column_means(block, hsum, hcount, out, base, top, sub_width)
+        s1 = sub_width
+        s2 = 2 * sub_width
+        s3 = 3 * sub_width
+        s4 = 4 * sub_width
+        bx = 0
+        while bx < sub_width
+          i = top + bx
+          sum = hsum[i] + hsum[i + s1] + hsum[i + s2] + hsum[i + s3] + hsum[i + s4]
+          count = hcount[i] + hcount[i + s1] + hcount[i + s2] + hcount[i + s3] + hcount[i + s4]
+          centre = block[base + bx]
+          if centre > 0
+            sum += 2 * centre
+            count += 2
+          end
+          out[base + bx] = count > 0 ? sum / count : 0
+          bx += 1
+        end
+      end
+
+      # Sets every 0 entry to the previous non-zero one in scan order (or
+      # the first one). All zero (no contrast anywhere) becomes -1:
+      # everything light.
+      def fill_gaps(values, row_size)
         first = values.index(&:positive?) or return values.fill(-1)
         values.fill(values[first], 0, first)
         last = values[first]
-        i = first + 1
         n = values.size
+        i = first + 1
         while i < n
+          stop = i + row_size
+          stop = n if stop > n
+          last = fill_gaps_span(values, i, stop, last)
+          i = stop
+        end
+        values
+      end
+
+      # fill_gaps for values[i...stop]; returns the last non-zero value.
+      def fill_gaps_span(values, i, stop, last)
+        while i < stop
           t = values[i]
-          if t.zero?
+          if t == 0
             values[i] = last
           else
             last = t
           end
           i += 1
         end
-        values
+        last
       end
 
       # Mean black point over the 5x5 blocks around each block (the window
@@ -330,32 +427,39 @@ module QrReader
         hsum = Array.new(sub_width * sub_height, 0)
         by = 0
         while by < sub_height
-          base = by * sub_width
-          bx = 0
-          while bx < sub_width
-            i = base + bx.clamp(2, sub_width - 3)
-            hsum[base + bx] = black_points[i - 2] + black_points[i - 1] + black_points[i] +
-                              black_points[i + 1] + black_points[i + 2]
-            bx += 1
-          end
+          five_sums_row(black_points, hsum, by * sub_width, sub_width)
           by += 1
         end
         averages = Array.new(sub_width * sub_height, 0)
-        two_rows = 2 * sub_width
         by = 0
         while by < sub_height
-          centre = by.clamp(2, sub_height - 3) * sub_width
-          base = by * sub_width
-          bx = 0
-          while bx < sub_width
-            i = centre + bx
-            averages[base + bx] = (hsum[i - two_rows] + hsum[i - sub_width] + hsum[i] +
-                                   hsum[i + sub_width] + hsum[i + two_rows]) / 25
-            bx += 1
-          end
+          five_means_row(hsum, averages, by * sub_width, by.clamp(2, sub_height - 3) * sub_width, sub_width)
           by += 1
         end
         averages
+      end
+
+      # Sums over the 5 blocks around each block of one block row.
+      def five_sums_row(values, hsum, base, sub_width)
+        last = sub_width - 3
+        bx = 0
+        while bx < sub_width
+          i = base + (bx < 2 ? 2 : (bx > last ? last : bx))
+          hsum[base + bx] = values[i - 2] + values[i - 1] + values[i] + values[i + 1] + values[i + 2]
+          bx += 1
+        end
+      end
+
+      # Means over 5 block rows (centred on block row +centre+) of +hsum+.
+      def five_means_row(hsum, averages, base, centre, sub_width)
+        two_rows = 2 * sub_width
+        bx = 0
+        while bx < sub_width
+          i = centre + bx
+          averages[base + bx] = (hsum[i - two_rows] + hsum[i - sub_width] + hsum[i] +
+                                 hsum[i + sub_width] + hsum[i + two_rows]) / 25
+          bx += 1
+        end
       end
 
       # Marks the pixels of one image row that are at or below their block's

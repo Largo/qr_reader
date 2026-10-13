@@ -8,6 +8,8 @@ require "tmpdir"
 require_relative "../bench/support"
 require_relative "../bench/corpus"
 require_relative "../bench/synthetic"
+require_relative "../bench/speed"
+require "digest"
 
 # Adversarial tests for the testkit (test encoder, distortions, bench
 # helpers): edge cases, garbage parameters and cross-checks against
@@ -422,5 +424,291 @@ class TestTestkitAdversarial < Minitest::Test
     chunk = ->(type, body) { [body.bytesize].pack("N") + type + body + [Zlib.crc32(type + body)].pack("N") }
     "\x89PNG\r\n\x1a\n".b + chunk.("IHDR", [width, height, 8, 6, 0, 0, 0].pack("NNCCCCC")) +
       chunk.("IDAT", Zlib::Deflate.deflate(raw)) + chunk.("IEND", "".b)
+  end
+
+  # --- second pass: structured append parity, GS%, rqrcode masks ------------
+
+  # §8.3.12: the parity is the XOR of the original message bytes, so GS and
+  # "%" count as themselves, not as the "%" / "%%" escapes that alphanumeric
+  # segments use after FNC1.
+  def test_structured_append_parity_ignores_fnc1_escapes
+    message = "A\x1DB%%C"
+    e = QrTestEncoder.build([[:alphanumeric, message]], fnc1: :first, structured_append: [0, 2, nil])
+    assert_equal "A%B%%%%C", e.segments.last.data
+    assert_equal message.bytes.reduce(:^), e.segments.first.data[2]
+    text = "10ABC\x1D21XY%Z\x1D30%%7"
+    series = QrTestEncoder.structured_append_series(text, 3, mode: :alphanumeric, fnc1: :first, level: :L)
+    assert_equal [text.bytes.reduce(:^)], series.map { |s| s.segments.first.data[2] }.uniq
+  end
+
+  # "GS%" would be written as "%%%", which decoders (ZXing, zxing-cpp)
+  # read as "%GS": the encoder refuses it in one alphanumeric segment and
+  # automatic mode falls back to byte mode; a segment break is unambiguous.
+  def test_gs_followed_by_percent_is_never_misencoded
+    assert_raises(QrTestEncoder::Error) { QrTestEncoder.build([[:alphanumeric, "AB\x1D%C"]], fnc1: :first) }
+    assert_raises(QrTestEncoder::Error) { QrTestEncoder.structured_append_series("A\x1D%BC", 2, mode: :alphanumeric, fnc1: :first) }
+    # Split between the GS and the "%", the parts are unambiguous.
+    assert_equal 2, QrTestEncoder.structured_append_series("A\x1D%B", 2, mode: :alphanumeric, fnc1: :first).size
+    auto = QrTestEncoder.build("AB\x1D%C", fnc1: :first)
+    assert_equal %i[fnc1_first byte], auto.segments.map(&:mode)
+    assert_equal %i[fnc1_first alphanumeric], QrTestEncoder.build("AB%\x1DC", fnc1: :first).segments.map(&:mode)
+    skip "zxing-cpp reference venv not available" unless QrReference.available?
+
+    symbols = [auto, QrTestEncoder.build([[:alphanumeric, "AB\x1D"], [:alphanumeric, "%C"]], fnc1: :first),
+               QrTestEncoder.build("AB%\x1DC", fnc1: :first)]
+    Dir.mktmpdir do |dir|
+      paths = symbols.each_with_index.map do |sym, i|
+        File.join(dir, "gs#{i}.png").tap { |path| QrTestHelper.write_png(sym.to_image(module_size: 3), path) }
+      end
+      texts = QrReference.decode(paths, text_mode: "Plain").map { |r| r["results"].map { |x| x["text"] } }
+      assert_equal [["AB\x1D%C"], ["AB\x1D%C"], ["AB%\x1DC"]], texts
+    end
+  end
+
+  # The requirement's own check for the remaining versions: rqrcode_core
+  # chooses the mask, we read it from its format bits and must produce the
+  # same symbol (test_encoder covers 1-10, 14, 21, 27, 33 and 40 this way).
+  # rqrcode's mask evaluation is slow: a third of them by default, all with
+  # QR_ENCODER_FULL=1.
+  def test_matches_rqrcode_mask_choice_for_every_version
+    rng = Random.new(31)
+    versions = (11..39).to_a - [14, 21, 27, 33]
+    versions = versions.each_slice(3).map(&:first) unless ENV["QR_ENCODER_FULL"]
+    versions.each do |version|
+      level = LEVELS[version % 4]
+      mode, ours = [[:number, :numeric], [:alphanumeric, :alphanumeric], [:byte_8bit, :byte]][version % 3]
+      chars = { number: "0123456789", alphanumeric: QrTestEncoder::ALPHANUMERIC_CHARSET, byte_8bit: "abcdefghij.-/:" }[mode]
+      text = Array.new(rng.rand(1..60)) { chars[rng.rand(chars.size)] }.join
+      theirs = QrReader::BitMatrix.from_rows(RQRCodeCore::QRCode.new(text, level: level.downcase, size: version, mode: mode).modules)
+      read_level, mask = QrTestEncoder.read_format(theirs)
+      assert_equal level, read_level, "version #{version}"
+      assert_equal theirs, QrTestEncoder.encode([[ours, text]], version: version, level: level, mask: mask),
+                   "#{version}-#{level} mask #{mask} #{mode}"
+    end
+  end
+
+  def test_render_and_penalty_validate_their_arguments
+    matrix = QrTestEncoder.encode("x", version: 1)
+    [{ module_size: 0 }, { module_size: 2.5 }, { quiet: -1 }, { quiet: 1.5 }, { dark: 256 }, { light: -1 }, { dark: "0" }].each do |options|
+      assert_raises(QrTestEncoder::Error, options.inspect) { QrTestEncoder.render(matrix, **options) }
+    end
+    assert_equal [21, 21], QrTestEncoder.render(matrix, module_size: 1, quiet: 0).then { |img| [img.width, img.height] }
+    assert_raises(QrTestEncoder::Error) { QrTestEncoder.penalty(QrReader::BitMatrix.new(21, 25)) }
+  end
+
+  def test_encoded_ec_level_is_lowercase_like_results
+    assert_equal :q, QrTestEncoder.build("x", level: "q").ec_level
+    assert_equal :Q, QrTestEncoder.build("x", level: :q).level
+    assert_equal %i[l m q h], LEVELS.map { |level| QrTestEncoder.build("x", level: level).ec_level }
+  end
+
+  # --- second pass: Distort ---------------------------------------------------------
+
+  # Output bytes recorded with the original whole-image loops before they
+  # were split into per-row kernels; the synthetic baselines depend on them.
+  # Float rounding of libm functions may differ on other platforms.
+  PINNED = {
+    "gradient" => "185x185:a5c47ec3408fda8eca810c82a33eb45d",
+    "vignette" => "185x185:6bad1294159381be34f270d60832048d",
+    "shadow" => "185x185:573df56178bbdbe1bdfe268c3690ef3d",
+    "gaussian_noise" => "185x185:3efc538d2a6ee1f332fbeddb40b4464e",
+    "salt_pepper" => "185x185:4a5a31b4ab18ad428e7d92d818e9b80c",
+    "blur" => "185x185:b2fb9f0ffe9d98cfb691e38254ad5aae",
+    "motion_blur" => "185x185:36b83b9aad4f8368087bfa3d5d047cc2",
+    "scale_down" => "68x68:30999a9fd4ad924cc16f0903f3a425a0",
+    "scale_up" => "296x296:2b053cc589fc100c56e8de2449d557a4",
+    "perspective" => "210x220:9992584793dad8340e8065f6b2be0b28",
+    "tilt" => "185x185:fe0b6d12da4191b1c5709896e5035c07",
+    "rotate" => "277x277:cbe616a54667ca2b1a4d7059da7c880f",
+    "cylinder" => "185x185:1ab212231cd3c62db9d0c7e294cb332a",
+    "barrel" => "185x185:30e001145c6da87badd95b73a67ec0d9"
+  }.freeze
+
+  def test_outputs_match_pinned_digests
+    skip "digests pinned on x86_64 Linux" unless RUBY_PLATFORM.start_with?("x86_64-linux")
+
+    img = Distort.gaussian_noise(QrTestEncoder.build("PINNED OUTPUT", version: 3, level: :Q, mask: 4).to_image(module_size: 5),
+                                 sigma: 6, seed: 11)
+    outputs = {
+      "gradient" => Distort.gradient(img, from: 1.1, to: 0.35, angle: 125),
+      "vignette" => Distort.vignette(img, strength: 0.7),
+      "shadow" => Distort.shadow(img, darkness: 0.6, softness: 0.1, seed: 7),
+      "gaussian_noise" => Distort.gaussian_noise(img, sigma: 20, seed: 3),
+      "salt_pepper" => Distort.salt_pepper(img, amount: 0.03, seed: 3),
+      "blur" => Distort.blur(img, 1.7),
+      "motion_blur" => Distort.motion_blur(img, length: 8, angle: 35),
+      "scale_down" => Distort.scale(img, 0.37),
+      "scale_up" => Distort.scale(img, 1.6),
+      "perspective" => Distort.perspective(img, [[12.5, 30], [170, 5], [190, 200], [3, 160]], 210, 220,
+                                           background: 200, supersample: 3),
+      "tilt" => Distort.perspective_tilt(img, strength: 0.25, seed: 9),
+      "rotate" => Distort.rotate(img, 33.3),
+      "cylinder" => Distort.cylinder(img, arc: 140, bulge: 0.1),
+      "barrel" => Distort.barrel(img, k: -0.2, background: 30)
+    }
+    outputs.each do |name, out|
+      assert_equal PINNED.fetch(name), "#{out.width}x#{out.height}:#{Digest::MD5.hexdigest(out.data)}", name
+    end
+  end
+
+  # The documented algorithm in one piece: a 65536-entry Box-Muller table,
+  # then one little-endian 16-bit pick per pixel from a single rng.bytes
+  # call. Row-wise drawing must give the same stream for any image shape.
+  def test_gaussian_noise_matches_one_shot_reference
+    rng = Random.new(2)
+    [[1, 1], [1, 9], [9, 1], [3, 3], [7, 5], [8, 3], [31, 17]].each do |w, h|
+      img = QrReader::Image.new(w, h, Array.new(w * h) { rng.rand(256) }.pack("C*"))
+      noise = Random.new(77)
+      table = Array.new(65_536) { (Math.sqrt(-2 * Math.log(1 - noise.rand)) * Math.cos(2 * Math::PI * noise.rand) * 30).round }
+      picks = noise.bytes(2 * w * h).unpack("v*")
+      expected = img.data.bytes.each_with_index.map { |v, i| (v + table[picks[i]]).clamp(0, 255) }.pack("C*")
+      assert_equal expected, Distort.gaussian_noise(img, sigma: 30, seed: 77).data, "#{w}x#{h}"
+    end
+  end
+
+  def test_invalid_parameters_raise_argument_error
+    img = gray(12, 10, 128)
+    nan = Float::NAN
+    corners = [[0, 0], [12, 0], [12, 10], [0, 10]]
+    [
+      -> { Distort.perspective(img, corners, 12, 10, supersample: 0) },
+      -> { Distort.perspective(img, corners, 12, 10, supersample: 1.5) },
+      -> { Distort.perspective(img, corners, 12, 10, supersample: 17) },
+      -> { Distort.perspective(img, corners, 12, 10, background: 256) },
+      -> { Distort.perspective(img, corners.first(3), 12, 10) },
+      -> { Distort.perspective(img, [[0, 0], [12, nan], [12, 10], [0, 10]], 12, 10) },
+      -> { Distort.perspective(img, corners, 0, 10) },
+      -> { Distort.pad(img, 2.5) }, -> { Distort.pad(img, -1) }, -> { Distort.pad(img, 2, value: 256) },
+      -> { Distort.compose(20, 20, [[img, 1.5, 2]]) }, -> { Distort.compose(20, 20, [[img, 1, 2]], background: -1) },
+      -> { Distort.box_blur(img, 1.5) }, -> { Distort.motion_blur(img, length: 3.5) },
+      -> { Distort.motion_blur(img, angle: nan) }, -> { Distort.rotate(img, nan) }, -> { Distort.rotate(img, 5, margin: -1) },
+      -> { Distort.gradient(img, angle: nan) }, -> { Distort.gradient(img, to: Float::INFINITY) },
+      -> { Distort.vignette(img, strength: nan) }, -> { Distort.shadow(img, softness: nan) },
+      -> { Distort.gaussian_noise(img, sigma: nan) }, -> { Distort.gaussian_noise(img, sigma: Float::INFINITY) },
+      -> { Distort.salt_pepper(img, amount: nan) }, -> { Distort.perspective_tilt(img, strength: nan) },
+      -> { Distort.cylinder(img, bulge: nan) }, -> { Distort.cylinder(img, arc: "90") }, -> { Distort.barrel(img, k: nan) },
+      -> { Distort.barrel(img, background: 300) }, -> { Distort.contrast(img, low: "0") }, -> { Distort.brightness(img, nil) },
+      -> { Distort.jpeg_bytes(img, quality: "abc") }, -> { Distort.jpeg_bytes(img, quality: 0) },
+      -> { Distort.jpeg_bytes(img, quality: 101) }, -> { Distort.jpeg(img, quality: 50.5) }
+    ].each_with_index { |call, i| assert_raises(ArgumentError, "call #{i}") { call.call } }
+  end
+
+  # Absurd sizes fail fast instead of allocating gigabytes or looping for minutes.
+  def test_absurd_sizes_are_rejected_or_bounded
+    img = QrReader::Image.new(30, 20, (0...600).map { |i| (i * 37) % 256 }.pack("C*"))
+    [
+      -> { Distort.scale(img, 1e5) }, -> { Distort.scale(img, 1e300) }, -> { Distort.resize(img, 100_000, 100_000) },
+      -> { Distort.perspective(img, [[0, 0], [1, 0], [1, 1], [0, 1]], 1 << 20, 1 << 20) },
+      -> { Distort.rotate(img, 10, margin: 1 << 20) }, -> { Distort.pad(img, 1 << 20) },
+      -> { Distort.compose(1 << 20, 1 << 20, []) }
+    ].each_with_index { |call, i| assert_raises(ArgumentError, "call #{i}") { call.call } }
+    started = BenchSupport.now
+    [[10**9, 33], [10**12, 90], [10**9 + 1, 89.99999], [10**10, 0.00001]].each do |length, angle|
+      blurred = Distort.motion_blur(img, length: length, angle: angle)
+      assert_equal [30, 20], [blurred.width, blurred.height]
+    end
+    assert_operator BenchSupport.now - started, :<, 2
+    # The same weights as summing every step one by one.
+    [[1, 0], [2, 45], [8, 35], [15, 135], [40, 89.5], [1001, 10], [4000, 271]].each do |length, angle|
+      rad = angle * Math::PI / 180
+      expected = Array.new(length) do |i|
+        t = i - length / 2
+        [(t * Math.cos(rad)).round.clamp(-30, 30), (t * Math.sin(rad)).round.clamp(-20, 20)]
+      end.tally
+      assert_equal expected.to_a, Distort.send(:motion_offsets, length, rad, 30, 20).to_a, "#{length} at #{angle}"
+    end
+  end
+
+  # Coordinates exactly on the edges and NaN/Infinity from degenerate quads
+  # sample the border pixels or the background, never raise.
+  def test_degenerate_warps_give_background
+    img = QrReader::Image.new(4, 3, (1..12).to_a.pack("C*"))
+    point = Distort.perspective(img, [[5, 5]] * 4, 10, 10, background: 77)
+    assert_equal [77], point.data.bytes.uniq
+    line = Distort.perspective(img, [[0, 0], [10, 0], [10, 0], [0, 0]], 10, 10, background: 9, supersample: 2)
+    assert_equal [10, 10], [line.width, line.height]
+    # Infinite and NaN (0 * Infinity) coordinates.
+    assert_equal [255], Distort.barrel(img, k: Float::MAX).data.bytes.uniq
+  end
+
+  # --- second pass: reference runner and bench scripts -------------------------------
+
+  def test_reference_decode_accepts_paths_that_look_like_options
+    skip "zxing-cpp reference venv not available" unless QrReference.available?
+
+    Dir.mktmpdir do |dir|
+      QrTestHelper.write_png(QrTestEncoder.build("DASH").to_image, File.join(dir, "--pure"))
+      QrTestHelper.write_png(QrTestEncoder.build("MINUS").to_image, File.join(dir, "-x.png"))
+      results = Dir.chdir(dir) { QrReference.decode(["--pure", "-x.png"]) }
+      assert_equal [["DASH"], ["MINUS"]], results.map { |r| r["results"].map { |x| x["text"] } }
+    end
+  end
+
+  def test_report_comparison_rejects_foreign_reports
+    Dir.mktmpdir do |dir|
+      speed_report = File.join(dir, "speed.json")
+      File.write(speed_report, JSON.generate({ "meta" => {}, "timings" => {} }))
+      current = { "cases" => { "a" => { "pass" => true } } }
+      _, err = capture_io do
+        assert_raises(SystemExit) { BenchSupport.compare_reports(speed_report, current, "vs speed") }
+      end
+      assert_match(/no "cases"/, err)
+      corpus_report = File.join(dir, "corpus.json")
+      File.write(corpus_report, JSON.generate(current))
+      _, err = capture_io do
+        assert_raises(SystemExit) { SpeedBench.compare([], corpus_report) }
+      end
+      assert_match(/no "timings"/, err)
+    end
+  end
+
+  def test_bench_option_errors_and_ci_limits
+    parser = OptionParser.new { |o| o.on("--n N", Integer) }
+    _, err = capture_io do
+      error = assert_raises(SystemExit) { BenchSupport.parse!(parser, ["--n", "x"]) }
+      assert_equal 2, error.status
+    end
+    assert_match(/invalid argument/, err)
+    assert_equal ["2.0x faster", "4.0x slower", "1.0x faster", "-"],
+                 [[10.0, 5.0], [0.5, 2.0], [3.0, 3.0], [0.0, 1.0]].map { |b, a| BenchSupport.speed_change(b, a) }
+    assert_nil BenchSupport.check_limits(10, min_pass: 10, wrong: 0, max_wrong: 0)
+    assert_nil BenchSupport.check_limits(3)
+    [[{ min_pass: 11 }, /at least 11/], [{ wrong: 1, max_wrong: 0 }, /1 misreads/]].each do |options, message|
+      _, err = capture_io do
+        error = assert_raises(SystemExit) { BenchSupport.check_limits(10, **options) }
+        assert_equal 1, error.status
+      end
+      assert_match message, err
+    end
+  end
+
+  # The RGB variant decodes (Pillow, independent of BenchSupport) to the
+  # same luminance.
+  def test_rgb_png_writer
+    image = QrReader::Image.new(7, 3, (0...21).map { |i| i * 12 }.pack("C*"))
+    png = BenchSupport.png_bytes(image, rgb: true)
+    raw = Zlib::Inflate.inflate(png.byteslice(41, png.byteslice(33, 4).unpack1("N")))
+    assert_equal (0...3).map { |y| "\0".b + image.row(y).bytes.flat_map { |v| [v] * 3 }.pack("C*") }.join, raw
+    skip "zxing-cpp reference venv not available" unless QrReference.available?
+
+    Dir.mktmpdir do |dir|
+      path = File.join(dir, "rgb.png")
+      File.binwrite(path, BenchSupport.png_bytes(QrTestEncoder.build("RGB PNG").to_image, rgb: true))
+      assert_equal ["RGB PNG"], QrReference.decode([path])[0]["results"].map { |r| r["text"] }
+    end
+  end
+
+  def test_speed_bench_fixtures_are_meant_to_decode
+    fixtures = SpeedBench::Inputs.new.fixture_jpegs
+    skip "no JPEG fixtures" if fixtures.empty?
+
+    fixtures.each do |path|
+      QrReader::Formats.decode(File.binread(path))
+    rescue QrReader::UnsupportedImageError => e
+      flunk "#{path}: #{e.message}"
+    rescue StandardError
+      nil # other failures are the JPEG decoder's own tests' business
+    end
+    assert_equal 3, fixtures.size
   end
 end

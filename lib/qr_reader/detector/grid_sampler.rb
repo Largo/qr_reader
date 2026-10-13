@@ -14,24 +14,33 @@ module QrReader
     #
     # Modules whose centre falls outside the image read as light.
     module GridSampler
+      # Scale of the fixed-point arithmetic of sample_row / vote_row.
+      FIXED_ONE = (1 << 24).to_f
+      # Scaled coordinates beyond this (pixels about 2**30 away) are not
+      # sampled, so that the stepping stays within Fixnum range.
+      FIXED_LIMIT = 2.0**54
+
       module_function
 
       # Samples a dimension x dimension grid. +regions+ lists
       # [x0, x1, y0, y1, transform], each covering modules x0...x1 and
-      # y0...y1 (use whole(d, transform) for a single transform). With
-      # +offset+ > 0 a module is the majority vote of its centre pixel and
-      # the four pixels +offset+ away, which ignores isolated noise.
+      # y0...y1 (use whole(d, transform) for a single transform). With an
+      # +offset+ (pixels; an Integer or [horizontal, vertical], see
+      # vote_offsets) a module is the majority vote of its centre pixel and
+      # the four pixels that far left, right, above and below it, which
+      # ignores isolated noise.
       def sample(matrix, dimension, regions, offset: 0)
         out = "\0".b * (dimension * dimension)
         bits = matrix.bits
         w = matrix.width
         h = matrix.height
+        ox, oy = offset_pair(offset)
         regions.each do |x0, x1, y0, y1, transform|
           m = transform.m
           my = y0
           while my < y1
-            if offset.positive?
-              vote_row(bits, w, h, out, my * dimension, m, my + 0.5, x0, x1, offset)
+            if ox > 0 || oy > 0
+              vote_row(bits, w, h, out, my * dimension, m, my + 0.5, x0, x1, ox, oy)
             else
               sample_row(bits, w, h, out, my * dimension, m, my + 0.5, x0, x1)
             end
@@ -50,6 +59,7 @@ module QrReader
         bits = matrix.bits
         w = matrix.width
         h = matrix.height
+        ox, oy = offset_pair(offset)
         m = transform.m
         my = 0
         while my < dimension
@@ -64,7 +74,7 @@ module QrReader
               cdx, cdy = col_shift[mx]
               px = (m[0] * u + m[1] * v + m[2]) / den + cdx + rdx
               py = (m[3] * u + m[4] * v + m[5]) / den + cdy + rdy
-              if px >= 0.0 && py >= 0.0 && px < w && py < h && dark_vote?(bits, w, h, px.to_i, py.to_i, offset)
+              if px >= 0.0 && py >= 0.0 && px < w && py < h && dark_vote?(bits, w, h, px.to_i, py.to_i, ox, oy)
                 out.setbyte(base + mx, 1)
               end
             end
@@ -81,15 +91,17 @@ module QrReader
       # under 3 px), and a module is dark if it is darker than the mean of
       # the (2r+1) x (2r+1) modules around it. +regions+ as in
       # sample. Keeps information the binarization lost (blur, uneven light,
-      # small modules). +inverted+ reads light-on-dark symbols.
-      def sample_luminance(image, dimension, regions, module_size, radius: 4, inverted: false)
+      # small modules). +inverted+ reads light-on-dark symbols. +offset+
+      # overrides the quarter module offsets derived from +module_size+
+      # (see vote_offsets).
+      def sample_luminance(image, dimension, regions, module_size, radius: 4, inverted: false, offset: nil)
         lum = Array.new(dimension * dimension, 0)
-        offset = vote_offset(module_size)
+        ox, oy = offset_pair(offset || vote_offset(module_size))
         regions.each do |x0, x1, y0, y1, transform|
           m = transform.m
           my = y0
           while my < y1
-            luminance_row(image.data, image.width, image.height, lum, my * dimension, m, my + 0.5, x0, x1, offset)
+            luminance_row(image.data, image.width, image.height, lum, my * dimension, m, my + 0.5, x0, x1, ox, oy)
             my += 1
           end
         end
@@ -108,46 +120,100 @@ module QrReader
         module_size >= 3 ? (module_size / 4.0).round : 0
       end
 
-      # Like sample_row, voting over five pixels per module.
-      def vote_row(bits, w, h, out, off, m, v, x0, x1, offset)
-        bx = m[1] * v + m[2]
-        by = m[4] * v + m[5]
-        bd = m[7] * v + m[8]
-        m0 = m[0]
-        m3 = m[3]
-        m6 = m[6]
+      # [horizontal, vertical] majority sampling offsets for the modules
+      # of +transform+ at the centre of a dimension x dimension grid: a
+      # quarter of the module's horizontal (vertical) chord through its
+      # centre, none below 3 px. Unlike vote_offset this keeps the samples
+      # inside modules that are not square in the image - fax pages
+      # (204 x 98 dpi), strong perspective.
+      def vote_offsets(transform, dimension)
+        c = dimension * 0.5
+        o = transform.apply(c, c) or return [0, 0]
+        u = transform.apply(c + 1, c) or return [0, 0]
+        v = transform.apply(c, c + 1) or return [0, 0]
+        ux = u[0] - o[0]
+        uy = u[1] - o[1]
+        vx = v[0] - o[0]
+        vy = v[1] - o[1]
+        area = (ux * vy - uy * vx).abs
+        horizontal = area / [uy.abs, vy.abs].max
+        vertical = area / [ux.abs, vx.abs].max
+        [chord_offset(horizontal), chord_offset(vertical)]
+      end
+
+      def chord_offset(chord)
+        chord.finite? && chord >= 3 ? (chord / 4.0).round : 0
+      end
+
+      # [ox, oy] from an Integer or a pair.
+      def offset_pair(offset)
+        offset.is_a?(Array) ? offset : [offset, offset]
+      end
+
+      # Like sample_row, voting over five pixels per module: the centre and
+      # those +ox+ left and right, +oy+ above and below.
+      def vote_row(bits, w, h, out, off, m, v, x0, x1, ox, oy)
+        nx, ny, nd, sx, sy, sd = fixed_row(m, v, x0, x1)
+        return unless nx
+
         max_x = w - 1
         max_y = h - 1
         mx = x0
         while mx < x1
-          u = mx + 0.5
-          den = m6 * u + bd
-          if den > 1e-9 || den < -1e-9
-            px = (m0 * u + bx) / den
-            py = (m3 * u + by) / den
-            if px >= 0.0 && py >= 0.0 && px < w && py < h
-              ix = px.to_i
-              iy = py.to_i
+          if nd != 0
+            ix = nx / nd
+            iy = ny / nd
+            if ix >= 0 && iy >= 0 && ix < w && iy < h
               row = iy * w
-              l = ix - offset
-              l = 0 if l.negative?
-              r = ix + offset
+              l = ix - ox
+              l = 0 if l < 0
+              r = ix + ox
               r = max_x if r > max_x
-              t = iy - offset
-              t = 0 if t.negative?
-              b = iy + offset
+              t = iy - oy
+              t = 0 if t < 0
+              b = iy + oy
               b = max_y if b > max_y
               votes = bits.getbyte(row + ix) + bits.getbyte(row + l) + bits.getbyte(row + r) +
                       bits.getbyte(t * w + ix) + bits.getbyte(b * w + ix)
               out.setbyte(off + mx, 1) if votes >= 3
             end
           end
+          nx += sx
+          ny += sy
+          nd += sd
           mx += 1
         end
       end
 
-      # Mean luminance (x 4, as Integer) of modules x0...x1 of one module row.
-      def luminance_row(data, w, h, lum, off, m, v, x0, x1, offset)
+      # Fixed-point stepping along a module row: the transform's numerators
+      # and denominator at module (x0 + 0.5, v) and their increments per
+      # module, as Integers scaled so that the denominator's magnitude is
+      # about FIXED_ONE. Pixel (nx / nd, ny / nd) is then found with integer
+      # floor division, which is exact up to rounding of the scaled values
+      # and 3x faster than Float arithmetic. nil if the row is degenerate.
+      def fixed_row(m, v, x0, x1)
+        u = x0 + 0.5
+        d0 = m[6] * u + m[7] * v + m[8]
+        d1 = d0 + m[6] * (x1 - x0 - 1)
+        d0a = d0.abs
+        d1a = d1.abs
+        mag = d0a > d1a ? d0a : d1a
+        return unless mag > 1e-12 && mag < Float::INFINITY
+
+        s = FIXED_ONE / mag
+        nx = (m[0] * u + m[1] * v + m[2]) * s
+        ny = (m[3] * u + m[4] * v + m[5]) * s
+        # Rows far outside the image would need Bignums; they read as light.
+        return unless nx.abs < FIXED_LIMIT && ny.abs < FIXED_LIMIT && (m[0] * s).abs < FIXED_LIMIT &&
+                      (m[3] * s).abs < FIXED_LIMIT
+
+        [nx.round, ny.round, (d0 * s).round, (m[0] * s).round, (m[3] * s).round, (m[6] * s).round]
+      end
+
+      # Mean luminance (x 4, as Integer) of modules x0...x1 of one module
+      # row: half the centre pixel, an eighth each of the pixels +ox+ left
+      # and right, +oy+ above and below (bilinear at the centre if both are 0).
+      def luminance_row(data, w, h, lum, off, m, v, x0, x1, ox, oy)
         bx = m[1] * v + m[2]
         by = m[4] * v + m[5]
         bd = m[7] * v + m[8]
@@ -166,13 +232,17 @@ module QrReader
               ix = px.to_i
               iy = py.to_i
               value =
-                if offset.zero?
+                if ox == 0 && oy == 0
                   bilinear4(data, w, h, px - 0.5, py - 0.5)
                 else
-                  l = (ix - offset).clamp(0, w - 1)
-                  r = (ix + offset).clamp(0, w - 1)
-                  t = (iy - offset).clamp(0, h - 1)
-                  b = (iy + offset).clamp(0, h - 1)
+                  l = ix - ox
+                  l = 0 if l < 0
+                  r = ix + ox
+                  r = w - 1 if r >= w
+                  t = iy - oy
+                  t = 0 if t < 0
+                  b = iy + oy
+                  b = h - 1 if b >= h
                   c = iy * w
                   (4 * data.getbyte(c + ix) + data.getbyte(c + l) + data.getbyte(c + r) +
                    data.getbyte(t * w + ix) + data.getbyte(b * w + ix)) >> 1
@@ -238,19 +308,19 @@ module QrReader
         BitMatrix.new(n, n, out)
       end
 
-      # Majority of the pixel (ix, iy) and the four pixels +offset+ away (or
-      # just the pixel when +offset+ is 0).
-      def dark_vote?(bits, w, h, ix, iy, offset)
+      # Majority of the pixel (ix, iy) and the pixels +ox+ left and right,
+      # +oy+ above and below (just the pixel when both are 0).
+      def dark_vote?(bits, w, h, ix, iy, ox, oy)
         row = iy * w
-        return bits.getbyte(row + ix) == 1 if offset.zero?
+        return bits.getbyte(row + ix) == 1 if ox == 0 && oy == 0
 
-        l = ix - offset
-        l = 0 if l.negative?
-        r = ix + offset
+        l = ix - ox
+        l = 0 if l < 0
+        r = ix + ox
         r = w - 1 if r >= w
-        t = iy - offset
-        t = 0 if t.negative?
-        b = iy + offset
+        t = iy - oy
+        t = 0 if t < 0
+        b = iy + oy
         b = h - 1 if b >= h
         bits.getbyte(row + ix) + bits.getbyte(row + l) + bits.getbyte(row + r) +
           bits.getbyte(t * w + ix) + bits.getbyte(b * w + ix) >= 3
@@ -259,25 +329,19 @@ module QrReader
       # Samples modules x0...x1 of the module row at height v (a module
       # centre) into out[off + x].
       def sample_row(bits, w, h, out, off, m, v, x0, x1)
-        bx = m[1] * v + m[2]
-        by = m[4] * v + m[5]
-        bd = m[7] * v + m[8]
-        m0 = m[0]
-        m3 = m[3]
-        m6 = m[6]
+        nx, ny, nd, sx, sy, sd = fixed_row(m, v, x0, x1)
+        return unless nx
+
         mx = x0
         while mx < x1
-          u = mx + 0.5
-          den = m6 * u + bd
-          if den > 1e-9 || den < -1e-9
-            px = (m0 * u + bx) / den
-            py = (m3 * u + by) / den
-            # Compare before flooring: Floats beyond the image (or NaN)
-            # never reach Float#floor.
-            if px >= 0.0 && py >= 0.0 && px < w && py < h && bits.getbyte(py.to_i * w + px.to_i) == 1
-              out.setbyte(off + mx, 1)
-            end
+          if nd != 0
+            ix = nx / nd
+            iy = ny / nd
+            out.setbyte(off + mx, 1) if ix >= 0 && iy >= 0 && ix < w && iy < h && bits.getbyte(iy * w + ix) == 1
           end
+          nx += sx
+          ny += sy
+          nd += sd
           mx += 1
         end
       end

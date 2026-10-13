@@ -29,6 +29,9 @@ module QrReader
 
       HEX_DIGITS = "0123456789abcdef".bytes.freeze
 
+      # RLE opcodes decoded per call of Decoder#rle_slice.
+      RLE_SLICE = 256
+
       class << self
         # Plausibility check on the first bytes ("BM" + known DIB header size).
         def bmp?(head)
@@ -214,18 +217,22 @@ module QrReader
           am = 0 unless alpha
           if @bpp == 32 && rm == 0xFF0000 && gm == 0xFF00 && bm == 0xFF
             return ->(off, out) { Rows.rgb(bytes, off, w, out, 2, 1, 0, 4) } if am.zero?
-            return ->(off, out) { Rows.rgba(bytes, off, w, out, 2, 1, 0, 3) } if am == 0xFF000000
+            if am == 0xFF000000
+              table = Support.over_white_table
+              return ->(off, out) { Rows.rgba(bytes, off, w, out, table, 2, 1, 0, 3) }
+            end
           end
 
           fields = [rm, gm, bm, am].map { |mask| Field.new(mask) }
           wide = @bpp == 32
-          ->(off, out) { masked_row(bytes, off, w, wide, fields, out) }
+          table = Support.over_white_table unless am.zero?
+          ->(off, out) { masked_row(bytes, off, w, wide, fields, table, out) }
         end
 
         # Converts a row of +n+ little-endian 16-bit (or, if +wide+, 32-bit)
         # pixels at +off+ with arbitrary channel masks; an alpha field
-        # (non-zero mask) is composited over white.
-        def masked_row(bytes, off, n, wide, fields, out)
+        # (non-zero mask) is composited over white through +table+.
+        def masked_row(bytes, off, n, wide, fields, table, out)
           r, g, b, a = fields
           rm = r.mask
           rs = r.shift
@@ -250,10 +257,7 @@ module QrReader
               i += 2
             end
             l = (306 * rt[(v & rm) >> rs] + 601 * gt[(v & gm) >> gs] + 117 * bt[(v & bm) >> bs] + 0x200) >> 10
-            if am != 0
-              alpha = at[(v & am) >> as]
-              l = (l * alpha + 255 * (255 - alpha) + 127) / 255 if alpha != 255
-            end
+            l = table.getbyte((at[(v & am) >> as] << 8) | l) if am != 0
             out << l
           end
           out
@@ -271,32 +275,49 @@ module QrReader
         end
 
         # RLE8/RLE4: runs and absolute groups of palette indices; deltas and
-        # early line/bitmap ends leave pixels transparent (white).
+        # early line/bitmap ends leave pixels transparent (white). The
+        # opcodes are read in slices (rle_slice) so that YJIT compiles the
+        # loop; absolute groups are mapped pixel by pixel (rle_absolute).
         def decode_rle
+          raise ImageError, "truncated BMP RLE data" if @data_offset + 2 > @bytes.bytesize
+
+          @rle4 = @compression == BI_RLE4
+          lum = @lumas.map { |v| v.chr.b }
+          # RLE4 runs alternate the two nibbles of their byte.
+          @runs = @rle4 ? Array.new(256) { |b| lum[b >> 4] + lum[b & 15] } : lum
+          @out = WHITE * (@width * @height)
+          @pos = @data_offset
+          @x = @y = 0
+          rle_slice while @y < @height
+          @out
+        end
+
+        # Decodes up to RLE_SLICE opcodes from @pos; the position (@pos, @x,
+        # @y) carries over to the next call. @y reaches the height at the end.
+        def rle_slice
           bytes = @bytes
           size = bytes.bytesize
           w = @width
           h = @height
-          rle4 = @compression == BI_RLE4
-          lum = @lumas.map { |v| v.chr.b }
-          out = WHITE * (w * h)
-          pos = @data_offset
-          x = y = 0
-          while y < h
+          pos = @pos
+          x = @x
+          y = @y
+          ops = 0
+          while y < h && ops < RLE_SLICE
             raise ImageError, "truncated BMP RLE data" if pos + 2 > size
 
             count = bytes.getbyte(pos)
             value = bytes.getbyte(pos + 1)
             pos += 2
+            ops += 1
             if count.positive?
-              run = rle4 ? (lum[value >> 4] + lum[value & 15]) * ((count + 1) >> 1) : lum[value] * count
-              put(out, x, y, run, count)
+              rle_run(x, y, count, value) if x < w
               x += count
             elsif value.zero? # end of line
               x = 0
               y += 1
             elsif value == 1 # end of bitmap
-              break
+              y = h
             elsif value == 2 # delta
               raise ImageError, "truncated BMP RLE data" if pos + 2 > size
 
@@ -304,28 +325,78 @@ module QrReader
               y += bytes.getbyte(pos + 1)
               pos += 2
             else # absolute mode: +value+ indices, padded to 16 bits
-              nbytes = rle4 ? (value + 1) >> 1 : value
+              nbytes = @rle4 ? (value + 1) >> 1 : value
               raise ImageError, "truncated BMP RLE data" if pos + nbytes > size
 
-              indices = rle4 ? bytes.unpack1("H#{value}", offset: pos).b : bytes.byteslice(pos, value)
-              Support.translate!(indices, rle4 ? HEX_DIGITS : ALL_BYTES, rle4 ? @lumas.first(16) : @lumas)
-              put(out, x, y, indices, value)
+              rle_absolute(pos, x, y, value) if x < w
               x += value
               pos += nbytes + (nbytes & 1)
             end
           end
-          out
+          @pos = pos
+          @x = x
+          @y = y
         end
 
-        # Writes the first +n+ pixels of +run+ at (x, y) in file row order,
-        # clipped to the image.
-        def put(out, x, y, run, n)
+        # A run of +count+ pixels at (x, y) in file row order, clipped
+        # (x is inside the image). Short runs, the most common ones, are
+        # written byte by byte rather than built as Strings.
+        def rle_run(x, y, count, value)
           w = @width
-          return if x >= w || y >= @height
+          n = count < w - x ? count : w - x
+          dst = row_offset(y) + x
+          out = @out
+          if n > 8
+            run = @rle4 ? @runs[value] * ((n + 1) >> 1) : @runs[value] * n
+            out.bytesplice(dst, n, run.bytesize > n ? run.byteslice(0, n) : run)
+          elsif @rle4
+            even = @lumas[value >> 4]
+            odd = @lumas[value & 15]
+            k = 0
+            while k < n
+              out.setbyte(dst + k, (k & 1).zero? ? even : odd)
+              k += 1
+            end
+          else
+            v = @lumas[value]
+            stop = dst + n
+            while dst < stop
+              out.setbyte(dst, v)
+              dst += 1
+            end
+          end
+        end
 
-          n = w - x if n > w - x
-          row = @top_down ? y : @height - 1 - y
-          out.bytesplice(row * w + x, n, run.byteslice(0, n))
+        # An absolute group of +count+ indices at +pos+, drawn at (x, y),
+        # clipped (x is inside the image).
+        def rle_absolute(pos, x, y, count)
+          w = @width
+          n = count < w - x ? count : w - x
+          bytes = @bytes
+          lumas = @lumas
+          out = @out
+          dst = row_offset(y) + x
+          stop = dst + n
+          if @rle4
+            k = 0
+            while dst < stop
+              b = bytes.getbyte(pos + (k >> 1))
+              out.setbyte(dst, lumas[(k & 1).zero? ? b >> 4 : b & 15])
+              dst += 1
+              k += 1
+            end
+          else
+            while dst < stop
+              out.setbyte(dst, lumas[bytes.getbyte(pos)])
+              dst += 1
+              pos += 1
+            end
+          end
+        end
+
+        # Offset of file row +y+ in the top-down output.
+        def row_offset(y)
+          (@top_down ? y : @height - 1 - y) * @width
         end
       end
       private_constant :Decoder

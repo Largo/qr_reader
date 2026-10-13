@@ -7,8 +7,10 @@
 #   ruby bench/jpeg_bench.rb -n 5 -f 1920   # 5 timed runs, only cases matching "1920"
 #
 # Test images are photos of a QR code (ZXing corpus qrcode-1/1.png) resized
-# to typical camera sizes with sensor-like noise, encoded by ImageMagick
-# (`magick`, development tool) and cached in $TMPDIR/qr_reader_jpeg_bench.
+# to typical camera sizes with sensor-like noise, and "A4 scans" (2480x3508,
+# 300 dpi: a white page with text lines, the code and scanner noise), encoded
+# by ImageMagick (`magick`, development tool) and cached in
+# $TMPDIR/qr_reader_jpeg_bench.
 # "first" is the first decode in this process (includes YJIT compilation),
 # "best"/"median" are over the timed runs that follow.
 
@@ -29,7 +31,7 @@ CACHE = File.join(Dir.tmpdir, "qr_reader_jpeg_bench")
 SOURCE = File.expand_path("../test/corpus/zxing/qrcode-1/1.png", __dir__)
 FileUtils.mkdir_p(CACHE)
 
-# [name, size, ImageMagick encoding options, scales]
+# [name, size ("A4" for a scanned page), ImageMagick encoding options, scales]
 CASES = [
   ["640x480 baseline 4:2:0 q85", "640x480", %w[-sampling-factor 2x2], [1, 2]],
   ["640x480 progressive 4:2:0 q85", "640x480", %w[-sampling-factor 2x2 -interlace JPEG], [1]],
@@ -38,15 +40,38 @@ CASES = [
   ["1920x1080 gray q85", "1920x1080", %w[-colorspace Gray], [1]],
   ["1920x1080 progressive 4:2:0 q85", "1920x1080", %w[-sampling-factor 2x2 -interlace JPEG], [1, 2, 4, 8]],
   ["4032x3024 baseline 4:2:0 q85", "4032x3024", %w[-sampling-factor 2x2], [1, 2, 4, 8]],
-  ["4032x3024 progressive 4:2:0 q85", "4032x3024", %w[-sampling-factor 2x2 -interlace JPEG], [1, 2, 4, 8]]
+  ["4032x3024 progressive 4:2:0 q85", "4032x3024", %w[-sampling-factor 2x2 -interlace JPEG], [1, 2, 4, 8]],
+  ["A4 scan gray q85", "A4", %w[-colorspace Gray], [1, 2, 4]],
+  ["A4 scan 4:2:0 q85", "A4", %w[-sampling-factor 2x2], [1, 2]],
+  ["A4 scan 4:4:4 q85 restart", "A4", %w[-sampling-factor 1x1 -define jpeg:restart-interval=4], [1]],
+  ["A4 scan progressive gray q85", "A4", %w[-colorspace Gray -interlace JPEG], [1, 2]],
+  ["A4 scan CMYK q85", "A4", %w[-colorspace CMYK -sampling-factor 1x1], [1]]
 ].freeze
+
+# A4 page at 300 dpi: text-like lines, the QR code, slight rotation and noise.
+def page_source
+  file = File.join(CACHE, "a4_page.png")
+  return file if File.exist?(file)
+
+  text = (1..60).map { |i| "Invoice line #{i}: lorem ipsum dolor sit amet, consectetur adipiscing elit" }.join("\n")
+  ok = system("magick", "-size", "2480x3508", "xc:white", "-fill", "black", "-pointsize", "28",
+              "-annotate", "+200+300", text, "(", SOURCE, "-resize", "600x600", ")", "-geometry", "+1700+2700",
+              "-composite", "-rotate", "0.4", "-gravity", "center", "-extent", "2480x3508",
+              "-attenuate", "0.15", "+noise", "Gaussian", file)
+  abort "could not create #{file} (is ImageMagick's `magick` installed?)" unless ok
+  file
+end
 
 def image_file(name, size, opts)
   file = File.join(CACHE, "#{name.tr(' :', '__')}.jpg")
   return file if File.exist?(file)
 
-  ok = system("magick", SOURCE, "-resize", "#{size}!", "-attenuate", "0.25", "+noise", "Gaussian",
-              "-quality", "85", *opts, file)
+  ok = if size == "A4"
+         system("magick", page_source, "-quality", "85", *opts, file)
+       else
+         system("magick", SOURCE, "-resize", "#{size}!", "-attenuate", "0.25", "+noise", "Gaussian",
+                "-quality", "85", *opts, file)
+       end
   abort "could not create #{file} (is ImageMagick's `magick` installed?)" unless ok
   file
 end

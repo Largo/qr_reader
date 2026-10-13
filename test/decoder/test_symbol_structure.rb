@@ -107,7 +107,7 @@ class TestDecoderSymbolStructure < Minitest::Test
         assert_equal mask, expected.mask
         assert_equal bits[0], bits[1]
         assert_equal [expected, 0], Decoder::FormatReader.decode_format(*bits)
-        assert_equal bits, Decoder::FormatReader.format_bits(m.transpose.bits, m.width, true)
+        assert_equal bits, Decoder::FormatReader.format_bits(m.transpose.bits, m.width, mirrored: true)
       end
     end
   end
@@ -134,7 +134,7 @@ class TestDecoderSymbolStructure < Minitest::Test
       m = rqr("V", version: v, level: :L, mask: 0)
       copies = Decoder::FormatReader.version_bits(m.bits, m.width)
       assert_equal [QrReader::SymbolVersion[v].version_info_bits] * 2, copies
-      assert_equal copies, Decoder::FormatReader.version_bits(m.transpose.bits, m.width, true)
+      assert_equal copies, Decoder::FormatReader.version_bits(m.transpose.bits, m.width, mirrored: true)
     end
   end
 

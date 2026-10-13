@@ -40,30 +40,48 @@ module QrReader
         # Undoes the interleaving of §7.6: data codewords are taken from every
         # block in turn (shorter blocks run out first), then EC codewords.
         def blocks(level)
-          @blocks[level] ||= begin
-            ec_blocks = @version.ec_blocks(level)
-            data_counts = ec_blocks.data_codewords_per_block
-            indices = data_counts.map { [] }
-            raw = 0
-            data_counts.max.times do |i|
-              data_counts.each_with_index do |count, b|
-                next if i >= count
-
-                indices[b] << raw
-                raw += 1
-              end
-            end
-            ec_blocks.ec_codewords_per_block.times do
-              indices.each do |list|
-                list << raw
-                raw += 1
-              end
-            end
-            data_counts.zip(indices).map { |count, list| [count, list.freeze].freeze }.freeze
-          end
+          @blocks[level] ||= build_blocks(@version.ec_blocks(level))
         end
 
         private
+
+        # Undoes the interleaving of §7.6 (plain loops: runs once per level).
+        def build_blocks(ec_blocks)
+          data_counts = ec_blocks.data_codewords_per_block
+          count = data_counts.size
+          indices = Array.new(count) { [] }
+          raw = 0
+          longest = data_counts.max
+          i = 0
+          while i < longest
+            b = 0
+            while b < count
+              if i < data_counts[b]
+                indices[b] << raw
+                raw += 1
+              end
+              b += 1
+            end
+            i += 1
+          end
+          i = 0
+          while i < ec_blocks.ec_codewords_per_block
+            b = 0
+            while b < count
+              indices[b] << raw
+              raw += 1
+              b += 1
+            end
+            i += 1
+          end
+          blocks = []
+          b = 0
+          while b < count
+            blocks << [data_counts[b], indices[b].freeze].freeze
+            b += 1
+          end
+          blocks.freeze
+        end
 
         # Zig-zag over column pairs from the right, alternately upwards and
         # downwards, skipping the vertical timing column and function modules

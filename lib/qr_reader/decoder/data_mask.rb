@@ -32,11 +32,25 @@ module QrReader
       # from the 12 distinct rows, so it costs O(n) String operations.
       def grid(mask, n)
         repeat = n / PERIOD + 1
-        rows = Array.new(PERIOD) do |y|
-          unit = Array.new(PERIOD) { |x| masked?(mask, x, y) ? 1 : 0 }.pack("C*")
-          (unit * repeat).byteslice(0, n)
+        rows = Array.new(PERIOD)
+        y = 0
+        while y < PERIOD
+          unit = "\0".b * PERIOD
+          x = 0
+          while x < PERIOD
+            unit.setbyte(x, 1) if masked?(mask, x, y)
+            x += 1
+          end
+          rows[y] = (unit * repeat).byteslice(0, n)
+          y += 1
         end
-        Array.new(n) { |y| rows[y % PERIOD] }.join.b
+        out = "".b
+        y = 0
+        while y < n
+          out << rows[y % PERIOD]
+          y += 1
+        end
+        out
       end
     end
   end

@@ -121,8 +121,7 @@ class TestDistort < Minitest::Test
     assert_equal @image.data, identity.data
     corners = [[20, 30], [190, 12], [215, 205], [8, 170]]
     ours = Distort.perspective(@image, corners, 240, 220, supersample: 2)
-    # Float corners: QrTestHelper.square_to_quad truncates with Integer input.
-    theirs = QrTestHelper.warp(@image, corners.map { |p| p.map(&:to_f) }, 240, 220)
+    theirs = QrTestHelper.warp(@image, corners, 240, 220)
     assert_operator max_diff(ours, theirs), :<=, 1
     assert_operator max_diff(Distort.rotate(@image, 27), QrTestHelper.rotate(@image, 27)), :<=, 1
     # A strongly converging quad puts the horizon inside the canvas.

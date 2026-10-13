@@ -53,7 +53,7 @@ module QrReader
 
           min_size = @bytes.getbyte(@data_pos) or raise ImageError, "truncated GIF image data"
           indices = LZW.new(read_sub_blocks(@data_pos + 1), min_size).decode(n)
-          pixels = Support.translate!(indices, ALL_BYTES, lumas)
+          pixels = indices.empty? ? WHITE * n : Support.translate!(indices, ALL_BYTES, lumas)
           pixels << (WHITE * (n - pixels.bytesize)) if pixels.bytesize < n # stream ended early
           pixels = deinterlace(pixels) if @interlaced
           Image.new(@canvas_w, @canvas_h, compose(pixels))
@@ -69,7 +69,8 @@ module QrReader
         end
 
         # Skips extensions (remembering the transparent colour of a graphic
-        # control extension) up to the first image descriptor.
+        # control extension) up to the first image descriptor. Stray bytes
+        # between blocks are skipped, as ImageMagick, Pillow and browsers do.
         def read_first_image(pos)
           bytes = @bytes
           loop do
@@ -94,7 +95,7 @@ module QrReader
               pos = skip_sub_blocks(pos + 2)
             when 0x3B then raise ImageError, "GIF contains no image"
             when nil then raise ImageError, "truncated GIF (no image)"
-            else raise ImageError, format("corrupt GIF (unexpected block 0x%02X)", bytes.getbyte(pos))
+            else pos += 1
             end
           end
         end
@@ -185,7 +186,10 @@ module QrReader
 
         # Up to +n+ palette indices; fewer only if an end code arrives early.
         def decode(n)
-          out = Support.buffer(n)
+          # The k-th code after a clear yields at most k bytes: reserve no
+          # more than the data can produce (a few bytes may claim 2^27 pixels).
+          codes = @data.bytesize * 8 / (@min_size + 1) + 1
+          out = Support.buffer([n, codes * (codes + 1) / 2].min)
           decode_slice(out, [out.bytesize + SLICE, n].min) until @finished || out.bytesize >= n
           out.bytesize > n ? out.byteslice(0, n) : out
         end

@@ -30,7 +30,8 @@ class QrTestEncoder
   # An encoded symbol.
   #
   # matrix          - QrReader::BitMatrix (no quiet zone), corruption applied
-  # version, level, mask
+  # version, level, mask (level as in ISO/IEC 18004: :L, :M, :Q, :H; #ec_level
+  #                   gives the lowercase form used by QrReader::Result)
   # segments        - Array of Segment actually encoded
   # bit_length      - number of payload bits before terminator/padding
   # data_codewords  - Array<Integer>, payload + padding, before error correction
@@ -42,6 +43,11 @@ class QrTestEncoder
                         :data_codewords, :blocks, :codewords, :corrupted) do
     def dimension
       matrix.width
+    end
+
+    # +level+ in the lowercase form of QrReader::Result#ec_level (:l, :m, :q, :h).
+    def ec_level
+      level.downcase
     end
 
     # Axis-aligned grayscale rendering with a light quiet zone.
@@ -115,6 +121,10 @@ class QrTestEncoder
   # Alphanumeric value by byte (nil for bytes outside the character set).
   ALPHANUMERIC_BYTES = Array.new(256) { |b| ALPHANUMERIC_VALUES[b.chr] }.freeze
 
+  # After FNC1, alphanumeric segments write GS as "%" and "%" as "%%"; a GS
+  # followed by "%" has no unambiguous encoding within one segment.
+  AMBIGUOUS_GS = "\x1D%".b.freeze
+
   # GB2312 subset indicator following the Hanzi mode indicator.
   HANZI_SUBSET_GB2312 = 0b0001
 
@@ -179,9 +189,11 @@ class QrTestEncoder
     #   or a plain String (auto mode). Byte segments use the String's bytes
     #   as-is (UTF-8 for ordinary literals); kanji/hanzi segments are
     #   transcoded to Shift_JIS/GB2312. After an FNC1 indicator, "\x1D" (GS)
-    #   in alphanumeric segments is written as "%" and "%" as "%%".
+    #   in alphanumeric segments is written as "%" and "%" as "%%" (a GS
+    #   directly followed by "%" has no such encoding: explicit alphanumeric
+    #   segments raise, automatic mode picks byte mode).
     # version: 1..40 or nil (smallest that fits)
-    # level: :L, :M, :Q, :H
+    # level: :L, :M, :Q, :H (lowercase Symbols and Strings are accepted too)
     # mask: 0..7 or nil (lowest penalty score, §7.8.3)
     # eci: designator inserted before the data (after any structured append header)
     # fnc1: :first or [:second, application_indicator] inserted before the data
@@ -263,7 +275,8 @@ class QrTestEncoder
         offset += size
         chars[offset - size, size].join
       end
-      parity = parts.sum("".b) { |part| segment_payload_bytes(segment(mode, part)) }.bytes.reduce(0, :^)
+      fnc1 = !options[:fnc1].nil?
+      parity = parts.sum("".b) { |part| segment_payload_bytes(segment(mode, part, fnc1: fnc1), fnc1) }.bytes.reduce(0, :^)
       parts.each_with_index.map do |part, i|
         build([[mode, part]], structured_append: [i, count, parity], **options)
       end
@@ -282,6 +295,10 @@ class QrTestEncoder
 
     # Axis-aligned rendering of a module matrix as a QrReader::Image.
     def render(matrix, module_size: 4, quiet: 4, dark: 0, light: 255)
+      raise Error, "module_size must be a positive Integer" unless module_size.is_a?(Integer) && module_size.positive?
+      raise Error, "quiet must be a non-negative Integer" unless quiet.is_a?(Integer) && !quiet.negative?
+      raise Error, "dark and light must be gray levels 0..255" unless [dark, light].all? { |v| v.is_a?(Integer) && v.between?(0, 255) }
+
       n = matrix.width
       m = matrix.height
       side_w = (n + 2 * quiet) * module_size
@@ -353,6 +370,8 @@ class QrTestEncoder
 
     # Penalty score of a finished symbol (§7.8.3.1, rules N1..N4).
     def penalty(matrix)
+      raise Error, "penalty needs a square matrix" unless matrix.width == matrix.height
+
       score_cells(matrix.bits, matrix.width)
     end
 
@@ -470,7 +489,8 @@ class QrTestEncoder
       bytes = text.b
       if bytes.match?(/\A[0-9]*\z/n)
         :numeric
-      elsif bytes.each_byte.all? { |c| ALPHANUMERIC_BYTES[c] || (fnc1 && c == 0x1D) }
+      elsif bytes.each_byte.all? { |c| ALPHANUMERIC_BYTES[c] || (fnc1 && c == 0x1D) } &&
+            !(fnc1 && bytes.include?(AMBIGUOUS_GS))
         :alphanumeric
       else
         :byte
@@ -490,7 +510,12 @@ class QrTestEncoder
         Segment.new(:numeric, text)
       when :alphanumeric
         text = plain_bytes(value)
-        text = text.gsub("%", "%%").tr("\x1D", "%") if fnc1
+        if fnc1
+          # GS% would be written as %%%, which decoders read as %GS.
+          raise Error, "GS followed by % cannot be encoded in one alphanumeric segment; split it" if text.include?(AMBIGUOUS_GS)
+
+          text = text.gsub("%", "%%").tr("\x1D", "%")
+        end
         bad = text.each_byte.reject { |c| ALPHANUMERIC_BYTES[c] }
         raise Error, "invalid alphanumeric characters #{bad.uniq.pack('C*').inspect}" unless bad.empty?
 
@@ -561,17 +586,30 @@ class QrTestEncoder
       segments.map do |seg|
         next seg unless seg.mode == :structured_append && seg.data[2].nil?
 
-        parity = segments.sum("".b) { |s| segment_payload_bytes(s) }.bytes.reduce(0, :^)
-        Segment.new(:structured_append, [seg.data[0], seg.data[1], parity])
+        Segment.new(:structured_append, [seg.data[0], seg.data[1], message_parity(segments)])
       end
+    end
+
+    # XOR of the bytes of all data segments (see #segment_payload_bytes).
+    def message_parity(segments)
+      fnc1 = false
+      parity = 0
+      segments.each do |seg|
+        fnc1 ||= %i[fnc1_first fnc1_second].include?(seg.mode)
+        segment_payload_bytes(seg, fnc1).each_byte { |b| parity ^= b }
+      end
+      parity
     end
 
     # Bytes contributing to the structured append parity: the data as it
     # would be transmitted in 8-bit form (the Shift_JIS / GB2312 code of
-    # every Kanji / Hanzi, recovered from its 13-bit value).
-    def segment_payload_bytes(seg)
+    # every Kanji / Hanzi, recovered from its 13-bit value; GS and "%" in
+    # alphanumeric segments after FNC1, not their "%" / "%%" escapes).
+    def segment_payload_bytes(seg, fnc1 = false)
       case seg.mode
-      when :numeric, :alphanumeric, :byte then seg.data.b
+      when :alphanumeric
+        fnc1 ? seg.data.gsub(/%%?/n) { |m| m == "%%" ? "%" : "\x1D" } : seg.data.b
+      when :numeric, :byte then seg.data.b
       when :kanji
         seg.data.map do |v|
           code = ((v / 0xC0) << 8) | (v % 0xC0)
@@ -1013,7 +1051,11 @@ class QrTestEncoder
       count
     end
 
-    # N4: 10 points per 5 % deviation of the dark proportion from 50 %.
+    # N4: 10 points per 5 % deviation of the dark proportion from 50 %
+    # (Table 11: k for 50 +- 5k % to 50 +- 5(k + 1) %). At an exact multiple
+    # of 5 % the lower k is taken; ZXing takes the higher one. Symbols can
+    # only hit that boundary at exactly 40/60 % (n divisible by 5), which
+    # masked data practically never does.
     def balance_penalty(cells, n)
       total = n * n
       dark = cells.count("\x01")

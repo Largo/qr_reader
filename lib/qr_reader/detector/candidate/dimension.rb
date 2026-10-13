@@ -37,10 +37,18 @@ module QrReader
         end
 
         # Module size from the 1:1:3:1:1 spread of pattern +p+ along the unit
-        # direction (ux, uy); nil if the runs do not fit.
+        # direction (ux, uy); nil if the runs do not fit. If the exact runs
+        # do not fit, single noise pixels are bridged for patterns of 3+ px
+        # modules. (Not the other way round: modules along this direction
+        # may be much thinner - fax pages - and a one pixel light ring
+        # real; bridged, the runs can still pass the relaxed ratio test.)
         def line_module_size(p, ux, uy)
           limit = (p.module_size * 10).ceil + 2
-          noise = p.module_size >= 3
+          spread_module_size(p, ux, uy, limit, false) ||
+            (p.module_size >= 3 && spread_module_size(p, ux, uy, limit, true)) || nil
+        end
+
+        def spread_module_size(p, ux, uy, limit, noise)
           fwd = Geometry.runs(@matrix, p.x, p.y, ux, uy, limit, noise: noise) or return
           back = Geometry.runs(@matrix, p.x, p.y, -ux, -uy, limit, noise: noise) or return
           a, b, c, d, e = back[2], back[1], fwd[0] + back[0] - 1, fwd[1], fwd[2]
@@ -139,8 +147,8 @@ module QrReader
             next if d < 45
 
             t = transform_for(d, @mode) or next
-            versions = read_version(t, d) + local_versions(d)
-            next unless versions.any? { |v| v && v.dimension == d }
+            next unless read_version(t, d).any? { |v| v && v.dimension == d } ||
+                        local_versions(d).any? { |v| v && v.dimension == d }
 
             @version_confirmed = true
             return d

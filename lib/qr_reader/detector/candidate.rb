@@ -118,8 +118,13 @@ module QrReader
 
           try.call(sample(d, m, piecewise: true)) if promising?(d, m)
         end
+        # Other dimensions with the first reference point that suits them
+        # (the alignment pattern may be a look-alike found for the first).
         @dimensions.drop(1).each do |other|
-          try.call(sample(other, @mode, piecewise: true)) if promising?(other, @mode)
+          mode = [@mode, :strokes, :parallelogram].uniq.find do |m|
+            (m == :parallelogram || reference(m)) && promising?(other, m)
+          end
+          try.call(sample(other, mode, piecewise: true)) if mode
         end
         nil
       end
@@ -149,9 +154,12 @@ module QrReader
       end
 
       # Cheap estimate of #plausible? that reads only the timing pattern
-      # modules through the global transform (no full sampling).
+      # modules through the global transform (no full sampling). Symbols
+      # whose version information confirmed the dimension count as likely
+      # even when bending defeats the global transform (chance agreement of
+      # an 18-bit version block with the measured dimension is rare).
       def likely?
-        @likely = promising?(@dimension, @mode) if @likely.nil?
+        @likely = @version_confirmed || promising?(@dimension, @mode) if @likely.nil?
         @likely
       end
 
@@ -321,7 +329,7 @@ module QrReader
         cols = timing_shift(t, d, :row, 6.5) or return
         # Trace column 6 where the row displacement says it is.
         rows = timing_shift(t, d, :column, 6.5 + timing_offset(t, cols[6], 6.5, 6.5)) or return
-        GridSampler.sample_warped(@matrix, d, t, cols, rows, offset: GridSampler.vote_offset(@module_size))
+        GridSampler.sample_warped(@matrix, d, t, cols, rows, offset: GridSampler.vote_offsets(t, d))
       end
 
       # Per module column (+axis+ :row, tracing timing row 6 at module
@@ -403,15 +411,18 @@ module QrReader
       # Samples the grid for dimension d: piecewise along the alignment
       # pattern grid for versions 7+ if requested; from the grayscale image
       # with module-level thresholds if +luminance+, else from the binarized
-      # image (majority of five pixels per module from 3 px modules on).
+      # image (majority of five pixels per module along each axis in which
+      # modules span 3+ px).
       def sample(d, mode, piecewise:, luminance: false)
         t = transform_for(d, mode) or return
         pieces = (regions(d, mode) if piecewise) || GridSampler.whole(d, t)
+        offset = GridSampler.vote_offsets(t, d)
         if luminance
           image = @detector.image or return
-          GridSampler.sample_luminance(image, d, pieces, @module_size, inverted: @detector.inverted_image?)
+          GridSampler.sample_luminance(image, d, pieces, @module_size, inverted: @detector.inverted_image?,
+                                                                       offset: offset)
         else
-          GridSampler.sample(@matrix, d, pieces, offset: GridSampler.vote_offset(@module_size))
+          GridSampler.sample(@matrix, d, pieces, offset: offset)
         end
       end
     end

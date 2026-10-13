@@ -35,8 +35,8 @@ module QrReader
     # ImageError. Uncompressed-mode extensions count as damage.
     #
     # Speed: codes are looked up in tables indexed by the next 13 (runs) or
-    # 7 (2-D modes) bits, read from 32-bit windows precomputed for every
-    # byte offset; changing elements live in Integer arrays and rows are
+    # 7 (2-D modes) bits, read from two adjacent 16-bit words of the data
+    # (unpacked once); changing elements live in Integer arrays and rows are
     # painted with String#bytesplice (C memcpy) runs; rows equal to the row
     # above are appended as a whole.
     module CCITT
@@ -96,10 +96,11 @@ module QrReader
 
       class << self
         # Decodes a CCITT stream to an Image (see the module documentation
-        # for the parameters).
+        # for the parameters). end_of_block and damaged_rows_before_error
+        # are accepted for PDF compatibility; decoding is always lenient.
+        # rubocop:disable Lint/UnusedMethodArgument
         def decode(data, columns:, rows: nil, k: -1, black_is_1: false, encoded_byte_align: false, fill_order: 1,
                    end_of_line: false, end_of_block: true, damaged_rows_before_error: 0)
-          _ = end_of_block, damaged_rows_before_error # accepted for PDF compatibility; always lenient
           raise ImageError, "CCITT data must be a String" unless data.is_a?(String)
 
           rows = nil if rows.is_a?(Integer) && rows.zero?
@@ -113,6 +114,9 @@ module QrReader
 
           Image.new(columns, count, out)
         end
+        # rubocop:enable Lint/UnusedMethodArgument
+
+        private
 
         # Lookup table for the next RUN_BITS bits: (run << 4 | code length),
         # or -1 where no code matches (EOL, garbage).
@@ -139,8 +143,6 @@ module QrReader
           table.freeze
         end
 
-        private
-
         def check_size(columns, rows)
           unless columns.is_a?(Integer) && columns.positive? && (rows.nil? || (rows.is_a?(Integer) && rows.positive?))
             raise ImageError, "invalid CCITT dimensions #{columns.inspect}x#{rows.inspect}"
@@ -159,6 +161,9 @@ module QrReader
       REVERSE_FROM = Image::TR_ESCAPE.call((0..255).to_a)
       REVERSE_TO = Image::TR_ESCAPE.call((0..255).map { |b| format("%08b", b).reverse.to_i(2) })
 
+      # EOFB (Group 4) / the start of RTC (Group 3): two EOL codes.
+      TWO_EOLS = 0b000000000001_000000000001
+
       # Row-start results of Decoder#start_row.
       ONE_D = 0
       TWO_D = 1
@@ -167,13 +172,7 @@ module QrReader
       # String#bytesplice with a source range exists from Ruby 3.3 on.
       SPLICE_RANGE = RUBY_VERSION >= "3.3"
 
-      private_constant :WHITE_TERMINATING, :BLACK_TERMINATING, :WHITE_MAKEUP, :BLACK_MAKEUP, :EXTENDED_MAKEUP,
-                       :RUN_BITS, :MODE_BITS, :PASS, :HORIZONTAL, :EXTENSION, :ZEROS, :MODE_CODES,
-                       :WHITE_RUNS, :BLACK_RUNS, :MODES, :REVERSE_FROM, :REVERSE_TO, :ONE_D, :TWO_D, :DONE,
-                       :SPLICE_RANGE
-
-      # Decodes one CCITT stream; TIFF uses it directly to append strips to
-      # a page buffer.
+      # Decodes one CCITT stream.
       class Decoder
         NONZERO = /[^\0]/n
         private_constant :NONZERO
@@ -184,7 +183,7 @@ module QrReader
           data = data.tr(REVERSE_FROM, REVERSE_TO) if fill_order == 2
           @data = data
           @nbits = data.bytesize * 8
-          @win = windows(data)
+          @win = words(data)
           @columns = columns
           @k = k.is_a?(Integer) ? k : -1
           @byte_align = byte_align ? true : false
@@ -216,21 +215,20 @@ module QrReader
             break if mode == DONE
 
             ok = mode == TWO_D ? decode_2d_row(ref, cur) : decode_1d_row(cur)
-            unless ok
-              if @eols
-                # Damaged row: repeat the row above, resume at the next EOL.
-                cur.replace(ref)
-                @pos = find_eol(@pos)
-              else
-                @failed_at_start = true if count.zero?
-                cur.pop if cur.size.odd?
-                cur.push(cols, cols, cols, cols)
-                emit(cur, ref, row, out, bg, fg)
-                count += 1
-                break
-              end
-            else
+            if ok
               cur.push(cols, cols, cols, cols)
+            elsif @eols
+              # Damaged row: repeat the row above, resume at the next EOL.
+              cur.replace(ref)
+              @pos = find_eol(@pos)
+            else
+              # No EOLs to resynchronise at: keep the row's start and stop.
+              @failed_at_start = true if count.zero?
+              cur.pop if cur.size.odd?
+              cur.push(cols, cols, cols, cols)
+              emit(cur, ref, row, out, bg, fg)
+              count += 1
+              break
             end
             emit(cur, ref, row, out, bg, fg)
             count += 1
@@ -248,18 +246,18 @@ module QrReader
 
         private
 
-        # 32-bit big-endian windows starting at every byte offset (plus zero
-        # padding), so that up to 25 bits at any bit position are one lookup.
-        def windows(data)
-          n = data.bytesize
-          m = (n >> 2) + 3
-          padded = data + ("\0".b * (4 * m + 3 - n))
-          parts = Array.new(4) { |k| padded.byteslice(k, 4 * m).unpack("N*") }
-          parts[0].zip(parts[1], parts[2], parts[3]).flatten!
+        # The data as big-endian 16-bit words plus zero padding: any 13 bits
+        # lie within two adjacent words, any 25 bits within three. (A table
+        # of 32-bit windows at every byte offset would save a lookup per
+        # code but takes far longer to build than a dense page to decode.)
+        def words(data)
+          (data + ("\0".b * (16 + (data.bytesize & 1)))).unpack("n*")
         end
 
         def peek(pos, bits)
-          (@win[pos >> 3] >> (32 - bits - (pos & 7))) & ((1 << bits) - 1)
+          w = @win
+          k = pos >> 4
+          (((w[k] << 32) | (w[k + 1] << 16) | w[k + 2]) >> (48 - bits - (pos & 15))) & ((1 << bits) - 1)
         end
 
         # Handles byte alignment, fill bits, EOL codes, EOFB/RTC and the
@@ -269,7 +267,13 @@ module QrReader
           pos = @pos
           return DONE if pos >= @nbits
 
-          pos = (pos + 7) & ~7 if @byte_align && !@end_of_line
+          if @byte_align && !@end_of_line
+            # EOFB/RTC may follow the last row unaligned; two EOLs in a row
+            # cannot be mistaken for fill bits and a row.
+            return DONE if peek(pos, 24) == TWO_EOLS
+
+            pos = (pos + 7) & ~7
+          end
           eol = false
           # 11 zero bits: an EOL (maybe after fill bits), EOFB/RTC or padding.
           while peek(pos, 12) <= 1
@@ -303,16 +307,16 @@ module QrReader
           nil
         end
 
-        # Bit position of the next EOL code at or after +pos+ (the end of the
-        # data when there is none).
+        # Bit position of the next EOL code (or of the fill bits before it)
+        # at or after +pos+; the end of the data when there is none.
         def find_eol(pos)
           nbits = @nbits
           while pos < nbits
             bits = peek(pos, 12)
-            return pos if bits == 1
+            return pos if bits <= 1
 
             # No EOL can start before the first 1 bit of this window.
-            pos += bits.zero? ? 1 : 13 - bits.bit_length
+            pos += 13 - bits.bit_length
           end
           nbits
         end
@@ -329,7 +333,7 @@ module QrReader
           while true
             run = 0
             while true
-              e = white[(win[pos >> 3] >> (19 - (pos & 7))) & 0x1FFF]
+              e = white[(((win[k = pos >> 4] << 16) | win[k + 1]) >> (19 - (pos & 15))) & 0x1FFF]
               if e.negative?
                 @pos = pos
                 return false
@@ -346,7 +350,7 @@ module QrReader
 
             run = 0
             while true
-              e = black[(win[pos >> 3] >> (19 - (pos & 7))) & 0x1FFF]
+              e = black[(((win[k = pos >> 4] << 16) | win[k + 1]) >> (19 - (pos & 15))) & 0x1FFF]
               if e.negative?
                 @pos = pos
                 return false
@@ -377,7 +381,7 @@ module QrReader
           color = 0 # of the run starting at a0; changing element parity
           bi = 0    # index of b1 in ref
           while a0 < cols
-            m = modes[(win[pos >> 3] >> (25 - (pos & 7))) & 0x7F]
+            m = modes[(((win[k = pos >> 4] << 16) | win[k + 1]) >> (25 - (pos & 15))) & 0x7F]
             pos += m & 15
             m >>= 4
             if m < PASS # vertical: a1 = b1 + (m - 3)
@@ -402,7 +406,7 @@ module QrReader
               first = color.zero? ? WHITE_RUNS : BLACK_RUNS
               run1 = 0
               while true
-                e = first[(win[pos >> 3] >> (19 - (pos & 7))) & 0x1FFF]
+                e = first[(((win[k = pos >> 4] << 16) | win[k + 1]) >> (19 - (pos & 15))) & 0x1FFF]
                 if e.negative?
                   @pos = pos
                   return false
@@ -415,7 +419,7 @@ module QrReader
               second = color.zero? ? BLACK_RUNS : WHITE_RUNS
               run2 = 0
               while true
-                e = second[(win[pos >> 3] >> (19 - (pos & 7))) & 0x1FFF]
+                e = second[(((win[k = pos >> 4] << 16) | win[k + 1]) >> (19 - (pos & 15))) & 0x1FFF]
                 if e.negative?
                   @pos = pos
                   return false
@@ -464,6 +468,8 @@ module QrReader
           end
         end
       end
+
+      private_constant(*constants)
     end
   end
 end

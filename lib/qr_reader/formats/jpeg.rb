@@ -13,11 +13,14 @@ module QrReader
     # intervals, 8/16-bit quantisation tables, 1 component (gray), 3 components
     # (YCbCr, or RGB via Adobe APP14 / component ids "RGB") and 4 components
     # (Adobe CMYK and YCCK). Arithmetic coding, lossless, hierarchical and
-    # 12-bit JPEGs raise UnsupportedImageError. The output matches
-    # libjpeg-turbo's default "islow" IDCT exactly, including the reduced
-    # IDCTs used for scale 2, 4 and 8. Truncated scan data decodes what is
-    # present (missing blocks stay mid-gray); other corruption raises
-    # ImageError. EXIF orientation is ignored.
+    # 12-bit and JPEG-LS files raise UnsupportedImageError. The output
+    # matches libjpeg-turbo's default "islow" IDCT exactly (as built with
+    # SIMD, which saturates out-of-range samples), including the reduced
+    # IDCTs, per-component DCT scaling and upsampling used for scale 2, 4
+    # and 8. Truncated scan data decodes what is present (missing blocks
+    # stay mid-gray); damaged restart intervals are resynchronised by their
+    # marker numbers; other corruption raises ImageError. EXIF orientation
+    # is ignored.
     #
     # How it stays fast in pure Ruby:
     # * For YCbCr only Y is reconstructed (Y is the luminance). Chroma blocks
@@ -58,8 +61,14 @@ module QrReader
       # and for the end-of-block pseudo run (scratch slot 64).
       ZIGZAG_EXT = (ZIGZAG + [63] * 16 + [64] * (EOB_RUN + 4 - 16)).freeze
 
-      # libjpeg's post-IDCT range limiting, indexed by (sample + 128) & 1023:
-      # clamps to 0..255 (and wraps far out-of-range values the same way).
+      # Post-IDCT range limiting of libjpeg-turbo's 8x8, 4x4 and 2x2 IDCTs,
+      # whose SIMD versions (used on x86 and ARM) saturate: indexed by
+      # (sample + 128) & 0xFFFF, clamps samples within +-32767 to 0..255.
+      CLAMP = ((0..255).to_a + Array.new(32_640, 255) + Array.new(32_640, 0)).freeze
+
+      # libjpeg's C range-limit table (used by its 1x1 IDCT at scale 8),
+      # indexed by (sample + 128) & 1023: clamps to 0..255 near the valid
+      # range but wraps far out-of-range samples around.
       RANGE_LIMIT = Array.new(1024) do |i|
         c = (i - 128) & 1023
         if c < 128 then c + 128
@@ -74,17 +83,29 @@ module QrReader
       # of the last nonzero one. (At scale 8 only the DC is kept: 1 entry.)
       BLOCK_STRIDE = 65
 
-      # Decoded samples are buffered as packed big-endian words. By output
+      # Decoded samples are buffered as packed little-endian words (first
+      # sample in the low byte: "V*" packs faster than "N*"). By output
       # block size (8 / scale): samples per word, words per block row, the
       # factor that repeats a sample over a word, and the pack directive.
       SAMPLES_PER_WORD = [nil, 1, 2, nil, 4, nil, nil, nil, 4].freeze
       WORDS = [nil, 1, 1, nil, 1, nil, nil, nil, 2].freeze
       SPREAD = [nil, 1, 0x0101, nil, 0x01010101, nil, nil, nil, 0x01010101].freeze
-      PACK = [nil, "C*", "n*", nil, "N*", nil, nil, nil, "N*"].freeze
+      PACK = [nil, "C*", "v*", nil, "V*", nil, nil, nil, "V*"].freeze
 
       # Largest supported output (64 Mi pixels, e.g. 8192 x 8192); bigger
       # images need a larger +scale+. Guards against absurd header sizes.
       MAX_PIXELS = 1 << 26
+
+      # Most coefficients (Array entries, 576 MiB) a progressive JPEG may
+      # store: enough for one needed component of a MAX_PIXELS image, but
+      # not for four (CMYK) of that size, which need a larger +scale+.
+      MAX_COEFFICIENTS = 72 << 20
+
+      # Block visits (blocks covered by decoded scans) per block of the needed
+      # components after which the rest of a file is ignored: real
+      # progressive files make about 3 to 10, but crafted ones could repeat
+      # cheap scans (e.g. end-of-band runs over the whole image).
+      MAX_VISITS = 64
 
       # Decoded scans after which the rest of a file is ignored: crafted files
       # with endless refinement scans could otherwise take very long (real
@@ -133,7 +154,8 @@ module QrReader
         0xC3 => "lossless", 0xC5 => "hierarchical", 0xC6 => "hierarchical progressive",
         0xC7 => "hierarchical lossless", 0xC9 => "arithmetic-coded", 0xCA => "arithmetic-coded progressive",
         0xCB => "arithmetic-coded lossless", 0xCD => "arithmetic-coded hierarchical",
-        0xCE => "arithmetic-coded hierarchical progressive", 0xCF => "arithmetic-coded hierarchical lossless"
+        0xCE => "arithmetic-coded hierarchical progressive", 0xCF => "arithmetic-coded hierarchical lossless",
+        0xF7 => "JPEG-LS"
       }.freeze
 
       class << self
@@ -247,6 +269,9 @@ module QrReader
         attr_accessor :cw, :ch, :bw, :bh, :abw, :abh, :pw, :ph
         # Whether the component contributes to the luminance output.
         attr_accessor :needed
+        # Output size of its blocks (libjpeg's DCT_scaled_size: 8, 4, 2 or 1)
+        # and the IDCT producing them.
+        attr_accessor :bs, :idct
         # Output plane (binary String, pw x ph), and for progressive JPEGs the
         # coefficients: one Array per block row, allocated on first use, with
         # BLOCK_STRIDE entries per block.
@@ -274,7 +299,7 @@ module QrReader
       # Input: coefficients in natural order, either dequantised (#transform)
       # or raw at offset +base+ with dequantisation table +q+
       # (#transform_dequant, for stored progressive coefficients). Output: a
-      # bs x bs block written to the Array +out+ as packed big-endian words
+      # bs x bs block written to the Array +out+ as packed little-endian words
       # (WORDS[bs] per block row, see PACK) at word offset +off+ with row
       # stride +stride+ (in words). Writing four samples per Array element
       # instead of one is markedly faster under YJIT.
@@ -351,7 +376,7 @@ module QrReader
             at = ->(base, k) { k.zero? ? base : "#{base} + #{k}" }
             ac_zero = (used - [0]).map { |k| "d#{k} == 0" }.join(" && ")
             name = "#{'u' if unrolled}idct#{'q' if dequant}#{size}_#{n}"
-            src = ["def #{name}(c, #{'base, q, ' if dequant}out, off, stride)", "rl = RANGE_LIMIT"]
+            src = ["def #{name}(c, #{'base, q, ' if dequant}out, off, stride)", "rl = CLAMP"]
 
             # Pass 1, one column: input index expression and workspace slot per row.
             column = lambda do |input, q_index, slot, dc_q|
@@ -366,13 +391,14 @@ module QrReader
             # Pass 2, one row from workspace slots to packed words.
             row = lambda do |slot|
               used.each { |k| src << "d#{k} = #{slot[k]}" }
-              src << "if #{ac_zero}" << "v = rl[((d0 + 4112) >> 5) & 1023] * #{SPREAD[size]}"
+              src << "if #{ac_zero}" << "v = rl[((d0 + 4112) >> 5) & 0xFFFF] * #{SPREAD[size]}"
               WORDS[size].times { |w| src << "out[#{at['off', w]}] = v" }
               src << "else"
               stmts, outs = kernel[->(e) { "((#{e}) + 4112) << #{shift}" }]
               src.concat(stmts)
-              outs.map { |o| "rl[((#{o}) >> #{pass2}) & 1023]" }.each_slice(SAMPLES_PER_WORD[size]).with_index do |px, w|
-                word = px.each_with_index.map { |p, j| (shift8 = 8 * (px.size - 1 - j)).zero? ? p : "(#{p} << #{shift8})" }
+              samples = outs.map { |o| "rl[((#{o}) >> #{pass2}) & 0xFFFF]" }
+              samples.each_slice(SAMPLES_PER_WORD[size]).with_index do |px, w|
+                word = px.each_with_index.map { |p, j| (shift8 = 8 * j).zero? ? p : "(#{p} << #{shift8})" }
                 src << "out[#{at['off', w]}] = #{word.join(' | ')}"
               end
               src << "end"
@@ -484,9 +510,14 @@ module QrReader
           end
         end
 
-        # Sample of a DC-only block (the same for every IDCT size).
+        # Sample of a DC-only block (the same for every IDCT size, except
+        # that libjpeg-turbo's 1x1 IDCT wraps instead of saturating).
         def dc_sample(dequantised_dc)
-          RANGE_LIMIT[((dequantised_dc + 1028) >> 3) & 1023]
+          if @bs == 1
+            RANGE_LIMIT[((dequantised_dc + 1028) >> 3) & 1023]
+          else
+            CLAMP[((dequantised_dc + 1028) >> 3) & 0xFFFF]
+          end
         end
 
         # Fills a bs x bs block of +out+ (packed words) with sample +value+.
@@ -520,6 +551,9 @@ module QrReader
         # or a restart marker.
         SEGMENT_END = /\xFF[^\x00\xD0-\xD7]/n
         RST_MARKER = /\xFF[\xD0-\xD7]/n
+        RST_SPLIT = /\xFF([\xD0-\xD7])/n
+        # Reserved marker codes, which only occur in corrupt scan data.
+        BAD_MARKER = /\xFF[\x01-\xBF]/n
         NOT_FF = /[^\xFF]/n
         FILL_BYTES = /\xFF+(?=[\x00\xD0-\xD7])/n
         DNL_MARKER = "\xFF\xDC\x00\x04".b.freeze
@@ -530,24 +564,38 @@ module QrReader
 
         ScanComponent = Struct.new(:comp, :dc, :ac)
 
+        # Exceptions that only a bug triggered by corrupt input could raise;
+        # they are reported as ImageError.
+        INTERNAL_ERRORS = [NoMethodError, TypeError, ArgumentError, RangeError, IndexError, ZeroDivisionError,
+                           EncodingError, FrozenError].freeze
+
         # libjpeg's YCbCr -> RGB tables (jdcolor.c, 16-bit fixed point),
         # indexed by the Cb/Cr sample.
         CR_R = Array.new(256) { |i| (91_881 * (i - 128) + 32_768) >> 16 }.freeze
         CB_B = Array.new(256) { |i| (116_130 * (i - 128) + 32_768) >> 16 }.freeze
         CR_G = Array.new(256) { |i| -46_802 * (i - 128) }.freeze
         CB_G = Array.new(256) { |i| -22_554 * (i - 128) + 32_768 }.freeze
+        # Clamps -512...768 to 0..255, indexed by value + 512.
+        CLAMP512 = Array.new(1280) { |i| (i - 512).clamp(0, 255) }.freeze
 
-        # Output block size (8 / scale), IDCT, restart interval and MCU grid.
-        attr_reader :bs, :idct, :restart_interval, :mcux, :mcuy
+        # Restart interval and MCU grid.
+        attr_reader :restart_interval, :mcux, :mcuy
+
+        # (a * b + 127) / 255 for bytes a and b, indexed by a << 8 | b (for
+        # CMYK; built on first use).
+        def self.mul255
+          @mul255 ||= Array.new(1 << 16) { |i| ((i >> 8) * (i & 255) + 127) / 255 }.freeze
+        end
 
         def initialize(bytes, scale)
-          raise ArgumentError, "scale must be 1, 2, 4 or 8" unless [1, 2, 4, 8].include?(scale)
+          unless scale.is_a?(Numeric) && [1, 2, 4, 8].include?(scale)
+            raise ArgumentError, "scale must be 1, 2, 4 or 8, not #{scale.inspect}"
+          end
           raise ImageError, "JPEG data must be a String" unless bytes.is_a?(String)
 
           @data = bytes.encoding == Encoding::BINARY ? bytes : bytes.b
-          @scale = scale
-          @bs = 8 / scale
-          @idct = IDCT.new(@bs)
+          @scale = scale.to_i # also accepts 2.0
+          @bs = 8 / @scale
           @qt = Array.new(4)
           @dc_defs = Array.new(4)
           @ac_defs = Array.new(4)
@@ -568,6 +616,8 @@ module QrReader
           [@width, @height]
         rescue Truncated
           raise ImageError, "truncated JPEG header"
+        rescue *INTERNAL_ERRORS => e
+          raise ImageError, "corrupt JPEG header (internal #{e.class}: #{e.message})"
         end
 
         def decode
@@ -575,15 +625,18 @@ module QrReader
             parse(false)
           rescue UnsupportedImageError
             raise
-          rescue ImageError
+          rescue ImageError => e
             # Truncation or corruption after complete scans: keep what was decoded.
-            raise if @scans_decoded.zero?
+            if @scans_decoded.zero?
+              raise e unless e.is_a?(Truncated)
+
+              raise ImageError, "truncated JPEG"
+            end
           end
           raise ImageError, "JPEG has no image data" if @scans_decoded.zero?
 
           finish
-        rescue NoMethodError, TypeError, ArgumentError, RangeError, IndexError, ZeroDivisionError,
-               EncodingError => e
+        rescue *INTERNAL_ERRORS => e
           # Safety net: garbage input must only ever raise ImageError.
           raise ImageError, "corrupt JPEG data (internal #{e.class}: #{e.message})"
         end
@@ -643,7 +696,7 @@ module QrReader
             when 0xC0, 0xC1, 0xC2
               pos = read_frame(pos, code)
               return if header_only
-            when 0xC3, 0xC5, 0xC6, 0xC7, 0xC9, 0xCA, 0xCB, 0xCD, 0xCE, 0xCF
+            when 0xC3, 0xC5, 0xC6, 0xC7, 0xC9, 0xCA, 0xCB, 0xCD, 0xCE, 0xCF, 0xF7
               raise UnsupportedImageError, "#{UNSUPPORTED_SOF[code]} JPEG is not supported" unless header_only
 
               read_frame(pos, code)
@@ -824,7 +877,36 @@ module QrReader
           @vmax = comps.map(&:v).max
           @mcux = (w + 8 * @hmax - 1) / (8 * @hmax)
           @mcuy = (h + 8 * @vmax - 1) / (8 * @vmax)
-          comps.each { |c| setup_component(c, needed.include?(c.index), comps.size == 1) }
+          idcts = {}
+          comps.each do |c|
+            c.bs = scaled_block_size(c)
+            c.idct = idcts[c.bs] ||= IDCT.new(c.bs)
+            setup_component(c, needed.include?(c.index), comps.size == 1)
+          end
+          check_coefficient_memory if @progressive
+          @scanned = Array.new(comps.size, false)
+          @visits = 0
+          @max_visits = MAX_VISITS * comps.sum { |c| c.needed ? c.abw * c.abh : 0 } + 65_536
+        end
+
+        # libjpeg's per-component DCT scaling: at reduced scales a subsampled
+        # component gets a larger IDCT where that replaces upsampling.
+        def scaled_block_size(c)
+          size = @bs
+          while size < 8 && ((@hmax * @bs) % (c.h * size * 2)).zero? && ((@vmax * @bs) % (c.v * size * 2)).zero?
+            size *= 2
+          end
+          size
+        end
+
+        # Progressive JPEGs keep all coefficients of the needed components
+        # (8 bytes per Array entry): refuse sizes whose storage would explode.
+        def check_coefficient_memory
+          entries = @components.sum { |c| c.needed ? c.abw * c.abh * (c.bs == 1 ? 1 : BLOCK_STRIDE) : 0 }
+          return if entries <= MAX_COEFFICIENTS
+
+          raise UnsupportedImageError, "progressive JPEG too large to decode at scale #{@scale} " \
+                                       "(#{@width}x#{@height}, #{@components.size} components)"
         end
 
         def setup_component(c, needed, single)
@@ -834,8 +916,8 @@ module QrReader
           c.bh = (c.ch + 7) / 8
           c.abw = single ? c.bw : @mcux * c.h
           c.abh = single ? c.bh : @mcuy * c.v
-          c.pw = c.abw * @bs
-          c.ph = c.abh * @bs
+          c.pw = c.abw * c.bs
+          c.ph = c.abh * c.bs
           c.needed = needed
           return unless needed
 
@@ -872,13 +954,17 @@ module QrReader
           count = byte(pos + 2)
           raise ImageError, "corrupt JPEG: bad scan header" if !count.between?(1, 4) || stop - pos != 6 + 2 * count
 
-          scomps = Array.new(count) do |i|
+          scomps = []
+          count.times do |i|
             id = byte(pos + 3 + 2 * i)
             tables = byte(pos + 4 + 2 * i)
-            comp = @components.find { |c| c.id == id } or raise ImageError, "corrupt JPEG: bad scan component"
+            # The first component with this id not yet in the scan (some
+            # encoders write duplicate ids; libjpeg-turbo matches them so).
+            comp = @components.find { |c| c.id == id && scomps.none? { |s| s.comp.equal?(c) } }
+            raise ImageError, "corrupt JPEG: bad scan component" unless comp
             raise ImageError, "corrupt JPEG: bad Huffman table id" if (tables >> 4) > 3 || (tables & 15) > 3
 
-            ScanComponent.new(comp, tables >> 4, tables & 15)
+            scomps << ScanComponent.new(comp, tables >> 4, tables & 15)
           end
           ss = byte(stop - 3)
           se = byte(stop - 2)
@@ -893,7 +979,9 @@ module QrReader
           validate_progression(count, ss, se, ah, al) if @progressive
           seg_end, fill = scan_extent(stop)
           if decode_scan?(scomps, ss)
-            raise ImageError, "corrupt JPEG: too many scans" if @scans_decoded >= MAX_SCANS
+            # Crafted files could repeat cheap scans that each visit every block.
+            @visits += scan_blocks(scomps)
+            raise ImageError, "corrupt JPEG: too many scans" if @scans_decoded >= MAX_SCANS || @visits > @max_visits
 
             words, starts, ends = entropy_words(stop, seg_end, fill)
             @scans_decoded += 1
@@ -906,6 +994,13 @@ module QrReader
           seg_end
         end
 
+        # Blocks covered by a scan.
+        def scan_blocks(scomps)
+          return scomps[0].comp.bw * scomps[0].comp.bh if scomps.size == 1
+
+          @mcux * @mcuy * scomps.sum { |s| s.comp.h * s.comp.v }
+        end
+
         def validate_progression(count, ss, se, ah, al)
           bad = ss.zero? ? !se.zero? : ss > se || se > 63 || count != 1
           bad ||= ah != 0 && al != ah - 1
@@ -913,32 +1008,45 @@ module QrReader
           raise ImageError, "corrupt JPEG: bad progressive scan parameters" if bad
         end
 
-        # Whether a scan contributes to the output (progressive scans that only
-        # carry chroma, or AC data at scale 8, are skipped).
+        # Whether a scan contributes to the output: scans without needed
+        # components, progressive AC scans of components decoded DC-only
+        # (block size 1) and repeated sequential scans are skipped.
         def decode_scan?(scomps, ss)
-          return true unless @progressive
-          return false if !ss.zero? && @bs == 1
+          unless @progressive
+            # A component has a single sequential scan: repeats are ignored,
+            # and so are scans of components the output does not need.
+            fresh = scomps.any? { |s| s.comp.needed && !@scanned[s.comp.index] }
+            scomps.each { |s| @scanned[s.comp.index] = true }
+            return fresh
+          end
+          return scomps.any? { |s| s.comp.needed } if ss.zero?
 
-          scomps.any? { |s| s.comp.needed }
+          c = scomps[0].comp
+          c.needed && c.bs > 1
         end
 
         # End of the entropy-coded data starting at +pos+: the first 0xFF that
         # is neither stuffing nor a restart marker. Fill bytes (0xFF runs)
         # before stuffing or RST are allowed; +fill+ tells whether any occur.
+        # With restart intervals, reserved marker codes (corrupt data) do not
+        # end the scan either: like libjpeg, decoding resumes at the next RST.
         # Returns [end position, fill].
         def scan_extent(pos)
           data = @data
           fill = false
+          resync = @restart_interval.positive?
           while (e = data.index(SEGMENT_END, pos))
-            return [e, fill] unless data.getbyte(e + 1) == 0xFF
-
-            r = data.index(NOT_FF, e + 1)
-            return [e, fill] unless r
-
+            r = e + 1
+            if data.getbyte(r) == 0xFF
+              r = data.index(NOT_FF, r)
+              return [e, fill] unless r
+            end
             c = data.getbyte(r)
-            return [e, fill] unless c.zero? || c.between?(0xD0, 0xD7)
-
-            fill = true
+            if c.zero? || c.between?(0xD0, 0xD7)
+              fill = true
+            elsif !resync || c >= 0xC0
+              return [e, fill]
+            end
             pos = r + 1
           end
           [data.bytesize, fill]
@@ -955,12 +1063,15 @@ module QrReader
           rst = seg.index(RST_MARKER)
           pieces = if rst.nil? then [seg]
                    elsif @restart_interval.zero? then [seg.byteslice(0, rst)] # a stray RST ends the data, like in libjpeg
-                   else seg.split(RST_MARKER, -1)
+                   else restart_intervals(seg.split(RST_SPLIT, -1))
                    end
+          bad = seg.match?(BAD_MARKER)
           buf = String.new(capacity: seg.bytesize + 4 * pieces.size + TAIL_PADDING.bytesize, encoding: Encoding::BINARY)
           starts = []
           ends = []
           pieces.each do |piece|
+            # Corrupt data: the interval's data ends at a reserved marker.
+            piece = piece.byteslice(0, piece.index(BAD_MARKER) || piece.bytesize) if bad
             piece = piece.gsub(STUFFED, FF) if piece.include?(STUFFED)
             word = buf.bytesize >> 2
             starts << word
@@ -969,6 +1080,39 @@ module QrReader
           end
           buf << TAIL_PADDING
           [buf.unpack("N*"), starts, ends]
+        end
+
+        # Assigns the parts of a scan split at restart markers ([data, "\xD0",
+        # data, "\xD1", ...]) to restart intervals by the markers' numbers
+        # (modulo 8). A marker without the expected number is judged by the
+        # next one: if that one continues from the expected number, this
+        # marker is corrupt and counts as expected; if it continues from this
+        # marker, intervals were lost (up to five; they stay empty, i.e.
+        # gray) or, for a marker one or two behind, the data is stale and
+        # dropped. Otherwise libjpeg's resync rules apply: one or two ahead
+        # means lost intervals, one or two behind stale data, else resume.
+        def restart_intervals(parts)
+          pieces = [parts[0]]
+          expected = 0
+          n = parts.size
+          i = 1
+          while i < n
+            m = parts[i].getbyte(0) & 7
+            ahead = (m - expected) & 7
+            unless ahead.zero?
+              nxt = i + 2 < n ? parts[i + 2].getbyte(0) & 7 : nil
+              if nxt == ((expected + 1) & 7) then ahead = 0
+              elsif nxt != ((m + 1) & 7) && ahead.between?(3, 5) then ahead = 0
+              end
+            end
+            if ahead < 6
+              ahead.times { pieces << "".b }
+              pieces << parts[i + 1]
+              expected += ahead + 1
+            end
+            i += 2
+          end
+          pieces
         end
 
         # ---------------------------------------------------------------
@@ -994,8 +1138,8 @@ module QrReader
           q = Array.new(64, 0)
           64.times { |k| q[ZIGZAG[k]] = c.qz[k] }
           plane = String.new(capacity: c.pw * c.ph, encoding: Encoding::BINARY)
-          buf = Array.new(c.pw / SAMPLES_PER_WORD[@bs] * @bs, 0)
-          pack = PACK[@bs]
+          buf = Array.new(c.pw / SAMPLES_PER_WORD[c.bs] * c.bs, 0)
+          pack = PACK[c.bs]
           c.abh.times { |by| render_row(c, by, q, buf).pack(pack, buffer: plane) }
           c.plane = plane
           c.coefs = nil
@@ -1003,11 +1147,11 @@ module QrReader
 
         # IDCTs block row +by+ of +c+ into +buf+ (packed words).
         def render_row(c, by, q, buf)
+          bs = c.bs
           coefs = c.coefs[by]
-          return buf.fill(128 * SPREAD[@bs]) unless coefs # no data: all coefficients 0
+          return buf.fill(128 * SPREAD[bs]) unless coefs # no data: all coefficients 0
 
-          idct = @idct
-          bs = @bs
+          idct = c.idct
           stride = c.pw / SAMPLES_PER_WORD[bs]
           step = WORDS[bs]
           base = 0
@@ -1035,12 +1179,17 @@ module QrReader
         def component_samples(c)
           ow = @out_w
           oh = @out_h
-          return crop(c.plane, c.pw, ow, oh) if c.h == @hmax && c.v == @vmax
+          # Samples per MCU after scaling (libjpeg's input group), which the
+          # upsampler expands to hmax x vmax output pixels.
+          h = c.h * c.bs / @bs
+          v = c.v * c.bs / @bs
+          return crop(c.plane, c.pw, ow, oh) if h == @hmax && v == @vmax
 
           # Component size at this scale (libjpeg's downsampled size).
-          cw = (@width * c.h * @bs + @hmax * 8 - 1) / (@hmax * 8)
-          ch = (@height * c.v * @bs + @vmax * 8 - 1) / (@vmax * 8)
-          Upsampler.new(c.plane, c.pw, cw, ch, @hmax, @vmax, c.h, c.v, @bs == 8).run(ow, oh)
+          cw = (@width * c.h * c.bs + @hmax * 8 - 1) / (@hmax * 8)
+          ch = (@height * c.v * c.bs + @vmax * 8 - 1) / (@vmax * 8)
+          # libjpeg's "fancy" upsampling needs DCT_scaled_size > 1.
+          Upsampler.new(c.plane, c.pw, cw, ch, @hmax, @vmax, h, v, @bs > 1).run(ow, oh)
         end
 
         def crop(plane, pw, w, h)
@@ -1052,9 +1201,10 @@ module QrReader
         end
 
         # Combines component planes into luminance, one row per block call.
+        # (Rows are appended byte by byte, faster than setbyte.)
         def convert(planes)
           w = @out_w
-          out = "\0".b * (w * @out_h)
+          out = String.new(capacity: w * @out_h, encoding: Encoding::BINARY)
           @out_h.times { |y| yield(*planes, out, y * w, w) }
           out
         end
@@ -1062,7 +1212,7 @@ module QrReader
         def rgb_row(r, g, b, out, i, n)
           stop = i + n
           while i < stop
-            out.setbyte(i, (306 * r.getbyte(i) + 601 * g.getbyte(i) + 117 * b.getbyte(i) + 0x200) >> 10)
+            out << ((306 * r.getbyte(i) + 601 * g.getbyte(i) + 117 * b.getbyte(i) + 0x200) >> 10)
             i += 1
           end
         end
@@ -1070,13 +1220,12 @@ module QrReader
         # Adobe CMYK JPEGs store inverted ink (255 = no ink), so the stored
         # values are 255 - ink: R = C' * K' / 255 and so on.
         def cmyk_row(c, m, y, k, out, i, n)
+          mul = Decoder.mul255
           stop = i + n
           while i < stop
             kk = k.getbyte(i)
-            r = (c.getbyte(i) * kk + 127) / 255
-            g = (m.getbyte(i) * kk + 127) / 255
-            b = (y.getbyte(i) * kk + 127) / 255
-            out.setbyte(i, (306 * r + 601 * g + 117 * b + 0x200) >> 10)
+            out << ((306 * mul[(c.getbyte(i) << 8) | kk] + 601 * mul[(m.getbyte(i) << 8) | kk] +
+                     117 * mul[(y.getbyte(i) << 8) | kk] + 0x200) >> 10)
             i += 1
           end
         end
@@ -1089,17 +1238,18 @@ module QrReader
           cb_b = CB_B
           cr_g = CR_G
           cb_g = CB_G
+          mul = Decoder.mul255
+          clamp = CLAMP512
           stop = i + n
           while i < stop
-            yy = 255 - y.getbyte(i)
+            yy = 767 - y.getbyte(i) # 255 - Y, offset for CLAMP512
             u = cb.getbyte(i)
             v = cr.getbyte(i)
             kk = k.getbyte(i)
-            c = (yy - cr_r[v]).clamp(0, 255)
-            m = (yy - ((cb_g[u] + cr_g[v]) >> 16)).clamp(0, 255)
-            ye = (yy - cb_b[u]).clamp(0, 255)
-            out.setbyte(i, (306 * ((c * kk + 127) / 255) + 601 * ((m * kk + 127) / 255) +
-                            117 * ((ye * kk + 127) / 255) + 0x200) >> 10)
+            c = clamp[yy - cr_r[v]]
+            m = clamp[yy - ((cb_g[u] + cr_g[v]) >> 16)]
+            ye = clamp[yy - cb_b[u]]
+            out << ((306 * mul[(c << 8) | kk] + 601 * mul[(m << 8) | kk] + 117 * mul[(ye << 8) | kk] + 0x200) >> 10)
             i += 1
           end
         end
@@ -1110,8 +1260,6 @@ module QrReader
       # luminance are entropy-decoded and dropped.
       class SequentialScan
         def initialize(decoder, scomps, words, starts, ends)
-          @bs = decoder.bs
-          @idct = decoder.idct
           @ri = decoder.restart_interval
           @words = words
           @starts = starts
@@ -1120,7 +1268,8 @@ module QrReader
           @nb = layout.size
           @preds = Array.new(scomps.size, 0)
           @kmax = Array.new(@nb, 0)
-          @rows = [] # [component, row buffer, rows per MCU row, words per MCU, words per row]
+          # [component, row buffer, rows per MCU row, words per MCU, words per row]
+          @rows = []
           setup_blocks(decoder, scomps, layout)
         end
 
@@ -1170,7 +1319,8 @@ module QrReader
 
         def setup_blocks(decoder, scomps, layout)
           interleaved = scomps.size > 1
-          bs = @bs
+          @idct = []
+          @ac = [] # whether the block's AC coefficients are needed (output block size > 1)
           @dc_fast = []
           @dc_look = []
           @dc_table = []
@@ -1197,6 +1347,8 @@ module QrReader
             @ac_look << ac.look
             @pred << scomps.index { |x| x.equal?(s) }
             unless c.needed
+              @idct << nil
+              @ac << false
               @blk << nil
               @q << nil
               @out << nil
@@ -1207,6 +1359,7 @@ module QrReader
             end
 
             decoder.latch_quant(c)
+            bs = c.bs
             stride = c.pw / SAMPLES_PER_WORD[bs] # row buffers hold packed words
             step = (interleaved ? c.h : 1) * WORDS[bs]
             buffers[c] ||= begin
@@ -1215,6 +1368,8 @@ module QrReader
               @rows << [c, buf, nrows, step, stride]
               buf
             end
+            @idct << c.idct
+            @ac << (bs > 1)
             @blk << Array.new(65, 0)
             @q << c.qz
             @out << buffers[c]
@@ -1243,7 +1398,6 @@ module QrReader
           preds = @preds
           kmaxes = @kmax
           zz = ZIGZAG_EXT
-          dc_only = @bs == 1
           nb = @nb
           b = 0
           while b < nb
@@ -1278,7 +1432,7 @@ module QrReader
             fast = @ac_fast[b]
             blk = @blk[b]
             k = 1
-            if blk && !dc_only
+            if @ac[b]
               q = @q[b]
               blk[0] = pred * q[0]
               while k < 64
@@ -1354,11 +1508,11 @@ module QrReader
           @acc = acc
           @bits = bits
           @wi = wi
-          idct = @idct
           b = 0
           while b < nb
             blk = @blk[b]
             if blk
+              idct = @idct[b]
               off = @off[b] + mx * @step[b]
               km = kmaxes[b]
               if km.zero?
@@ -1377,26 +1531,25 @@ module QrReader
         # Fills the MCU at column +mx+ of the row buffers with mid-gray.
         def gray_mcu(mx)
           @nb.times do |b|
-            @idct.fill(@out[b], @off[b] + mx * @step[b], @stride[b], 128) if @blk[b]
+            @idct[b].fill(@out[b], @off[b] + mx * @step[b], @stride[b], 128) if @blk[b]
           end
         end
 
         # Copies MCU row +my+ from the row buffers into the planes.
         def flush(my)
-          pack = PACK[@bs]
           @rows.each do |c, buf, nrows, _, _|
             len = c.pw * nrows
             start = my * len
-            c.plane.bytesplice(start, len, buf.pack(pack)) if start + len <= c.plane.bytesize
+            c.plane.bytesplice(start, len, buf.pack(PACK[c.bs])) if start + len <= c.plane.bytesize
           end
         end
 
         # Grays MCUs +mx+.. of the current row and flushes it; rows below
         # keep their (initially gray) content.
         def finish_row(mx, my)
-          gray = 128 * SPREAD[@bs]
-          @rows.each do |_, buf, nrows, step, stride|
+          @rows.each do |c, buf, nrows, step, stride|
             from = mx * step
+            gray = 128 * SPREAD[c.bs]
             nrows.times { |r| buf.fill(gray, r * stride + from, stride - from) } if from < stride
           end
           flush(my) if my < @mcuy
@@ -1466,14 +1619,13 @@ module QrReader
 
         def setup_dc(decoder, scomps, layout)
           interleaved = scomps.size > 1
-          @stride = decoder.bs == 1 ? 1 : BLOCK_STRIDE
           @nb = layout.size
           @preds = Array.new(scomps.size, 0)
           @b_rows = []
           @b_width = []
           @b_row = []
-          @b_col = []
-          @b_colstep = []
+          @b_col = [] # entry index of the block in its row, at MCU column 0
+          @b_colstep = [] # entries per MCU column
           @b_rowstep = []
           @b_pred = []
           @b_fast = []
@@ -1482,11 +1634,12 @@ module QrReader
           layout.each do |s, bx, by|
             c = s.comp
             decoder.latch_quant(c) if c.needed
+            stride = c.bs == 1 ? 1 : BLOCK_STRIDE # only the DC is kept at block size 1
             @b_rows << (c.needed ? c.coefs : nil)
-            @b_width << c.abw * @stride
+            @b_width << c.abw * stride
             @b_row << by
-            @b_col << bx
-            @b_colstep << (interleaved ? c.h : 1)
+            @b_col << bx * stride
+            @b_colstep << (interleaved ? c.h : 1) * stride
             @b_rowstep << (interleaved ? c.v : 1)
             @b_pred << scomps.index { |x| x.equal?(s) }
             next if @kind == :dc_refine
@@ -1508,7 +1661,6 @@ module QrReader
           refine = @kind == :dc_refine
           al = @al
           bit = 1 << al
-          stride = @stride
           nb = @nb
           mx = mx0
           while mx < mx1
@@ -1522,7 +1674,7 @@ module QrReader
               if (rows = @b_rows[b])
                 r = @b_row[b] + my * @b_rowstep[b]
                 coefs = rows[r] || (rows[r] = Array.new(@b_width[b], 0))
-                idx = (@b_col[b] + mx * @b_colstep[b]) * stride
+                idx = @b_col[b] + mx * @b_colstep[b]
               else
                 coefs = nil
               end
@@ -1560,7 +1712,7 @@ module QrReader
                 nb.times do |i|
                   next unless (rows = @b_rows[i])
 
-                  rows[@b_row[i] + my * @b_rowstep[i]][(@b_col[i] + mx * @b_colstep[i]) * stride] = 0
+                  rows[@b_row[i] + my * @b_rowstep[i]][@b_col[i] + mx * @b_colstep[i]] = 0
                 end
               end
               return false
@@ -1682,10 +1834,15 @@ module QrReader
           while bx < bx1
             base = bx * BLOCK_STRIDE
             last = coefs[base + 64]
-            if eobrun.positive? && last < ss
-              # Inside an end-of-band run with nothing to refine in this band.
+            if eobrun > 0 && last < ss
+              # Inside an end-of-band run with nothing to refine in this band
+              # (and likewise the following blocks).
               eobrun -= 1
               bx += 1
+              while eobrun > 0 && bx < bx1 && coefs[bx * BLOCK_STRIDE + 64] < ss
+                eobrun -= 1
+                bx += 1
+              end
               next
             end
             k = ss
@@ -1771,13 +1928,17 @@ module QrReader
         end
       end
 
-      # Upsamples a subsampled component plane to the output size. At full
-      # scale, 2x ratios use libjpeg's "fancy" triangle filters (h2v1, h1v2,
-      # h2v2); other integer ratios replicate samples, and fractional ratios
-      # (which libjpeg rejects) use the nearest sample.
+      # Upsamples a subsampled component plane to the output size, choosing
+      # the method like libjpeg (jdsample.c): with +fancy+ (DCT_scaled_size
+      # > 1) 2x ratios use the "fancy" triangle filters (h2v1 and h2v2 only
+      # for components wider than 2 samples, h1v2 always), other integer
+      # ratios replicate samples. Fractional ratios, which libjpeg rejects,
+      # use the nearest sample. Output rows are appended byte by byte (much
+      # faster than packing an Array).
       class Upsampler
         # +plane+ has row stride +stride+; the component's valid size is
-        # +cw+ x +ch+ samples.
+        # +cw+ x +ch+ samples, and +h+ x +v+ of them cover +hmax+ x +vmax+
+        # output pixels.
         def initialize(plane, stride, cw, ch, hmax, vmax, h, v, fancy)
           @plane = plane
           @stride = stride
@@ -1787,97 +1948,138 @@ module QrReader
           @vmax = vmax
           @h = h
           @v = v
-          rh = (hmax % h).zero? ? hmax / h : 0
+          @row_y_a = @row_y_b = @row_a = @row_b = nil
+          @rh = (hmax % h).zero? ? hmax / h : 0
           rv = (vmax % v).zero? ? vmax / v : 0
-          @fancy = fancy && rh.between?(1, 2) && rv.between?(1, 2)
-          @rh = rh
-          @rv = rv
+          @mode = if fancy && @rh == 2 && rv == 1 && cw > 2 then :h2v1
+                  elsif fancy && @rh == 1 && rv == 2 then :h1v2
+                  elsif fancy && @rh == 2 && rv == 2 && cw > 2 then :h2v2
+                  else :replicate
+                  end
         end
 
         def run(ow, oh)
           out = String.new(capacity: ow * oh, encoding: Encoding::BINARY)
-          oh.times do |y|
-            line = @fancy ? fancy_row(y) : nearest_row(y, ow)
-            line.fill(line[-1], line.size, ow - line.size) if line.size < ow
-            line.pack("C#{ow}", buffer: out)
+          last_src = nil
+          y = 0
+          while y < oh
+            start = out.bytesize
+            case @mode
+            when :h2v1 then h2v1(row(y), out, ow)
+            when :h1v2 then h1v2(y, out)
+            when :h2v2 then h2v2(y, out, ow)
+            else
+              # Replicated rows: copy the previous output row.
+              src = y * @v / @vmax
+              if src == last_src
+                out << out.byteslice(start - ow, ow)
+              else
+                replicate_row(row(src), out, ow)
+                last_src = src
+              end
+            end
+            raise ImageError, "corrupt JPEG: upsampling mismatch" unless out.bytesize == start + ow
+
+            y += 1
           end
           out
         end
 
         private
 
-        # Samples of component row +y+ (clamped to the valid rows), including
-        # the padding columns after the valid width.
+        # Samples of component row +y+ (clamped to the valid rows, as libjpeg
+        # repeats the first and last row for context), including the padding
+        # columns after the valid width.
         def row(y)
-          y = y.clamp(0, @ch - 1)
-          @plane.byteslice(y * @stride, @stride).bytes
+          y = 0 if y.negative?
+          y = @ch - 1 if y >= @ch
+          return @row_b if y == @row_y_b # the fancy filters read each row up to four times
+          return @row_a if y == @row_y_a
+
+          @row_y_b = @row_y_a
+          @row_b = @row_a
+          @row_y_a = y
+          @row_a = @plane.byteslice(y * @stride, @stride).bytes
         end
 
-        def nearest_row(y, ow)
-          src = row(y * @v / @vmax)
+        # Appends sample x * h / hmax of +src+ for x < ow: replication for
+        # integer ratios, the nearest sample for fractional ones.
+        def replicate_row(src, out, ow)
           last = @cw - 1
-          Array.new(ow) do |x|
-            sx = x * @h / @hmax
-            src[sx > last ? last : sx]
-          end
-        end
-
-        def fancy_row(y)
-          if @rv == 2
-            cy = y >> 1
-            lower = y.odd?
-            near = row(cy)
-            far = row(lower ? cy + 1 : cy - 1)
-            return h2v2(near, far) if @rh == 2
-
-            bias = lower ? 2 : 1
-            Array.new(@cw) { |x| (near[x] * 3 + far[x] + bias) >> 2 }
+          rh = @rh
+          x = 0
+          if rh.positive?
+            sx = 0
+            while x < ow
+              v = src[sx]
+              r = rh
+              while r.positive? && x < ow
+                out << v
+                x += 1
+                r -= 1
+              end
+              sx += 1
+            end
           else
-            h2v1(row(y))
+            h = @h
+            hmax = @hmax
+            while x < ow
+              sx = x * h / hmax
+              out << src[sx > last ? last : sx]
+              x += 1
+            end
           end
         end
 
-        # libjpeg h2v1_fancy_upsample: 3/4 nearer + 1/4 further sample. (With a
-        # single valid column, the second output uses the padding column, as
-        # in libjpeg.)
-        def h2v1(s)
+        # libjpeg h1v2_fancy_upsample: 3/4 nearer + 1/4 further row.
+        def h1v2(y, out)
+          lower = y.odd?
+          near = row(y >> 1)
+          far = row(lower ? (y >> 1) + 1 : (y >> 1) - 1)
+          bias = lower ? 2 : 1
           n = @cw
-          line = Array.new(2 * n, 0)
-          line[0] = s[0]
-          line[1] = (s[0] * 3 + s[1] + 2) >> 2
-          return line if n == 1
+          x = 0
+          while x < n
+            out << ((near[x] * 3 + far[x] + bias) >> 2)
+            x += 1
+          end
+        end
 
+        # libjpeg h2v1_fancy_upsample: 3/4 nearer + 1/4 further sample. The
+        # last output exists only if the output is that wide.
+        def h2v1(s, out, ow)
+          n = @cw
+          out << s[0] << ((s[0] * 3 + s[1] + 2) >> 2)
           x = 1
           while x < n - 1
             t = s[x] * 3
-            line[2 * x] = (t + s[x - 1] + 1) >> 2
-            line[2 * x + 1] = (t + s[x + 1] + 2) >> 2
+            out << ((t + s[x - 1] + 1) >> 2) << ((t + s[x + 1] + 2) >> 2)
             x += 1
           end
-          line[2 * n - 2] = (s[n - 1] * 3 + s[n - 2] + 1) >> 2
-          line[2 * n - 1] = s[n - 1]
-          line
+          out << ((s[n - 1] * 3 + s[n - 2] + 1) >> 2)
+          out << s[n - 1] if 2 * n <= ow
         end
 
-        # libjpeg h2v2_fancy_upsample on column sums 3 * near + far.
-        def h2v2(near, far)
+        # libjpeg h2v2_fancy_upsample on column sums 3 * nearer + further row.
+        def h2v2(y, out, ow)
+          lower = y.odd?
+          near = row(y >> 1)
+          far = row(lower ? (y >> 1) + 1 : (y >> 1) - 1)
           n = @cw
-          sums = Array.new(n < 2 ? 2 : n) { |x| near[x] * 3 + far[x] }
-          line = Array.new(2 * n, 0)
-          line[0] = (sums[0] * 4 + 8) >> 4
-          line[1] = (sums[0] * 3 + sums[1] + 7) >> 4
-          return line if n == 1
-
+          this = near[0] * 3 + far[0]
+          nxt = near[1] * 3 + far[1]
+          out << ((this * 4 + 8) >> 4) << ((this * 3 + nxt + 7) >> 4)
           x = 1
           while x < n - 1
-            t = sums[x] * 3
-            line[2 * x] = (t + sums[x - 1] + 8) >> 4
-            line[2 * x + 1] = (t + sums[x + 1] + 7) >> 4
+            last = this
+            this = nxt
+            nxt = near[x + 1] * 3 + far[x + 1]
+            t = this * 3
+            out << ((t + last + 8) >> 4) << ((t + nxt + 7) >> 4)
             x += 1
           end
-          line[2 * n - 2] = (sums[n - 1] * 3 + sums[n - 2] + 8) >> 4
-          line[2 * n - 1] = (sums[n - 1] * 4 + 7) >> 4
-          line
+          out << ((nxt * 3 + this + 8) >> 4)
+          out << ((nxt * 4 + 7) >> 4) if 2 * n <= ow
         end
       end
 

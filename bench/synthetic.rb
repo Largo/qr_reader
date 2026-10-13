@@ -18,6 +18,8 @@
 #   --save-failures DIR     write the input of every failing case to DIR (PNG / JPEG)
 #   --verbose               print every case with its time and result
 #   --list                  list the case ids and exit
+#   --min-pass N            exit with status 1 when fewer than N cases pass (for CI)
+#   --max-wrong N           exit with status 1 when more than N results are misreads (CI: 0)
 #   --reference             decode with zxing-cpp (bench/reference/zxcpp.py) instead of qr_reader;
 #                           regenerate the baseline with
 #                           bundle exec ruby bench/synthetic.rb --reference --json bench/baselines/synthetic_zxcpp.json
@@ -386,7 +388,7 @@ module SyntheticBench
 
   def parse_options(argv)
     options = { only: [] }
-    OptionParser.new do |o|
+    parser = OptionParser.new do |o|
       o.banner = "Usage: bundle exec ruby [--yjit] bench/synthetic.rb [options]"
       o.on("--quick") { options[:quick] = true }
       o.on("--only LIST") { |v| options[:only].concat(v.split(",")) }
@@ -397,7 +399,10 @@ module SyntheticBench
       o.on("--verbose") { options[:verbose] = true }
       o.on("--list") { options[:list] = true }
       o.on("--reference") { options[:reference] = true }
-    end.parse!(argv)
+      o.on("--min-pass N", Integer) { |v| options[:min_pass] = v }
+      o.on("--max-wrong N", Integer) { |v| options[:max_wrong] = v }
+    end
+    BenchSupport.parse!(parser, argv)
     options
   end
 
@@ -411,7 +416,7 @@ module SyntheticBench
   def run(argv)
     options = parse_options(argv)
     cases = select_cases(options)
-    abort "no cases selected" if cases.empty?
+    abort "no cases selected (families: #{all_cases.map(&:family).uniq.join(', ')})" if cases.empty?
     return cases.each { |c| puts c.id } if options[:list]
 
     decoder = options[:reference] ? QrReference.version : "qr_reader #{QrReader::VERSION}"
@@ -427,6 +432,8 @@ module SyntheticBench
     BenchSupport.write_json(options[:json], json) if options[:json]
     BenchSupport.compare_reports(options[:compare], json, "vs #{options[:compare]}") if options[:compare]
     BenchSupport.compare_reports(options[:baseline], json, "vs zxing-cpp baseline", baseline: true) if options[:baseline]
+    wrong = outcomes.count { |_, o| o.status == :wrong }
+    BenchSupport.check_limits(json["summary"]["passed"], min_pass: options[:min_pass], wrong: wrong, max_wrong: options[:max_wrong])
   end
 
   def generate(cases)

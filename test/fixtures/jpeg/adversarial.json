@@ -1,0 +1,576 @@
+[
+  {
+    "name": "adv_rgb_420",
+    "file": "adv_rgb_420.jpg",
+    "expect": "reference",
+    "note": "RGB, G and B subsampled 2x2",
+    "refs": {
+      "1": {
+        "file": "adv_rgb_420.1.gray.z",
+        "width": 61,
+        "height": 47
+      },
+      "2": {
+        "file": "adv_rgb_420.2.gray.z",
+        "width": 31,
+        "height": 24
+      },
+      "4": {
+        "file": "adv_rgb_420.4.gray.z",
+        "width": 16,
+        "height": 12
+      },
+      "8": {
+        "file": "adv_rgb_420.8.gray.z",
+        "width": 8,
+        "height": 6
+      }
+    },
+    "colorspace": "rgb"
+  },
+  {
+    "name": "adv_rgb_h1v2_prog",
+    "file": "adv_rgb_h1v2_prog.jpg",
+    "expect": "reference",
+    "note": "RGB, G and B subsampled vertically (h1v2), progressive",
+    "refs": {
+      "1": {
+        "file": "adv_rgb_h1v2_prog.1.gray.z",
+        "width": 61,
+        "height": 47
+      },
+      "2": {
+        "file": "adv_rgb_h1v2_prog.2.gray.z",
+        "width": 31,
+        "height": 24
+      },
+      "4": {
+        "file": "adv_rgb_h1v2_prog.4.gray.z",
+        "width": 16,
+        "height": 12
+      },
+      "8": {
+        "file": "adv_rgb_h1v2_prog.8.gray.z",
+        "width": 8,
+        "height": 6
+      }
+    },
+    "colorspace": "rgb"
+  },
+  {
+    "name": "adv_rgb_w1",
+    "file": "adv_rgb_w1.jpg",
+    "expect": "reference",
+    "note": "1 pixel wide: subsampled width 1, plain replication",
+    "refs": {
+      "1": {
+        "file": "adv_rgb_w1.1.gray.z",
+        "width": 1,
+        "height": 23
+      }
+    },
+    "colorspace": "rgb"
+  },
+  {
+    "name": "adv_rgb_w3",
+    "file": "adv_rgb_w3.jpg",
+    "expect": "reference",
+    "note": "3 pixels wide: subsampled width 2, plain replication",
+    "refs": {
+      "1": {
+        "file": "adv_rgb_w3.1.gray.z",
+        "width": 3,
+        "height": 17
+      },
+      "2": {
+        "file": "adv_rgb_w3.2.gray.z",
+        "width": 2,
+        "height": 9
+      }
+    },
+    "colorspace": "rgb"
+  },
+  {
+    "name": "adv_rgb_w5",
+    "file": "adv_rgb_w5.jpg",
+    "expect": "reference",
+    "note": "5 pixels wide: subsampled width 3, fancy h2v1",
+    "refs": {
+      "1": {
+        "file": "adv_rgb_w5.1.gray.z",
+        "width": 5,
+        "height": 9
+      },
+      "2": {
+        "file": "adv_rgb_w5.2.gray.z",
+        "width": 3,
+        "height": 5
+      },
+      "4": {
+        "file": "adv_rgb_w5.4.gray.z",
+        "width": 2,
+        "height": 3
+      }
+    },
+    "colorspace": "rgb"
+  },
+  {
+    "name": "adv_rgb_w6_v2",
+    "file": "adv_rgb_w6_v2.jpg",
+    "expect": "reference",
+    "note": "h1v2 is fancy at any width",
+    "refs": {
+      "1": {
+        "file": "adv_rgb_w6_v2.1.gray.z",
+        "width": 6,
+        "height": 5
+      },
+      "2": {
+        "file": "adv_rgb_w6_v2.2.gray.z",
+        "width": 3,
+        "height": 3
+      },
+      "4": {
+        "file": "adv_rgb_w6_v2.4.gray.z",
+        "width": 2,
+        "height": 2
+      }
+    },
+    "colorspace": "rgb"
+  },
+  {
+    "name": "adv_ycck_420",
+    "file": "adv_ycck_420.jpg",
+    "expect": "reference",
+    "note": "YCCK with K subsampled 2x2",
+    "refs": {
+      "1": {
+        "file": "adv_ycck_420.1.gray.z",
+        "width": 61,
+        "height": 47
+      },
+      "2": {
+        "file": "adv_ycck_420.2.gray.z",
+        "width": 31,
+        "height": 24
+      },
+      "4": {
+        "file": "adv_ycck_420.4.gray.z",
+        "width": 16,
+        "height": 12
+      },
+      "8": {
+        "file": "adv_ycck_420.8.gray.z",
+        "width": 8,
+        "height": 6
+      }
+    },
+    "colorspace": "ycck"
+  },
+  {
+    "name": "adv_ycck_422_prog",
+    "file": "adv_ycck_422_prog.jpg",
+    "expect": "reference",
+    "note": "progressive YCCK, 2x1",
+    "refs": {
+      "1": {
+        "file": "adv_ycck_422_prog.1.gray.z",
+        "width": 61,
+        "height": 47
+      },
+      "2": {
+        "file": "adv_ycck_422_prog.2.gray.z",
+        "width": 31,
+        "height": 24
+      },
+      "4": {
+        "file": "adv_ycck_422_prog.4.gray.z",
+        "width": 16,
+        "height": 12
+      },
+      "8": {
+        "file": "adv_ycck_422_prog.8.gray.z",
+        "width": 8,
+        "height": 6
+      }
+    },
+    "colorspace": "ycck"
+  },
+  {
+    "name": "adv_ycck_420_prog",
+    "file": "adv_ycck_420_prog.jpg",
+    "expect": "reference",
+    "note": "progressive YCCK, K subsampled 2x2: 2x2 IDCT with AC scans at scale 8",
+    "refs": {
+      "1": {
+        "file": "adv_ycck_420_prog.1.gray.z",
+        "width": 61,
+        "height": 47
+      },
+      "2": {
+        "file": "adv_ycck_420_prog.2.gray.z",
+        "width": 31,
+        "height": 24
+      },
+      "4": {
+        "file": "adv_ycck_420_prog.4.gray.z",
+        "width": 16,
+        "height": 12
+      },
+      "8": {
+        "file": "adv_ycck_420_prog.8.gray.z",
+        "width": 8,
+        "height": 6
+      }
+    },
+    "colorspace": "ycck"
+  },
+  {
+    "name": "adv_rgb_420_prog_restart",
+    "file": "adv_rgb_420_prog_restart.jpg",
+    "expect": "reference",
+    "note": "progressive RGB, G and B subsampled, restart intervals",
+    "refs": {
+      "1": {
+        "file": "adv_rgb_420_prog_restart.1.gray.z",
+        "width": 61,
+        "height": 47
+      },
+      "2": {
+        "file": "adv_rgb_420_prog_restart.2.gray.z",
+        "width": 31,
+        "height": 24
+      },
+      "4": {
+        "file": "adv_rgb_420_prog_restart.4.gray.z",
+        "width": 16,
+        "height": 12
+      },
+      "8": {
+        "file": "adv_rgb_420_prog_restart.8.gray.z",
+        "width": 8,
+        "height": 6
+      }
+    },
+    "colorspace": "rgb"
+  },
+  {
+    "name": "adv_luma_sub_2x2",
+    "file": "adv_luma_sub_2x2.jpg",
+    "expect": "reference",
+    "note": "Y 1x1, chroma 2x2",
+    "refs": {
+      "1": {
+        "file": "adv_luma_sub_2x2.1.gray.z",
+        "width": 61,
+        "height": 47
+      },
+      "2": {
+        "file": "adv_luma_sub_2x2.2.gray.z",
+        "width": 31,
+        "height": 24
+      },
+      "4": {
+        "file": "adv_luma_sub_2x2.4.gray.z",
+        "width": 16,
+        "height": 12
+      },
+      "8": {
+        "file": "adv_luma_sub_2x2.8.gray.z",
+        "width": 8,
+        "height": 6
+      }
+    },
+    "colorspace": "ycbcr"
+  },
+  {
+    "name": "adv_luma_sub_4x1",
+    "file": "adv_luma_sub_4x1.jpg",
+    "expect": "reference",
+    "note": "Y 1x1, chroma 4x1 (ratio 4)",
+    "refs": {
+      "1": {
+        "file": "adv_luma_sub_4x1.1.gray.z",
+        "width": 61,
+        "height": 47
+      },
+      "2": {
+        "file": "adv_luma_sub_4x1.2.gray.z",
+        "width": 31,
+        "height": 24
+      },
+      "4": {
+        "file": "adv_luma_sub_4x1.4.gray.z",
+        "width": 16,
+        "height": 12
+      },
+      "8": {
+        "file": "adv_luma_sub_4x1.8.gray.z",
+        "width": 8,
+        "height": 6
+      }
+    },
+    "colorspace": "ycbcr"
+  },
+  {
+    "name": "adv_luma_sub_1x4_prog",
+    "file": "adv_luma_sub_1x4_prog.jpg",
+    "expect": "reference",
+    "note": "Y 1x1, chroma 1x4, progressive",
+    "refs": {
+      "1": {
+        "file": "adv_luma_sub_1x4_prog.1.gray.z",
+        "width": 61,
+        "height": 47
+      },
+      "2": {
+        "file": "adv_luma_sub_1x4_prog.2.gray.z",
+        "width": 31,
+        "height": 24
+      },
+      "4": {
+        "file": "adv_luma_sub_1x4_prog.4.gray.z",
+        "width": 16,
+        "height": 12
+      },
+      "8": {
+        "file": "adv_luma_sub_1x4_prog.8.gray.z",
+        "width": 8,
+        "height": 6
+      }
+    },
+    "colorspace": "ycbcr"
+  },
+  {
+    "name": "adv_prog_script_420",
+    "file": "adv_prog_script_420.jpg",
+    "expect": "reference",
+    "note": "35 scans, Al up to 3, interleaved DC refinement",
+    "refs": {
+      "1": {
+        "file": "adv_prog_script_420.1.gray.z",
+        "width": 61,
+        "height": 47
+      },
+      "2": {
+        "file": "adv_prog_script_420.2.gray.z",
+        "width": 31,
+        "height": 24
+      },
+      "4": {
+        "file": "adv_prog_script_420.4.gray.z",
+        "width": 16,
+        "height": 12
+      },
+      "8": {
+        "file": "adv_prog_script_420.8.gray.z",
+        "width": 8,
+        "height": 6
+      }
+    },
+    "colorspace": "ycbcr"
+  },
+  {
+    "name": "adv_prog_script_gray",
+    "file": "adv_prog_script_gray.jpg",
+    "expect": "reference",
+    "note": "gray, bands refined out of order",
+    "refs": {
+      "1": {
+        "file": "adv_prog_script_gray.1.gray.z",
+        "width": 61,
+        "height": 47
+      },
+      "2": {
+        "file": "adv_prog_script_gray.2.gray.z",
+        "width": 31,
+        "height": 24
+      },
+      "4": {
+        "file": "adv_prog_script_gray.4.gray.z",
+        "width": 16,
+        "height": 12
+      },
+      "8": {
+        "file": "adv_prog_script_gray.8.gray.z",
+        "width": 8,
+        "height": 6
+      }
+    },
+    "colorspace": "gray"
+  },
+  {
+    "name": "adv_prog_script_16bit",
+    "file": "adv_prog_script_16bit.jpg",
+    "expect": "reference",
+    "note": "16-bit quantisation tables, spectral bands",
+    "refs": {
+      "1": {
+        "file": "adv_prog_script_16bit.1.gray.z",
+        "width": 61,
+        "height": 47
+      },
+      "2": {
+        "file": "adv_prog_script_16bit.2.gray.z",
+        "width": 31,
+        "height": 24
+      },
+      "4": {
+        "file": "adv_prog_script_16bit.4.gray.z",
+        "width": 16,
+        "height": 12
+      },
+      "8": {
+        "file": "adv_prog_script_16bit.8.gray.z",
+        "width": 8,
+        "height": 6
+      }
+    },
+    "colorspace": "ycbcr"
+  },
+  {
+    "name": "adv_prog_script_restart",
+    "file": "adv_prog_script_restart.jpg",
+    "expect": "reference",
+    "note": "the 35-scan script with restart intervals of 2 blocks",
+    "refs": {
+      "1": {
+        "file": "adv_prog_script_restart.1.gray.z",
+        "width": 61,
+        "height": 47
+      },
+      "2": {
+        "file": "adv_prog_script_restart.2.gray.z",
+        "width": 31,
+        "height": 24
+      },
+      "4": {
+        "file": "adv_prog_script_restart.4.gray.z",
+        "width": 16,
+        "height": 12
+      },
+      "8": {
+        "file": "adv_prog_script_restart.8.gray.z",
+        "width": 8,
+        "height": 6
+      }
+    },
+    "colorspace": "ycbcr"
+  },
+  {
+    "name": "adv_restart_7b",
+    "file": "adv_restart_7b.jpg",
+    "expect": "reference",
+    "note": "restart interval that does not divide the MCU rows",
+    "refs": {
+      "1": {
+        "file": "adv_restart_7b.1.gray.z",
+        "width": 61,
+        "height": 47
+      },
+      "2": {
+        "file": "adv_restart_7b.2.gray.z",
+        "width": 31,
+        "height": 24
+      },
+      "4": {
+        "file": "adv_restart_7b.4.gray.z",
+        "width": 16,
+        "height": 12
+      },
+      "8": {
+        "file": "adv_restart_7b.8.gray.z",
+        "width": 8,
+        "height": 6
+      }
+    },
+    "colorspace": "ycbcr"
+  },
+  {
+    "name": "adv_two_of_three",
+    "file": "adv_two_of_three.jpg",
+    "expect": "reference",
+    "note": "interleaved Y+Cb scan, then Cr",
+    "refs": {
+      "1": {
+        "file": "adv_two_of_three.1.gray.z",
+        "width": 61,
+        "height": 47
+      },
+      "2": {
+        "file": "adv_two_of_three.2.gray.z",
+        "width": 31,
+        "height": 24
+      },
+      "4": {
+        "file": "adv_two_of_three.4.gray.z",
+        "width": 16,
+        "height": 12
+      },
+      "8": {
+        "file": "adv_two_of_three.8.gray.z",
+        "width": 8,
+        "height": 6
+      }
+    },
+    "colorspace": "ycbcr"
+  },
+  {
+    "name": "adv_jfif_rgb",
+    "file": "adv_jfif_rgb.jpg",
+    "expect": "reference",
+    "note": "RGB data with Adobe transform 0 and a JFIF marker: libjpeg says YCbCr",
+    "refs": {
+      "1": {
+        "file": "adv_jfif_rgb.1.gray.z",
+        "width": 61,
+        "height": 47
+      },
+      "2": {
+        "file": "adv_jfif_rgb.2.gray.z",
+        "width": 31,
+        "height": 24
+      },
+      "4": {
+        "file": "adv_jfif_rgb.4.gray.z",
+        "width": 16,
+        "height": 12
+      },
+      "8": {
+        "file": "adv_jfif_rgb.8.gray.z",
+        "width": 8,
+        "height": 6
+      }
+    },
+    "colorspace": "ycbcr"
+  },
+  {
+    "name": "adv_dup_ids",
+    "file": "adv_dup_ids.jpg",
+    "expect": "reference",
+    "note": "all three component ids are 1 (in SOF and SOS)",
+    "refs": {
+      "1": {
+        "file": "adv_dup_ids.1.gray.z",
+        "width": 61,
+        "height": 47
+      },
+      "2": {
+        "file": "adv_dup_ids.2.gray.z",
+        "width": 31,
+        "height": 24
+      },
+      "4": {
+        "file": "adv_dup_ids.4.gray.z",
+        "width": 16,
+        "height": 12
+      },
+      "8": {
+        "file": "adv_dup_ids.8.gray.z",
+        "width": 8,
+        "height": 6
+      }
+    },
+    "colorspace": "ycbcr"
+  }
+]

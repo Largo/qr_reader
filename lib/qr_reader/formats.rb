@@ -22,17 +22,19 @@ module QrReader
     ALL_BYTES = (0..255).to_a.freeze
     WHITE = "\xFF".b
 
-    # Recognised but unsupported formats: [pattern, message].
+    # Recognised formats that Formats.decode does not read: [pattern, name,
+    # module that reads them (nil if none)].
+    # TIFF and PDF are multi-page containers read by their own modules.
     UNSUPPORTED = [
       [/\ARIFF....WEBP/mn, "WebP"],
-      [/\A(?:II\*\0|MM\0\*|II\+\0|MM\0\+)/n, "TIFF"],
+      [/\A(?:II\*\0|MM\0\*|II\+\0|MM\0\+)/n, "TIFF", "TIFF"],
       [/\A....ftyp(?:avif|avis)/mn, "AVIF"],
       [/\A....ftyp(?:heic|heix|hevc|hevx|heim|heis|mif1|msf1)/mn, "HEIC/HEIF"],
       [/\A(?:\xFF\x0A|\0\0\0\x0CJXL \r\n\x87\n)/n, "JPEG XL"],
       [/\A(?:\0\0\0\x0CjP  \r\n\x87\n|\xFF\x4F\xFF\x51)/n, "JPEG 2000"],
       [/\AP[Ff][\s#]/n, "PFM (floating point PNM)"],
       [/\A8BPS/n, "Photoshop PSD"],
-      [/\A%PDF-/n, "PDF"],
+      [/\A%PDF-/n, "PDF", "PDF"],
       [/\A\s*<(?:\?xml|svg|!DOCTYPE svg)/n, "SVG"]
     ].freeze
     private_constant :GIF_MAGIC, :PNM_MAGIC, :WHITESPACE, :ALL_BYTES, :WHITE, :UNSUPPORTED
@@ -85,12 +87,13 @@ module QrReader
 
       def unrecognized(bytes)
         head = bytes.byteslice(0, 64)
-        UNSUPPORTED.each do |pattern, name|
+        UNSUPPORTED.each do |pattern, name, container|
           next unless pattern.match?(head)
 
+          where = " here (QrReader.read and QrReader::Formats::#{container} read them)" if container
           return UnsupportedImageError.new(
-            "#{name} images are not supported; convert to PNG, JPEG, GIF, BMP or PNM first " \
-            "(e.g. `magick input output.png`)"
+            "#{name} images are not supported#{where}; convert to PNG, JPEG, GIF, BMP or PNM first, " \
+            "e.g. `magick input output.png`"
           )
         end
         return ImageError.new("empty image data") if bytes.empty?
@@ -129,6 +132,31 @@ module QrReader
       # Composites luminance +v+ with alpha +a+ over white (Image.from_pixels).
       def over_white(v, a)
         a == 255 ? v : (v * a + 255 * (255 - a) + 127) / 255
+      end
+
+      # over_white for every alpha and luminance as a 64 KiB String indexed
+      # by a << 8 | v: one getbyte instead of a division per pixel. Built on
+      # first use (about 65k iterations), then shared.
+      def over_white_table
+        @over_white_table ||= begin
+          table = "\0".b * 65_536
+          a = 0
+          while a < 256
+            fill_over_white_row(table, a)
+            a += 1
+          end
+          table.freeze
+        end
+      end
+
+      def fill_over_white_row(table, a)
+        base = a << 8
+        rest = 255 * (255 - a) + 127
+        v = 0
+        while v < 256
+          table.setbyte(base | v, (v * a + rest) / 255)
+          v += 1
+        end
       end
 
       # Translates every byte of +str+ in place: from_bytes[i] -> to_bytes[i].
@@ -180,31 +208,25 @@ module QrReader
         out
       end
 
-      # Colour + alpha, composited over white; fully transparent pixels
-      # skip the luma computation.
-      def rgba(src, off, n, out, ro = 0, go = 1, bo = 2, ao = 3, stride = 4)
+      # Colour + alpha, composited over white through +table+
+      # (Support.over_white_table).
+      def rgba(src, off, n, out, table, ro = 0, go = 1, bo = 2, ao = 3, stride = 4)
         i = off
         stop = off + n * stride
         while i < stop
-          a = src.getbyte(i + ao)
-          if a.zero?
-            out << 255
-          else
-            v = (306 * src.getbyte(i + ro) + 601 * src.getbyte(i + go) + 117 * src.getbyte(i + bo) + 0x200) >> 10
-            out << (a == 255 ? v : (v * a + 255 * (255 - a) + 127) / 255)
-          end
+          v = (306 * src.getbyte(i + ro) + 601 * src.getbyte(i + go) + 117 * src.getbyte(i + bo) + 0x200) >> 10
+          out << table.getbyte((src.getbyte(i + ao) << 8) | v)
           i += stride
         end
         out
       end
 
-      def gray_alpha(src, off, n, out, ao = 1, stride = 2)
+      # Gray + alpha, composited over white through +table+.
+      def gray_alpha(src, off, n, out, table, ao = 1, stride = 2)
         i = off
         stop = off + n * stride
         while i < stop
-          v = src.getbyte(i)
-          a = src.getbyte(i + ao)
-          out << (a == 255 ? v : (v * a + 255 * (255 - a) + 127) / 255)
+          out << table.getbyte((src.getbyte(i + ao) << 8) | src.getbyte(i))
           i += stride
         end
         out

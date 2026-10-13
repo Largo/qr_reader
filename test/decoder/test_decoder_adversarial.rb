@@ -1,7 +1,9 @@
 # frozen_string_literal: true
 
 require "json"
+require "zlib"
 require_relative "decoder_test_helper"
+require_relative "fixtures/generate_zxing_cpp_damaged"
 
 begin
   require "qr_encoder" # testkit's independent encoder (test/support)
@@ -11,8 +13,9 @@ end
 
 # Adversarial review of the decoder: orientation handling, inputs the
 # BitMatrix contract does not rule out, character sets compared with
-# zxing-cpp, the precomputed tables against their definitions, and symbols
-# from the testkit's independent encoder.
+# zxing-cpp, the precomputed tables against their definitions, symbols from
+# the testkit's independent encoder, damaged format/version information and
+# damaged symbols compared with zxing-cpp.
 class TestDecoderAdversarial < Minitest::Test
   include DecoderTestHelper
 
@@ -64,8 +67,8 @@ class TestDecoderAdversarial < Minitest::Test
           data = "\0".b * QrReader::SymbolVersion[version].data_codewords(level)
           matrix = SymbolBuilder.build(data, version: version, level: level, mask: mask)
           n = matrix.width
-          right = Decoder::FormatReader.format_bits(matrix.bits, n, false)
-          wrong = Decoder::FormatReader.format_bits(matrix.bits, n, true)
+          right = Decoder::FormatReader.format_bits(matrix.bits, n)
+          wrong = Decoder::FormatReader.format_bits(matrix.bits, n, mirrored: true)
           assert_equal 0, Decoder::FormatReader.decode_format(*right).last
           wrong.each do |word|
             distance = Decoder::FormatReader.decode_format(word, word)&.last || 4
@@ -252,7 +255,7 @@ class TestDecoderAdversarial < Minitest::Test
   def test_kanji_upper_range
     content = Decoder::BitstreamParser.parse(BitWriter.new.kanji("\xE0\x40\xEA\xA4".b, 1).to_data, 1)
     assert_equal "漾熙", content.text
-    assert_equal "\xE0\x40\xEA\xA4".b, content.bytes
+    assert_equal "\xE0\x40\xEA\xA4".b, content.raw_bytes
   end
 
   # --- precomputed tables against their definitions -----------------------
@@ -389,5 +392,229 @@ class TestDecoderAdversarial < Minitest::Test
       end
     end
     assert_operator outcomes[:rejected], :>, 0
+  end
+
+  # --- damaged format and version information ----------------------------
+
+  LEVEL_FOR_BITS = LEVEL_BITS.invert.freeze
+  # Masked format code words by data bits (EC level bits << 3 | mask).
+  FORMAT_CODES = Array.new(32) { |data| SymbolBuilder.bch(data, 5, 0x537, 15) ^ 0x5412 }.freeze
+
+  # Writes the 15-bit words +copy1+ (around the top-left finder) and +copy2+
+  # (split between bottom-left and top-right) into +matrix+; bit i of a word
+  # goes where ISO/IEC 18004 Figure 25 puts format bit i.
+  def write_format_copies(matrix, copy1, copy2)
+    n = matrix.width
+    15.times do |i|
+      x1, y1 = i < 8 ? [8, i < 6 ? i : i + 1] : [i == 8 ? 7 : 14 - i, 8]
+      x2, y2 = i < 8 ? [n - 1 - i, 8] : [8, n - 15 + i]
+      matrix.set(x1, y1, copy1[i])
+      matrix.set(x2, y2, copy2[i])
+    end
+    matrix
+  end
+
+  # Writes an 18-bit version information word into the top-right (:top_right)
+  # or bottom-left (:bottom_left) block (ISO/IEC 18004 Figure 27).
+  def write_version_copy(matrix, block, word)
+    n = matrix.width
+    18.times do |i|
+      x, y = block == :top_right ? [n - 11 + i % 3, i / 3] : [i / 3, n - 11 + i % 3]
+      matrix.set(x, y, word[i])
+    end
+    matrix
+  end
+
+  def random_error(rng, weight)
+    (0...15).to_a.sample(weight, random: rng).sum { |bit| 1 << bit }
+  end
+
+  def symbol_for_format(rng, data_bits, version)
+    level = LEVEL_FOR_BITS[data_bits >> 3]
+    text = payload(rng, :alphanumeric, rng.rand(1..8)) # fits v1-H
+    data = BitWriter.new.alphanumeric(text, version).to_data(QrReader::SymbolVersion[version].data_codewords(level))
+    [text, SymbolBuilder.build(data, version: version, level: level, mask: data_bits & 7)]
+  end
+
+  # Both copies damaged: the true copy 3 bits off, the other one damaged into
+  # (or close to) another code word that is as close or closer and lower -
+  # the reading a single-copy "nearest code word" rule gets wrong. Every
+  # code word the copies propose must be tried.
+  def test_format_copies_proposing_different_code_words
+    rng = Random.new(70)
+    32.times do |truth|
+      [[3, 3], [3, 2], [2, 1], [3, 0]].each_with_index do |(true_errors, other_errors), k|
+        others = (0...32).to_a - [truth]
+        other = truth.positive? && k.even? ? rng.rand(truth) : others.sample(random: rng)
+        version = [1, 3, 7, 12][(truth + k) % 4]
+        text, matrix = symbol_for_format(rng, truth, version)
+        good = FORMAT_CODES[truth] ^ random_error(rng, true_errors)
+        bad = FORMAT_CODES[other] ^ random_error(rng, other_errors)
+        k.odd? ? write_format_copies(matrix, good, bad) : write_format_copies(matrix, bad, good)
+        result = Decoder.decode(matrix)
+        where = "format #{truth} vs #{other}, errors #{true_errors}/#{other_errors}"
+        assert_equal text, result&.text, where
+        assert_equal [LEVEL_FOR_BITS[truth >> 3].downcase, truth & 7], [result.ec_level, result.mask], where
+        assert_equal text, Decoder.decode(matrix.transpose)&.text, "#{where}, mirrored"
+        assert_equal :ok, Decoder.diagnose(matrix)[:status]
+      end
+    end
+  end
+
+  # Whatever the other copy reads (random words, other code words, the
+  # unmasked variant), a symbol with one format copy at most 3 bits off its
+  # code word decodes, in either orientation.
+  def test_one_format_copy_within_three_bits_suffices
+    rng = Random.new(71)
+    300.times do |i|
+      truth = rng.rand(32)
+      text, matrix = symbol_for_format(rng, truth, [1, 2, 5, 7, 10][i % 5])
+      good = FORMAT_CODES[truth] ^ random_error(rng, rng.rand(0..3))
+      other = case i % 4
+              when 0 then rng.rand(1 << 15)
+              when 1 then FORMAT_CODES[rng.rand(32)] ^ random_error(rng, rng.rand(0..3))
+              when 2 then FORMAT_CODES[truth] ^ random_error(rng, rng.rand(4..15))
+              else FORMAT_CODES[rng.rand(32)] ^ 0x5412
+              end
+      i.odd? ? write_format_copies(matrix, good, other) : write_format_copies(matrix, other, good)
+      matrix = matrix.transpose if (i / 2).odd?
+      assert_equal text, Decoder.decode(matrix)&.text, "case #{i}: #{format('%015b %015b', good, other)}"
+    end
+  end
+
+  # Full-capacity payloads whose parity codewords, read as data of the
+  # weaker level (same block layout, so the stronger symbol's code words are
+  # valid weaker ones too), parse into extra or different text.
+  NESTED_LEVEL_TRAPS = [
+    [1, :H, :L, "07215873479921415"], [1, :Q, :M, "004925020914316934336348268"],
+    [2, :H, :L, "5620516770542677009791648967704996"],
+    [4, :Q, :M, "8938805399576047816221358187810541547600924588751115574300002270501412248060415188700917874004" \
+                "30827213241227341"]
+  ].freeze
+
+  # Format copies naming the weaker level (exactly) and the true, stronger
+  # one (2 bits off) with the same mask: the weaker reading decodes too, so
+  # the stronger one must win - else the result has the wrong level and,
+  # here, wrong text.
+  def test_weaker_level_reading_of_damaged_format_information
+    rng = Random.new(74)
+    NESTED_LEVEL_TRAPS.each do |version, strong, weak, digits|
+      data = BitWriter.new.numeric(digits, version).to_data(QrReader::SymbolVersion[version].data_codewords(strong))
+      mask = rng.rand(8)
+      matrix = SymbolBuilder.build(data, version: version, level: strong, mask: mask)
+      strong_code = FORMAT_CODES[(LEVEL_BITS[strong] << 3) | mask]
+      weak_code = FORMAT_CODES[(LEVEL_BITS[weak] << 3) | mask]
+      write_format_copies(matrix, weak_code, strong_code ^ random_error(rng, 2))
+      [matrix, matrix.transpose].each do |m|
+        result = Decoder.decode(m)
+        assert_equal digits, result&.text, "v#{version} #{strong} read as #{weak}"
+        assert_equal strong.downcase, result.ec_level
+        assert_equal result, Decoder.diagnose(m)[:result]
+      end
+    end
+  end
+
+  # The dimension decides the version. Only when both version information
+  # copies name the same other version is the grid rejected (the detector
+  # sampled it at the wrong size); one copy damaged into another version's
+  # code word, alone or next to an unreadable or different one, is not
+  # enough. zxing-cpp ignores the version information entirely.
+  def test_version_information_damaged_into_other_versions
+    rng = Random.new(72)
+    [7, 11, 22, 40].each do |version|
+      text, data = nil
+      text = payload(rng, :alphanumeric, 20)
+      data = BitWriter.new.alphanumeric(text, version).to_data(QrReader::SymbolVersion[version].data_codewords(:M))
+      clean = SymbolBuilder.build(data, version: version, level: :M, mask: version % 8)
+      code = ->(v) { SymbolBuilder.bch(v, 6, 0x1F25, 18) }
+      others = ((7..40).to_a - [version]).sample(2, random: rng)
+      readable = [[code.call(others[0]), code.call(version)], [code.call(others[0]), 0],
+                  [code.call(others[0]), code.call(others[1])], [0, code.call(others[1])]]
+      readable.each do |top_right, bottom_left|
+        [false, true].each do |swap|
+          m = clean.dup
+          write_version_copy(m, :top_right, swap ? bottom_left : top_right)
+          write_version_copy(m, :bottom_left, swap ? top_right : bottom_left)
+          where = "v#{version}: #{format('%018b %018b', top_right, bottom_left)}"
+          assert_equal text, Decoder.decode(m)&.text, where
+          assert_equal text, Decoder.decode(m.transpose)&.text, "#{where}, mirrored"
+        end
+      end
+      m = clean.dup
+      write_version_copy(m, :top_right, code.call(others[0]))
+      write_version_copy(m, :bottom_left, code.call(others[0]) ^ 0b101) # 2 bits off, same version
+      assert_nil Decoder.decode(m)
+      diagnosis = Decoder.diagnose(m)
+      assert_equal :version_info, diagnosis[:status]
+      assert_equal [others[0], others[0]], diagnosis[:version_info]
+    end
+  end
+
+  # --- diagnose agrees with decode ---------------------------------------
+
+  # diagnose tries exactly what decode tries: :ok exactly when decode
+  # returns a Result (the same one), on damaged symbols and garbage, with
+  # and without mirrored readings.
+  def test_diagnose_agrees_with_decode
+    rng = Random.new(73)
+    matrices = damaged_reference_cases.map { |spec, _| ZxingCppDamaged.build(spec) }
+    matrices += Array.new(150) do |i|
+      n = [21, 25, 45, 57][i % 4]
+      QrReader::BitMatrix.new(n, n, rng.bytes(n * n).tr("\x80-\xFF".b, "\x01").tr("^\x01".b, "\x00"))
+    end
+    statuses = Hash.new(0)
+    matrices.each_with_index do |matrix, i|
+      [true, false].each do |try_mirrored|
+        result = Decoder.decode(matrix, try_mirrored: try_mirrored)
+        diagnosis = Decoder.diagnose(matrix, try_mirrored: try_mirrored)
+        statuses[diagnosis[:status]] += 1
+        assert_equal !result.nil?, diagnosis[:status] == :ok, "case #{i}, try_mirrored #{try_mirrored}"
+        assert_equal result, diagnosis[:result] if result
+        assert_includes Decoder::STATUSES, diagnosis[:status]
+      end
+    end
+    %i[ok format_info reed_solomon].each { |status| assert_operator statuses[status], :>, 0, status }
+  end
+
+  def test_matrix_with_inconsistent_attributes
+    odd = QrReader::BitMatrix.allocate
+    odd.instance_variable_set(:@width, 21.0)
+    odd.instance_variable_set(:@height, 21.0)
+    odd.instance_variable_set(:@bits, "\0".b * 441)
+    assert_nil Decoder.decode(odd)
+    assert_equal :dimension, Decoder.diagnose(odd)[:status]
+  end
+
+  # --- damaged symbols compared with zxing-cpp ---------------------------
+
+  DAMAGED_REFERENCE = File.join(__dir__, "fixtures", "zxing_cpp_damaged.jsonl")
+
+  def damaged_reference_cases
+    @damaged_reference_cases ||= File.foreach(DAMAGED_REFERENCE).map { |line| [JSON.parse(line), line] }
+  end
+
+  # Damaged symbols (codeword errors up to capacity + 1, format and version
+  # information bit errors, mirrored ones) that zxing-cpp read or failed to
+  # read (fixtures/generate_zxing_cpp_damaged.rb): we must read every one it
+  # reads, with the same text, and never return wrong text.
+  def test_reads_every_damaged_symbol_zxing_cpp_reads
+    read = 0
+    reference = 0
+    damaged_reference_cases.each do |spec, line|
+      matrix = ZxingCppDamaged.build(spec)
+      assert_equal spec["crc"], Zlib.crc32(matrix.bits), "fixture grid differs (test builder changed?): #{line[0, 80]}"
+      text = Decoder.decode(matrix)&.text
+      expected = spec["zxing_cpp"]
+      if expected
+        reference += 1
+        assert_equal spec["text"], expected
+        assert_equal expected, text, line[0, 120]
+      else
+        assert_includes [nil, spec["text"]], text, line[0, 120]
+      end
+      read += 1 if text
+    end
+    assert_operator reference, :>=, 200
+    assert_operator read, :>, reference
   end
 end

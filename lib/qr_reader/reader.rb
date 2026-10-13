@@ -253,6 +253,9 @@ module QrReader
       return nil unless result
 
       points = candidate.points&.map { |x, y| [x * factor, y * factor] }
+      # A mirrored symbol was decoded from the transposed grid: its top-right
+      # and bottom-left corners are the grid's bottom-left and top-right.
+      points = [points[0], points[3], points[2], points[1]] if points && result.mirrored
       result = result.with(points: points, page: @page)
       return result if @seen.any? { |other| same_symbol?(other, result) }
 

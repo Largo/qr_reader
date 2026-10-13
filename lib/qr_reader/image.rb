@@ -19,6 +19,12 @@ module QrReader
     INVERT_FROM = TR_ESCAPE.call((0..255).to_a)
     INVERT_TO = TR_ESCAPE.call(255.downto(0).to_a)
 
+    # [red, green, blue, alpha] byte offsets within a pixel.
+    CHANNEL_OFFSETS = {
+      rgb: [0, 1, 2, nil], bgr: [2, 1, 0, nil], rgba: [0, 1, 2, 3], bgra: [2, 1, 0, 3],
+      argb: [1, 2, 3, 0], abgr: [3, 2, 1, 0], gray_alpha: []
+    }.freeze
+
     def initialize(width, height, data)
       unless width.is_a?(Integer) && height.is_a?(Integer) && width.positive? && height.positive?
         raise ArgumentError, "invalid image size #{width.inspect}x#{height.inspect}"
@@ -46,16 +52,21 @@ module QrReader
         raise ArgumentError, "expected #{expected} bytes of #{format} data, got #{data.bytesize}" if data.bytesize != expected
         return new(width, height, data) if format == :gray
 
-        n = width * height
-        out = "\0".b * n
-        case format
-        when :gray_alpha then convert_gray_alpha(data, out, n)
-        when :rgb then convert_rgb(data, out, n, 0, 1, 2, 3)
-        when :bgr then convert_rgb(data, out, n, 2, 1, 0, 3)
-        when :rgba then convert_rgba(data, out, n, 0, 1, 2, 3)
-        when :bgra then convert_rgba(data, out, n, 2, 1, 0, 3)
-        when :argb then convert_rgba(data, out, n, 1, 2, 3, 0)
-        when :abgr then convert_rgba(data, out, n, 3, 2, 1, 0)
+        out = buffer(width * height)
+        ro, go, bo, ao = CHANNEL_OFFSETS.fetch(format)
+        stride = width * channels
+        y = 0
+        # One call per row: YJIT compiles methods, not loops, so a whole-image
+        # loop entered once would stay interpreted.
+        while y < height
+          if format == :gray_alpha
+            convert_gray_alpha_row(data, out, y * stride, width)
+          elsif ao
+            convert_rgba_row(data, out, y * stride, width, ro, go, bo, ao)
+          else
+            convert_rgb_row(data, out, y * stride, width, ro, go, bo)
+          end
+          y += 1
         end
         new(width, height, out)
       end
@@ -73,36 +84,37 @@ module QrReader
         (306 * r + 601 * g + 117 * b + 0x200) >> 10
       end
 
+      # Empty binary String with room for +size+ bytes.
+      def buffer(size)
+        String.new(capacity: size, encoding: Encoding::BINARY)
+      end
+
       private
 
-      def convert_gray_alpha(src, out, n)
-        i = 0
-        while i < n
-          v = src.getbyte(2 * i)
-          a = src.getbyte(2 * i + 1)
-          out.setbyte(i, a == 255 ? v : (v * a + 255 * (255 - a) + 127) / 255)
-          i += 1
+      def convert_gray_alpha_row(src, out, j, n)
+        e = j + 2 * n
+        while j < e
+          v = src.getbyte(j)
+          a = src.getbyte(j + 1)
+          out << (a == 255 ? v : (v * a + 255 * (255 - a) + 127) / 255)
+          j += 2
         end
       end
 
-      def convert_rgb(src, out, n, ro, go, bo, stride)
-        i = 0
-        j = 0
-        while i < n
-          out.setbyte(i, (306 * src.getbyte(j + ro) + 601 * src.getbyte(j + go) + 117 * src.getbyte(j + bo) + 0x200) >> 10)
-          i += 1
-          j += stride
+      def convert_rgb_row(src, out, j, n, ro, go, bo)
+        e = j + 3 * n
+        while j < e
+          out << ((306 * src.getbyte(j + ro) + 601 * src.getbyte(j + go) + 117 * src.getbyte(j + bo) + 0x200) >> 10)
+          j += 3
         end
       end
 
-      def convert_rgba(src, out, n, ro, go, bo, ao)
-        i = 0
-        j = 0
-        while i < n
+      def convert_rgba_row(src, out, j, n, ro, go, bo, ao)
+        e = j + 4 * n
+        while j < e
           v = (306 * src.getbyte(j + ro) + 601 * src.getbyte(j + go) + 117 * src.getbyte(j + bo) + 0x200) >> 10
           a = src.getbyte(j + ao)
-          out.setbyte(i, a == 255 ? v : (v * a + 255 * (255 - a) + 127) / 255)
-          i += 1
+          out << (a == 255 ? v : (v * a + 255 * (255 - a) + 127) / 255)
           j += 4
         end
       end
@@ -135,19 +147,12 @@ module QrReader
     def rotate90
       w = @width
       h = @height
-      src = @data
-      out = "\0".b * (w * h)
-      y = 0
-      while y < h
-        x = 0
-        dst = h - 1 - y
-        off = y * w
-        while x < w
-          out.setbyte(dst, src.getbyte(off + x))
-          dst += h
-          x += 1
-        end
-        y += 1
+      out = Image.buffer(w * h)
+      x = 0
+      # Output row x is source column x read bottom to top.
+      while x < w
+        column_up(out, x)
+        x += 1
       end
       Image.new(h, w, out)
     end
@@ -192,39 +197,17 @@ module QrReader
       h = @height / factor
       raise ArgumentError, "downscale factor too large" if w < 1 || h < 1
 
-      src = @data
-      sw = @width
-      area = factor * factor
-      half = area / 2
-      out = "\0".b * (w * h)
-      sums = Array.new(w, 0)
+      out = Image.buffer(w * h)
+      step = factor * @width
+      off = 0
       y = 0
       while y < h
-        sums.fill(0)
-        sy = y * factor
-        sy_end = sy + factor
-        while sy < sy_end
-          off = sy * sw
-          x = 0
-          sx = off
-          while x < w
-            s = 0
-            e = sx + factor
-            while sx < e
-              s += src.getbyte(sx)
-              sx += 1
-            end
-            sums[x] += s
-            x += 1
-          end
-          sy += 1
+        if factor == 2
+          downscale2_row(out, off, w)
+        else
+          downscale_row(out, off, w, factor)
         end
-        base = y * w
-        x = 0
-        while x < w
-          out.setbyte(base + x, (sums[x] + half) / area)
-          x += 1
-        end
+        off += step
         y += 1
       end
       Image.new(w, h, out)
@@ -232,6 +215,59 @@ module QrReader
 
     def inspect
       "#<QrReader::Image #{@width}x#{@height}>"
+    end
+
+    private
+
+    # Appends source column x, bottom to top, to +out+.
+    def column_up(out, x)
+      src = @data
+      w = @width
+      i = (@height - 1) * w + x
+      while i >= 0
+        out << src.getbyte(i)
+        i -= w
+      end
+    end
+
+    # Appends one 2x-reduced row whose top source row starts at +off+.
+    def downscale2_row(out, off, w)
+      src = @data
+      a = off
+      b = off + @width
+      e = off + 2 * w
+      while a < e
+        out << ((src.getbyte(a) + src.getbyte(a + 1) + src.getbyte(b) + src.getbyte(b + 1) + 2) >> 2)
+        a += 2
+        b += 2
+      end
+    end
+
+    # Appends one row reduced by +factor+ whose top source row starts at +off+.
+    def downscale_row(out, off, w, factor)
+      src = @data
+      sw = @width
+      area = factor * factor
+      half = area / 2
+      x = 0
+      start = off
+      while x < w
+        s = 0
+        row = start
+        row_end = start + factor * sw
+        while row < row_end
+          i = row
+          e = row + factor
+          while i < e
+            s += src.getbyte(i)
+            i += 1
+          end
+          row += sw
+        end
+        out << (s + half) / area
+        start += factor
+        x += 1
+      end
     end
   end
 end

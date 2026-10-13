@@ -45,7 +45,10 @@ file, describe it in your final report instead.
 | jpeg | `lib/qr_reader/formats/jpeg.rb`, `test/formats/test_jpeg.rb`, `test/fixtures/jpeg/**`, `bench/jpeg_bench.rb` |
 | decoder | `lib/qr_reader/decoder.rb`, `lib/qr_reader/decoder/**`, `test/decoder/**` |
 | detector | `lib/qr_reader/detector.rb`, `lib/qr_reader/detector/**`, `lib/qr_reader/binarizer.rb`, `test/detector/**` |
-| testkit | `test/support/**` (except `test_helper.rb`), `test/test_encoder.rb`, `bench/**` (except `bench/jpeg_bench.rb`, `bench/reference/zxcpp.py` may be extended) |
+| testkit | `test/support/**` (except `test_helper.rb`), `test/test_encoder.rb`, `bench/**` (except `bench/jpeg_bench.rb`, `bench/scans/**`; `bench/reference/zxcpp.py` may be extended) |
+| tiff | `lib/qr_reader/formats/{ccitt,tiff}.rb`, `test/formats/test_{ccitt,tiff}*.rb`, `test/fixtures/tiff/**` |
+| pdf | `lib/qr_reader/formats/pdf.rb`, `test/formats/test_pdf*.rb`, `test/fixtures/pdf/**` |
+| scans | `bench/scans/**`, `test/corpus/scans/**` (generated, gitignored), `test/support/scan_sim.rb` |
 
 Each component has one entry file (`formats.rb`, `decoder.rb`, `detector.rb`)
 already required from `lib/qr_reader.rb`; the entry file `require_relative`s its
@@ -73,26 +76,31 @@ own sub-files. Stubs exist for all entry files — replace them.
 * `QrReader::FormatInformation` — `.decode(bits1, bits2 = bits1)` → instance with
   `ec_level` (:L/:M/:Q/:H) and `mask` (0..7), nearest within distance 3, else nil.
   `.encode(data5)` → masked 15-bit word.
-* `QrReader::Result` (Data) — `text, bytes, version, ec_level, mask, points, mirrored,
+* `QrReader::Result` (Data) — `text, raw_bytes, version, ec_level, mask, points, mirrored,
   errors_corrected, eci, fnc1, structured_append, symbology_identifier, segments`;
-  `QrReader::Segment(mode, text, eci)`, `QrReader::StructuredAppend(index, count, parity)`.
+  `page`, `mirrored?`; `QrReader::Segment(mode, text, eci)`, `QrReader::StructuredAppend(index, count, parity)`.
 * Errors: `QrReader::Error`, `ImageError` (corrupt/unknown image), `UnsupportedImageError`
   (recognised but unsupported, e.g. WebP), `NotFoundError`.
 
-## Public API (core; implemented during integration)
+## Public API (core)
 
 ```ruby
 QrReader.decode(input, **opts)      # => String or nil (first code)
 QrReader.decode!(input, **opts)     # => String, raises NotFoundError
+QrReader.decode_all(input, **opts)  # => Array<String> (all codes, all pages)
 QrReader.read(input, **opts)        # => Result or nil
-QrReader.decode_all(input, **opts)  # => Array<Result>
+QrReader.read_all(input, **opts)    # => Array<Result>
+QrReader.scan(input, **opts) { |result| }  # lazy, page by page; Enumerator without block
+QrReader::Reader.new(**opts)        # reusable; #read, #read_all, #scan
 ```
 
 `input`: file path (String/Pathname), IO, binary String of an encoded image
 (detected by magic bytes), `QrReader::Image`, or any object responding to
-`width`, `height` and `pixels` (ChunkyPNG-style RGBA integers).
-Options: `try_harder:` (default true: spend more time only when the fast path
-finds nothing), `inverted:` (`:auto`/true/false, light-on-dark codes).
+`width`, `height` and `pixels` (ChunkyPNG-style RGBA integers). Missing files
+raise `Errno::ENOENT`. Options: `try_harder:` (default true: spend more time
+only when the fast path finds nothing), `inverted:` (`:auto`/true/false,
+light-on-dark codes). `Result#ec_level` is lowercase (`:l :m :q :h`, like
+rqrcode); `Result#raw_bytes` is the binary payload.
 
 ## Component contracts
 
@@ -134,6 +142,39 @@ jumping to the next marker. `scale:` 2, 4, 8 decodes at reduced size with reduce
 IDCTs (4x4, 2x2, DC only) — output size `ceil(w/scale) x ceil(h/scale)`, like
 libjpeg. Truncated data: decode what is there, fill the rest with mid-gray.
 EXIF orientation is ignored (QR decoding is rotation-invariant).
+
+### tiff (scans)
+
+```ruby
+QrReader::Formats::CCITT.decode(data, columns:, rows: nil, k: -1, black_is_1: false,
+                                encoded_byte_align: false, fill_order: 1)   # => Image (black 0, white 255)
+QrReader::Formats::TIFF.decode(bytes, page: 0)       # => Image
+QrReader::Formats::TIFF.page_count(bytes)            # => Integer
+QrReader::Formats::TIFF.each_page(bytes) { |image| } # lazy; Enumerator without block
+QrReader::Formats::TIFF.dimensions(bytes, page: 0)   # => [w, h]
+```
+
+`k` follows the PDF CCITTFaxDecode convention: < 0 = Group 4 (T.6), 0 = Group 3
+1-D (T.4), > 0 = Group 3 2-D. TIFF compression 2 (Modified Huffman RLE) is the
+1-D variant with byte-aligned rows. TIFF: II/MM, multi-page IFD chains, strips
+and tiles, compression 1/2/3/4/5/7/8/32773/32946, predictor 2, photometric
+0/1/2/3/5/6, 1–16 bit, planar 1/2, FillOrder 2, alpha/extra samples.
+
+### pdf (scans)
+
+```ruby
+QrReader::Formats::PDF.each_image(bytes) { |image, info| }  # info: {page:, name:, width:, height:}
+QrReader::Formats::PDF.images(bytes)                         # => Array<Image>
+```
+
+Extracts the raster images of (scanned) PDFs page by page — vector-drawn QR
+codes are out of scope. Filters: Flate (+ predictors), DCT (via JPEG), CCITTFax
+(via CCITT), LZW, RunLength, ASCIIHex, ASCII85; JBIG2/JPX images are skipped.
+Images that can't be decoded are skipped; `UnsupportedImageError` only if the
+PDF is encrypted or contains no decodable image at all.
+
+`Result#page` (0-based) tells which page/image a code came from for multi-page
+inputs (nil for single images).
 
 ### decoder
 

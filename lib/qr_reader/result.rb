@@ -13,9 +13,9 @@ module QrReader
   # A decoded QR code.
   #
   # text                 - decoded content as a UTF-8 String
-  # bytes                - raw payload bytes (binary String) before character set decoding
+  # raw_bytes            - raw payload bytes (binary String) before character set decoding
   # version              - symbol version, 1..40
-  # ec_level             - :L, :M, :Q or :H
+  # ec_level             - error correction level: :l, :m, :q or :h (as in rqrcode)
   # mask                 - data mask pattern, 0..7
   # points               - [[x, y], ...] corners in image pixel coordinates:
   #                        top-left, top-right, bottom-right, bottom-left (nil if unknown)
@@ -26,16 +26,24 @@ module QrReader
   # structured_append    - StructuredAppend or nil
   # symbology_identifier - AIM identifier, e.g. "]Q1"
   # segments             - Array of Segment
-  Result = Data.define(:text, :bytes, :version, :ec_level, :mask, :points, :mirrored,
+  # page                 - 0-based page/image index for multi-page inputs (TIFF, PDF), else nil
+  Result = Data.define(:text, :raw_bytes, :version, :ec_level, :mask, :points, :mirrored,
                        :errors_corrected, :eci, :fnc1, :structured_append,
-                       :symbology_identifier, :segments) do
-    def initialize(text:, bytes:, version:, ec_level:, mask:, points: nil, mirrored: false,
+                       :symbology_identifier, :segments, :page) do
+    def initialize(text:, raw_bytes:, version:, ec_level:, mask:, points: nil, mirrored: false,
                    errors_corrected: 0, eci: nil, fnc1: nil, structured_append: nil,
-                   symbology_identifier: "]Q1", segments: [])
+                   symbology_identifier: "]Q1", segments: [], page: nil)
       super
     end
 
-    alias_method :to_str, :text
     alias_method :to_s, :text
+
+    def mirrored?
+      mirrored
+    end
+
+    def structured_append?
+      !structured_append.nil?
+    end
   end
 end

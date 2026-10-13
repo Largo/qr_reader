@@ -1,0 +1,5052 @@
+{
+  "meta": {
+    "decoder": "zxing-cpp 3.1.1",
+    "rotations": [
+      0,
+      90,
+      180,
+      270
+    ],
+    "text_mode": "Plain",
+    "created": "2026-10-12T20:43:36Z"
+  },
+  "summary": {
+    "passed": 664,
+    "total": 716,
+    "by_dir": {
+      "qrcode-1": {
+        "0": [
+          20,
+          20
+        ],
+        "90": [
+          20,
+          20
+        ],
+        "180": [
+          20,
+          20
+        ],
+        "270": [
+          20,
+          20
+        ]
+      },
+      "qrcode-2": {
+        "0": [
+          32,
+          35
+        ],
+        "90": [
+          32,
+          35
+        ],
+        "180": [
+          32,
+          35
+        ],
+        "270": [
+          32,
+          35
+        ]
+      },
+      "qrcode-3": {
+        "0": [
+          42,
+          42
+        ],
+        "90": [
+          42,
+          42
+        ],
+        "180": [
+          42,
+          42
+        ],
+        "270": [
+          42,
+          42
+        ]
+      },
+      "qrcode-4": {
+        "0": [
+          38,
+          48
+        ],
+        "90": [
+          38,
+          48
+        ],
+        "180": [
+          38,
+          48
+        ],
+        "270": [
+          38,
+          48
+        ]
+      },
+      "qrcode-5": {
+        "0": [
+          19,
+          19
+        ],
+        "90": [
+          19,
+          19
+        ],
+        "180": [
+          19,
+          19
+        ],
+        "270": [
+          19,
+          19
+        ]
+      },
+      "qrcode-6": {
+        "0": [
+          15,
+          15
+        ],
+        "90": [
+          15,
+          15
+        ],
+        "180": [
+          15,
+          15
+        ],
+        "270": [
+          15,
+          15
+        ]
+      }
+    },
+    "decode_ms": {
+      "n": 716,
+      "total": 291.203,
+      "mean": 0.407,
+      "median": 0.254,
+      "p95": 1.268,
+      "max": 3.371
+    },
+    "load_ms_total": 0,
+    "wall_s": 2.452,
+    "errors": 0
+  },
+  "cases": {
+    "qrcode-1/1.png@0": {
+      "pass": true,
+      "ms": 1.029,
+      "texts": [
+        "MEBKM:URL:http\\://en.wikipedia.org/wiki/Main_Page;;"
+      ]
+    },
+    "qrcode-1/2.png@0": {
+      "pass": true,
+      "ms": 0.716,
+      "texts": [
+        "MEBKM:URL:http\\://en.wikipedia.org/wiki/Main_Page;;"
+      ]
+    },
+    "qrcode-1/3.png@0": {
+      "pass": true,
+      "ms": 0.713,
+      "texts": [
+        "MEBKM:URL:http\\://en.wikipedia.org/wiki/Main_Page;;"
+      ]
+    },
+    "qrcode-1/4.png@0": {
+      "pass": true,
+      "ms": 0.857,
+      "texts": [
+        "MEBKM:URL:http\\://en.wikipedia.org/wiki/Main_Page;;"
+      ]
+    },
+    "qrcode-1/5.png@0": {
+      "pass": true,
+      "ms": 0.647,
+      "texts": [
+        "MEBKM:URL:http\\://en.wikipedia.org/wiki/Main_Page;;"
+      ]
+    },
+    "qrcode-1/6.png@0": {
+      "pass": true,
+      "ms": 0.706,
+      "texts": [
+        "MEBKM:URL:http\\://en.wikipedia.org/wiki/Main_Page;;"
+      ]
+    },
+    "qrcode-1/7.png@0": {
+      "pass": true,
+      "ms": 0.69,
+      "texts": [
+        "MEBKM:URL:http\\://en.wikipedia.org/wiki/Main_Page;;"
+      ]
+    },
+    "qrcode-1/8.png@0": {
+      "pass": true,
+      "ms": 0.719,
+      "texts": [
+        "MEBKM:URL:http\\://en.wikipedia.org/wiki/Main_Page;;"
+      ]
+    },
+    "qrcode-1/9.png@0": {
+      "pass": true,
+      "ms": 0.694,
+      "texts": [
+        "MEBKM:URL:http\\://en.wikipedia.org/wiki/Main_Page;;"
+      ]
+    },
+    "qrcode-1/10.png@0": {
+      "pass": true,
+      "ms": 0.706,
+      "texts": [
+        "MEBKM:URL:http\\://en.wikipedia.org/wiki/Main_Page;;"
+      ]
+    },
+    "qrcode-1/11.png@0": {
+      "pass": true,
+      "ms": 0.711,
+      "texts": [
+        "MEBKM:URL:http\\://en.wikipedia.org/wiki/Main_Page;;"
+      ]
+    },
+    "qrcode-1/12.png@0": {
+      "pass": true,
+      "ms": 0.769,
+      "texts": [
+        "MEBKM:URL:http\\://en.wikipedia.org/wiki/Main_Page;;"
+      ]
+    },
+    "qrcode-1/13.png@0": {
+      "pass": true,
+      "ms": 0.755,
+      "texts": [
+        "http://google.com/gwt/n?u=bluenile.com"
+      ]
+    },
+    "qrcode-1/14.png@0": {
+      "pass": true,
+      "ms": 0.763,
+      "texts": [
+        "http://google.com/gwt/n?u=bluenile.com"
+      ]
+    },
+    "qrcode-1/15.png@0": {
+      "pass": true,
+      "ms": 0.803,
+      "texts": [
+        "http://google.com/gwt/n?u=bluenile.com"
+      ]
+    },
+    "qrcode-1/16.png@0": {
+      "pass": true,
+      "ms": 1.308,
+      "texts": [
+        "Sean Owen\r\nsrowen@google.com\r\n917-364-2918\r\nhttp://awesome-thoughts.com"
+      ]
+    },
+    "qrcode-1/17.png@0": {
+      "pass": true,
+      "ms": 1.32,
+      "texts": [
+        "Sean Owen\r\nsrowen@google.com\r\n917-364-2918\r\nhttp://awesome-thoughts.com"
+      ]
+    },
+    "qrcode-1/18.png@0": {
+      "pass": true,
+      "ms": 1.128,
+      "texts": [
+        "Sean Owen\r\nsrowen@google.com\r\n917-364-2918\r\nhttp://awesome-thoughts.com"
+      ]
+    },
+    "qrcode-1/19.png@0": {
+      "pass": true,
+      "ms": 0.836,
+      "texts": [
+        "Sean Owen\r\nsrowen@google.com\r\n917-364-2918\r\nhttp://awesome-thoughts.com"
+      ]
+    },
+    "qrcode-1/20.png@0": {
+      "pass": true,
+      "ms": 1.236,
+      "texts": [
+        "Sean Owen\r\nsrowen@google.com\r\n917-364-2918\r\nhttp://awesome-thoughts.com"
+      ]
+    },
+    "qrcode-2/1.png@0": {
+      "pass": true,
+      "ms": 0.977,
+      "texts": [
+        "When we at WRT talk about \\\"text,\\\" we are generally talking about a particular kind of readable information encoding - and readable is a complex proposition. Text may be stylized in a way we are unfamiliar with, as in blackletter - it may be interspersed with some markup we don\\'t understand, such as HTML - it may be be a substitution system we aren\\'t familiar with, such as braille or morse code - or it may be a system that, while technically human-readable, isn\\'t particularly optimized for reading by humans, as with barcodes (although barcodes can be read)."
+      ]
+    },
+    "qrcode-2/2.png@0": {
+      "pass": true,
+      "ms": 3.371,
+      "texts": [
+        "LANDBYASCARC   PERCEPTIBLEC EEK,OOZI GITSWAYTHROU  AWILDERNESSOFBESUPPOSED,I  CANT,ORATL ASTDWARFISH.NO REESOFANYM  NITUDEARETOBESOMEMISERA  EFRAMEBUIL I GS,TENANTED, U INGSUMMER   THEFUGITIVE;BUTTHEWHO  ISLAND,WI H   EXCEPTIONOFT   W STERNPOI  ,ANDALINEOFLLIAMLEGR   .HEWASOF N    ENTHUGUENOTF    Y ANDHADON  BEENWEALTHTIONCONSE  ENTUPONH SD   STERS,HELEFTNE   LE NS,THEC   OFHISFOREOUTHCARO   A.THISISLA    AVERYSINGULARO    TCONSISTSO  ITTLEELSEDSAQUART   FAMILE. TI   PARATEDFROMTHEMA   AN BYASCAR   YPERCEPTERESORT     MARSH EN   EVEGETATION,ASMIGH   SU POSED,   CANT,ORATREMITY,      ORT OULTRIESTANDS,ANDWHEREARESOM MIS      FRAMEBUIFEVER,MAYBE      INDEED,                TO;BUTT      EISLAND,WITNYYEARSAGO,IC    ACTED                    LLIAM    AND.HEWASOFANNESHADREDUCEDHIM OWA                       IONC NSEQUENTUPONHISDSIDENCEATSULLIVA \\'S                          HC ROLINA.THISISLANOUTTHR    LESLON .        THATN  OINTE        U RTEROF    E.ITISTHROU       ERNE       DSANDSLI  ,AFAVOR        TOFT       HEN.T"
+      ]
+    },
+    "qrcode-2/4.png@0": {
+      "pass": true,
+      "ms": 1.161,
+      "texts": [
+        "http://wwws.keihin.ktr.mlit.go.jp/keitai/"
+      ]
+    },
+    "qrcode-2/5.png@0": {
+      "pass": true,
+      "ms": 0.463,
+      "texts": [
+        "2021200000"
+      ]
+    },
+    "qrcode-2/6.png@0": {
+      "pass": true,
+      "ms": 3.158,
+      "texts": [
+        "http://d.kaywa.com/20207100"
+      ]
+    },
+    "qrcode-2/7.png@0": {
+      "pass": true,
+      "ms": 0.324,
+      "texts": [
+        "BIZCARD:N:Todd;X:Ogasawara;T:Tech Geek;C:MobileViews.com;A:MobileTown USA;E:editor@mobileviews.com;;"
+      ]
+    },
+    "qrcode-2/8.png@0": {
+      "pass": true,
+      "ms": 0.269,
+      "texts": [
+        "http://staticrooster.com"
+      ]
+    },
+    "qrcode-2/9.png@0": {
+      "pass": true,
+      "ms": 0.158,
+      "texts": [
+        "Morden"
+      ]
+    },
+    "qrcode-2/10.png@0": {
+      "pass": true,
+      "ms": 0.127,
+      "texts": [
+        "Google モバイル\r\nhttp://google.jp"
+      ]
+    },
+    "qrcode-2/11.png@0": {
+      "pass": true,
+      "ms": 0.333,
+      "texts": [
+        "BEGIN:VCARD\r\nN:Kennedy;Steve\r\nTEL:+44 (0)7775 755503\r\nADR;HOME:;;Flat 2, 43 Howitt Road, Belsize Park;London;;NW34LU;UK\r\nORG:NetTek Ltd;\r\nTITLE:Consultant\r\nEMAIL:steve@nettek.co.uk\r\nURL:www.nettek.co.uk\r\nEMAIL;IM:MSN:steve@gbnet.net\r\nNOTE:Testing 1 2 3\r\nBDAY:19611105\r\nEND:VCARD"
+      ]
+    },
+    "qrcode-2/12.png@0": {
+      "pass": false,
+      "ms": 0.232,
+      "texts": []
+    },
+    "qrcode-2/13.png@0": {
+      "pass": false,
+      "ms": 0.272,
+      "texts": []
+    },
+    "qrcode-2/14.png@0": {
+      "pass": true,
+      "ms": 0.661,
+      "texts": [
+        "http://bbc.co.uk/programmes"
+      ]
+    },
+    "qrcode-2/15.png@0": {
+      "pass": true,
+      "ms": 0.729,
+      "texts": [
+        "In 25 words or less in the comments, below, tell us how QR codes will make the world less ordinary."
+      ]
+    },
+    "qrcode-2/16.png@0": {
+      "pass": true,
+      "ms": 0.521,
+      "texts": [
+        "[外側QRコード]\r\n \r\n*ﾀﾞﾌﾞﾙQR*\r\nhttp://d-qr.net/ex/",
+        "[内側QRコード]\r\n\r\n*ダブルQR*\r\nhttp://d-qr.net/ex/"
+      ]
+    },
+    "qrcode-2/17.png@0": {
+      "pass": true,
+      "ms": 0.269,
+      "texts": [
+        "ﾃﾞｻﾞｲﾝQR\r\nhttp://d-qr.net/ex/"
+      ]
+    },
+    "qrcode-2/18.png@0": {
+      "pass": true,
+      "ms": 0.261,
+      "texts": [
+        "*ﾃﾞｻﾞｲﾝQR*     \r\nhttp://d-qr.net/ex/       "
+      ]
+    },
+    "qrcode-2/19.png@0": {
+      "pass": true,
+      "ms": 0.269,
+      "texts": [
+        "*ﾃﾞｻﾞｲﾝQR*    \r\nhttp://d-qr.net/ex/         "
+      ]
+    },
+    "qrcode-2/20.png@0": {
+      "pass": true,
+      "ms": 0.266,
+      "texts": [
+        "*ﾃﾞｻﾞｲﾝQR*\r\nhttp://d-qr.net/ex/    "
+      ]
+    },
+    "qrcode-2/21.png@0": {
+      "pass": true,
+      "ms": 0.244,
+      "texts": [
+        "*ﾃﾞｻﾞｲﾝQR*  \r\nhttp://d-qr.net/ex/        "
+      ]
+    },
+    "qrcode-2/22.png@0": {
+      "pass": true,
+      "ms": 0.452,
+      "texts": [
+        "http://www.hotpepper.jp/mobile/cgi-bin/MBLC80100.cgi?SA=00&Z=AG&vos=hpp064&uid=NULLGWDOCOMO"
+      ]
+    },
+    "qrcode-2/23.png@0": {
+      "pass": true,
+      "ms": 0.27,
+      "texts": [
+        "http://aniful.jp/pr/  "
+      ]
+    },
+    "qrcode-2/24.png@0": {
+      "pass": true,
+      "ms": 0.214,
+      "texts": [
+        "*ﾃﾞｻﾞｲﾝQR* \r\nhttp://d-qr.net/ex/      "
+      ]
+    },
+    "qrcode-2/25.png@0": {
+      "pass": true,
+      "ms": 0.286,
+      "texts": [
+        "MEBKM:TITLE:;URL:http://d.kaywa.com/2020400102;;"
+      ]
+    },
+    "qrcode-2/26.png@0": {
+      "pass": true,
+      "ms": 0.173,
+      "texts": [
+        "<ﾃﾞｻﾞｲﾝQR> \r\nｲﾗｽﾄ入りｶﾗｰQRｺｰﾄﾞ\r\nhttp://d-qr.net/ex/ "
+      ]
+    },
+    "qrcode-2/27.png@0": {
+      "pass": true,
+      "ms": 0.185,
+      "texts": [
+        "*ﾃﾞｻﾞｲﾝQR*   \r\nhttp://d-qr.net/ex/ "
+      ]
+    },
+    "qrcode-2/28.png@0": {
+      "pass": false,
+      "ms": 0.541,
+      "texts": []
+    },
+    "qrcode-2/29.png@0": {
+      "pass": true,
+      "ms": 0.188,
+      "texts": [
+        "http://live.fdgm.jp/u/event/hype/hype_top.html \r\n\r\nMEBKM:TITLE:hypeモバイル;URL:http\\://live.fdgm.jp/u/event/hype/hype_top.html;;"
+      ]
+    },
+    "qrcode-2/30.png@0": {
+      "pass": true,
+      "ms": 0.274,
+      "texts": [
+        "MECARD:N:測試;;"
+      ]
+    },
+    "qrcode-2/31.png@0": {
+      "pass": true,
+      "ms": 0.724,
+      "texts": [
+        "今度のバージョンでは文章の暗号化ができます。"
+      ]
+    },
+    "qrcode-2/32.png@0": {
+      "pass": true,
+      "ms": 0.251,
+      "texts": [
+        "BEGIN:VCARD\r\nN:Kennedy;Steve\r\nTEL:+44 (0)7775 755503\r\nADR;HOME:;;Flat 2, 43 Howitt Road, Belsize Park;London;;NW34LU;UK\r\nORG:NetTek Ltd;\r\nTITLE:Consultant\r\nEMAIL:steve@nettek.co.uk\r\nURL:www.nettek.co.uk\r\nEMAIL;IM:MSN:steve@gbnet.net\r\nNOTE:Testing 1 2 3\r\nBDAY:19611105\r\nEND:VCARD"
+      ]
+    },
+    "qrcode-2/33.png@0": {
+      "pass": true,
+      "ms": 0.12,
+      "texts": [
+        "\u0001\u0010AD:SUB:阿;;"
+      ]
+    },
+    "qrcode-2/34.png@0": {
+      "pass": true,
+      "ms": 0.118,
+      "texts": [
+        "http://www.google.com/"
+      ]
+    },
+    "qrcode-2/35.png@0": {
+      "pass": true,
+      "ms": 0.117,
+      "texts": [
+        "http://www.google.com/"
+      ]
+    },
+    "qrcode-2/36.png@0": {
+      "pass": true,
+      "ms": 0.161,
+      "texts": [
+        "Morden"
+      ]
+    },
+    "qrcode-3/01.png@0": {
+      "pass": true,
+      "ms": 0.265,
+      "texts": [
+        "http://arnaud.sahuguet.com/graffiti/test.php?ll=-74.00309961503218,40.74102573163046,0"
+      ]
+    },
+    "qrcode-3/02.png@0": {
+      "pass": true,
+      "ms": 0.259,
+      "texts": [
+        "http://arnaud.sahuguet.com/graffiti/test.php?ll=-74.00309961503218,40.74102573163046,0"
+      ]
+    },
+    "qrcode-3/03.png@0": {
+      "pass": true,
+      "ms": 0.276,
+      "texts": [
+        "http://arnaud.sahuguet.com/graffiti/test.php?ll=-74.00309961503218,40.74102573163046,0"
+      ]
+    },
+    "qrcode-3/04.png@0": {
+      "pass": true,
+      "ms": 0.276,
+      "texts": [
+        "http://arnaud.sahuguet.com/graffiti/test.php?ll=-74.00309961503218,40.74102573163046,0"
+      ]
+    },
+    "qrcode-3/05.png@0": {
+      "pass": true,
+      "ms": 0.237,
+      "texts": [
+        "http://arnaud.sahuguet.com/graffiti/test.php?ll=-74.00309961503218,40.74102573163046,0"
+      ]
+    },
+    "qrcode-3/06.png@0": {
+      "pass": true,
+      "ms": 0.364,
+      "texts": [
+        "http://arnaud.sahuguet.com/graffiti/test.php?ll=-74.00309961503218,40.74102573163046,0"
+      ]
+    },
+    "qrcode-3/07.png@0": {
+      "pass": true,
+      "ms": 0.26,
+      "texts": [
+        "http://arnaud.sahuguet.com/graffiti/test.php?ll=-74.00309961503218,40.74102573163046,0"
+      ]
+    },
+    "qrcode-3/08.png@0": {
+      "pass": true,
+      "ms": 0.28,
+      "texts": [
+        "http://arnaud.sahuguet.com/graffiti/test.php?ll=-74.00309961503218,40.74102573163046,0"
+      ]
+    },
+    "qrcode-3/09.png@0": {
+      "pass": true,
+      "ms": 0.268,
+      "texts": [
+        "http://arnaud.sahuguet.com/graffiti/test.php?ll=-74.00309961503218,40.74102573163046,0"
+      ]
+    },
+    "qrcode-3/10.png@0": {
+      "pass": true,
+      "ms": 0.201,
+      "texts": [
+        "MECARD:N:Google 411,;TEL:18665881077;;"
+      ]
+    },
+    "qrcode-3/11.png@0": {
+      "pass": true,
+      "ms": 0.238,
+      "texts": [
+        "MECARD:N:Google 411,;TEL:18665881077;;"
+      ]
+    },
+    "qrcode-3/12.png@0": {
+      "pass": true,
+      "ms": 0.243,
+      "texts": [
+        "MECARD:N:Google 411,;TEL:18665881077;;"
+      ]
+    },
+    "qrcode-3/13.png@0": {
+      "pass": true,
+      "ms": 0.214,
+      "texts": [
+        "MECARD:N:Google 411,;TEL:18665881077;;"
+      ]
+    },
+    "qrcode-3/14.png@0": {
+      "pass": true,
+      "ms": 0.224,
+      "texts": [
+        "MECARD:N:Google 411,;TEL:18665881077;;"
+      ]
+    },
+    "qrcode-3/15.png@0": {
+      "pass": true,
+      "ms": 0.21,
+      "texts": [
+        "MECARD:N:Google 411,;TEL:18665881077;;"
+      ]
+    },
+    "qrcode-3/16.png@0": {
+      "pass": true,
+      "ms": 0.209,
+      "texts": [
+        "MECARD:N:Google 411,;TEL:18665881077;;"
+      ]
+    },
+    "qrcode-3/17.png@0": {
+      "pass": true,
+      "ms": 0.225,
+      "texts": [
+        "MECARD:N:Google 411,;TEL:18665881077;;"
+      ]
+    },
+    "qrcode-3/18.png@0": {
+      "pass": true,
+      "ms": 0.298,
+      "texts": [
+        "UI office hours signup\r\nhttp://www.corp.google.com/sparrow/ui_office_hours/ \r\n"
+      ]
+    },
+    "qrcode-3/19.png@0": {
+      "pass": true,
+      "ms": 0.288,
+      "texts": [
+        "UI office hours signup\r\nhttp://www.corp.google.com/sparrow/ui_office_hours/ \r\n"
+      ]
+    },
+    "qrcode-3/20.png@0": {
+      "pass": true,
+      "ms": 0.297,
+      "texts": [
+        "UI office hours signup\r\nhttp://www.corp.google.com/sparrow/ui_office_hours/ \r\n"
+      ]
+    },
+    "qrcode-3/21.png@0": {
+      "pass": true,
+      "ms": 0.305,
+      "texts": [
+        "UI office hours signup\r\nhttp://www.corp.google.com/sparrow/ui_office_hours/ \r\n"
+      ]
+    },
+    "qrcode-3/22.png@0": {
+      "pass": true,
+      "ms": 0.354,
+      "texts": [
+        "UI office hours signup\r\nhttp://www.corp.google.com/sparrow/ui_office_hours/ \r\n"
+      ]
+    },
+    "qrcode-3/23.png@0": {
+      "pass": true,
+      "ms": 0.337,
+      "texts": [
+        "UI office hours signup\r\nhttp://www.corp.google.com/sparrow/ui_office_hours/ \r\n"
+      ]
+    },
+    "qrcode-3/24.png@0": {
+      "pass": true,
+      "ms": 0.311,
+      "texts": [
+        "UI office hours signup\r\nhttp://www.corp.google.com/sparrow/ui_office_hours/ \r\n"
+      ]
+    },
+    "qrcode-3/25.png@0": {
+      "pass": true,
+      "ms": 0.3,
+      "texts": [
+        "UI office hours signup\r\nhttp://www.corp.google.com/sparrow/ui_office_hours/ \r\n"
+      ]
+    },
+    "qrcode-3/26.png@0": {
+      "pass": true,
+      "ms": 0.223,
+      "texts": [
+        "MECARD:N:Sean Owen;TEL:+12125658770;EMAIL:srowen@google.com;;"
+      ]
+    },
+    "qrcode-3/27.png@0": {
+      "pass": true,
+      "ms": 0.201,
+      "texts": [
+        "MECARD:N:Sean Owen;TEL:+12125658770;EMAIL:srowen@google.com;;"
+      ]
+    },
+    "qrcode-3/28.png@0": {
+      "pass": true,
+      "ms": 0.193,
+      "texts": [
+        "MECARD:N:Sean Owen;TEL:+12125658770;EMAIL:srowen@google.com;;"
+      ]
+    },
+    "qrcode-3/29.png@0": {
+      "pass": true,
+      "ms": 0.209,
+      "texts": [
+        "MECARD:N:Sean Owen;TEL:+12125658770;EMAIL:srowen@google.com;;"
+      ]
+    },
+    "qrcode-3/30.png@0": {
+      "pass": true,
+      "ms": 0.21,
+      "texts": [
+        "MECARD:N:Sean Owen;TEL:+12125658770;EMAIL:srowen@google.com;;"
+      ]
+    },
+    "qrcode-3/31.png@0": {
+      "pass": true,
+      "ms": 0.212,
+      "texts": [
+        "MECARD:N:Sean Owen;TEL:+12125658770;EMAIL:srowen@google.com;;"
+      ]
+    },
+    "qrcode-3/32.png@0": {
+      "pass": true,
+      "ms": 0.238,
+      "texts": [
+        "MECARD:N:Sean Owen;TEL:+12125658770;EMAIL:srowen@google.com;;"
+      ]
+    },
+    "qrcode-3/33.png@0": {
+      "pass": true,
+      "ms": 0.208,
+      "texts": [
+        "MECARD:N:Sean Owen;TEL:+12125658770;EMAIL:srowen@google.com;;"
+      ]
+    },
+    "qrcode-3/34.png@0": {
+      "pass": true,
+      "ms": 0.201,
+      "texts": [
+        "MECARD:N:Sean Owen;TEL:+12125658770;EMAIL:srowen@google.com;;"
+      ]
+    },
+    "qrcode-3/35.png@0": {
+      "pass": true,
+      "ms": 0.233,
+      "texts": [
+        "MECARD:N:Sean Owen;TEL:+12125658770;EMAIL:srowen@google.com;;"
+      ]
+    },
+    "qrcode-3/36.png@0": {
+      "pass": true,
+      "ms": 0.196,
+      "texts": [
+        "MECARD:N:Sean Owen;TEL:+12125658770;EMAIL:srowen@google.com;;"
+      ]
+    },
+    "qrcode-3/37.png@0": {
+      "pass": true,
+      "ms": 0.22,
+      "texts": [
+        "MECARD:N:Sean Owen;TEL:+12125658770;EMAIL:srowen@google.com;;"
+      ]
+    },
+    "qrcode-3/38.png@0": {
+      "pass": true,
+      "ms": 0.209,
+      "texts": [
+        "MECARD:N:Sean Owen;TEL:+12125658770;EMAIL:srowen@google.com;;"
+      ]
+    },
+    "qrcode-3/39.png@0": {
+      "pass": true,
+      "ms": 0.226,
+      "texts": [
+        "MECARD:N:Sean Owen;TEL:+12125658770;EMAIL:srowen@google.com;;"
+      ]
+    },
+    "qrcode-3/40.png@0": {
+      "pass": true,
+      "ms": 0.224,
+      "texts": [
+        "MECARD:N:Sean Owen;TEL:+12125658770;EMAIL:srowen@google.com;;"
+      ]
+    },
+    "qrcode-3/41.png@0": {
+      "pass": true,
+      "ms": 0.235,
+      "texts": [
+        "MECARD:N:Sean Owen;TEL:+12125658770;EMAIL:srowen@google.com;;"
+      ]
+    },
+    "qrcode-3/42.png@0": {
+      "pass": true,
+      "ms": 0.206,
+      "texts": [
+        "MECARD:N:Sean Owen;TEL:+12125658770;EMAIL:srowen@google.com;;"
+      ]
+    },
+    "qrcode-4/01.png@0": {
+      "pass": true,
+      "ms": 0.311,
+      "texts": [
+        "Google Print Ads - T.G.I.A.F. - January 31, 2008"
+      ]
+    },
+    "qrcode-4/02.png@0": {
+      "pass": true,
+      "ms": 0.209,
+      "texts": [
+        "Google Print Ads - T.G.I.A.F. - January 31, 2008"
+      ]
+    },
+    "qrcode-4/03.png@0": {
+      "pass": true,
+      "ms": 0.204,
+      "texts": [
+        "Google Print Ads - T.G.I.A.F. - January 31, 2008"
+      ]
+    },
+    "qrcode-4/04.png@0": {
+      "pass": true,
+      "ms": 0.221,
+      "texts": [
+        "Google Print Ads - T.G.I.A.F. - January 31, 2008"
+      ]
+    },
+    "qrcode-4/05.png@0": {
+      "pass": false,
+      "ms": 0.289,
+      "texts": []
+    },
+    "qrcode-4/06.png@0": {
+      "pass": false,
+      "ms": 0.293,
+      "texts": []
+    },
+    "qrcode-4/07.png@0": {
+      "pass": true,
+      "ms": 0.204,
+      "texts": [
+        "Google Print Ads - T.G.I.A.F. - January 31, 2008"
+      ]
+    },
+    "qrcode-4/08.png@0": {
+      "pass": false,
+      "ms": 0.295,
+      "texts": []
+    },
+    "qrcode-4/09.png@0": {
+      "pass": false,
+      "ms": 0.318,
+      "texts": []
+    },
+    "qrcode-4/10.png@0": {
+      "pass": true,
+      "ms": 0.218,
+      "texts": [
+        "Google Print Ads - T.G.I.A.F. - January 31, 2008"
+      ]
+    },
+    "qrcode-4/11.png@0": {
+      "pass": true,
+      "ms": 0.223,
+      "texts": [
+        "Google Print Ads - T.G.I.A.F. - January 31, 2008"
+      ]
+    },
+    "qrcode-4/12.png@0": {
+      "pass": true,
+      "ms": 0.221,
+      "texts": [
+        "Google Print Ads - T.G.I.A.F. - January 31, 2008"
+      ]
+    },
+    "qrcode-4/13.png@0": {
+      "pass": false,
+      "ms": 0.309,
+      "texts": []
+    },
+    "qrcode-4/14.png@0": {
+      "pass": true,
+      "ms": 0.213,
+      "texts": [
+        "Google Print Ads - T.G.I.A.F. - January 31, 2008"
+      ]
+    },
+    "qrcode-4/15.png@0": {
+      "pass": true,
+      "ms": 0.209,
+      "texts": [
+        "http://code.google.com"
+      ]
+    },
+    "qrcode-4/16.png@0": {
+      "pass": true,
+      "ms": 0.208,
+      "texts": [
+        "http://code.google.com"
+      ]
+    },
+    "qrcode-4/17.png@0": {
+      "pass": true,
+      "ms": 0.219,
+      "texts": [
+        "http://code.google.com"
+      ]
+    },
+    "qrcode-4/18.png@0": {
+      "pass": true,
+      "ms": 0.188,
+      "texts": [
+        "http://code.google.com"
+      ]
+    },
+    "qrcode-4/19.png@0": {
+      "pass": true,
+      "ms": 0.188,
+      "texts": [
+        "http://code.google.com"
+      ]
+    },
+    "qrcode-4/20.png@0": {
+      "pass": true,
+      "ms": 0.195,
+      "texts": [
+        "http://code.google.com"
+      ]
+    },
+    "qrcode-4/21.png@0": {
+      "pass": true,
+      "ms": 0.232,
+      "texts": [
+        "http://code.google.com"
+      ]
+    },
+    "qrcode-4/22.png@0": {
+      "pass": true,
+      "ms": 0.198,
+      "texts": [
+        "http://code.google.com"
+      ]
+    },
+    "qrcode-4/23.png@0": {
+      "pass": true,
+      "ms": 0.212,
+      "texts": [
+        "http://code.google.com"
+      ]
+    },
+    "qrcode-4/24.png@0": {
+      "pass": true,
+      "ms": 0.194,
+      "texts": [
+        "http://code.google.com"
+      ]
+    },
+    "qrcode-4/25.png@0": {
+      "pass": true,
+      "ms": 0.2,
+      "texts": [
+        "http://code.google.com"
+      ]
+    },
+    "qrcode-4/26.png@0": {
+      "pass": true,
+      "ms": 0.214,
+      "texts": [
+        "http://code.google.com"
+      ]
+    },
+    "qrcode-4/27.png@0": {
+      "pass": true,
+      "ms": 0.206,
+      "texts": [
+        "http://code.google.com"
+      ]
+    },
+    "qrcode-4/28.png@0": {
+      "pass": true,
+      "ms": 0.203,
+      "texts": [
+        "http://code.google.com"
+      ]
+    },
+    "qrcode-4/29.png@0": {
+      "pass": true,
+      "ms": 0.216,
+      "texts": [
+        "http://code.google.com"
+      ]
+    },
+    "qrcode-4/30.png@0": {
+      "pass": false,
+      "ms": 0.3,
+      "texts": []
+    },
+    "qrcode-4/31.png@0": {
+      "pass": false,
+      "ms": 0.38,
+      "texts": []
+    },
+    "qrcode-4/32.png@0": {
+      "pass": false,
+      "ms": 0.348,
+      "texts": []
+    },
+    "qrcode-4/33.png@0": {
+      "pass": false,
+      "ms": 0.314,
+      "texts": []
+    },
+    "qrcode-4/34.png@0": {
+      "pass": false,
+      "ms": 0.285,
+      "texts": []
+    },
+    "qrcode-4/35.png@0": {
+      "pass": true,
+      "ms": 0.201,
+      "texts": [
+        "http://code.google.com/p/zxing/"
+      ]
+    },
+    "qrcode-4/36.png@0": {
+      "pass": true,
+      "ms": 0.201,
+      "texts": [
+        "http://code.google.com/p/zxing/"
+      ]
+    },
+    "qrcode-4/37.png@0": {
+      "pass": true,
+      "ms": 0.186,
+      "texts": [
+        "http://code.google.com/p/zxing/"
+      ]
+    },
+    "qrcode-4/38.png@0": {
+      "pass": true,
+      "ms": 0.203,
+      "texts": [
+        "http://code.google.com/p/zxing/"
+      ]
+    },
+    "qrcode-4/39.png@0": {
+      "pass": true,
+      "ms": 0.211,
+      "texts": [
+        "http://code.google.com/p/zxing/"
+      ]
+    },
+    "qrcode-4/40.png@0": {
+      "pass": true,
+      "ms": 0.186,
+      "texts": [
+        "http://code.google.com/p/zxing/"
+      ]
+    },
+    "qrcode-4/41.png@0": {
+      "pass": true,
+      "ms": 0.187,
+      "texts": [
+        "http://code.google.com/p/zxing/"
+      ]
+    },
+    "qrcode-4/42.png@0": {
+      "pass": true,
+      "ms": 0.214,
+      "texts": [
+        "http://code.google.com/p/zxing/"
+      ]
+    },
+    "qrcode-4/43.png@0": {
+      "pass": true,
+      "ms": 0.185,
+      "texts": [
+        "http://code.google.com/p/zxing/"
+      ]
+    },
+    "qrcode-4/44.png@0": {
+      "pass": true,
+      "ms": 0.18,
+      "texts": [
+        "http://code.google.com/p/zxing/"
+      ]
+    },
+    "qrcode-4/45.png@0": {
+      "pass": true,
+      "ms": 0.178,
+      "texts": [
+        "http://code.google.com/p/zxing/"
+      ]
+    },
+    "qrcode-4/46.png@0": {
+      "pass": true,
+      "ms": 0.196,
+      "texts": [
+        "http://code.google.com/p/zxing/"
+      ]
+    },
+    "qrcode-4/47.png@0": {
+      "pass": true,
+      "ms": 0.203,
+      "texts": [
+        "http://code.google.com/p/zxing/"
+      ]
+    },
+    "qrcode-4/48.png@0": {
+      "pass": true,
+      "ms": 0.19,
+      "texts": [
+        "http://code.google.com/p/zxing/"
+      ]
+    },
+    "qrcode-5/01.png@0": {
+      "pass": true,
+      "ms": 0.254,
+      "texts": [
+        "MECARD:N:Sean Owen;TEL:+12125658770;EMAIL:srowen@google.com;;"
+      ]
+    },
+    "qrcode-5/02.png@0": {
+      "pass": true,
+      "ms": 0.205,
+      "texts": [
+        "MECARD:N:Sean Owen;TEL:+12125658770;EMAIL:srowen@google.com;;"
+      ]
+    },
+    "qrcode-5/03.png@0": {
+      "pass": true,
+      "ms": 0.226,
+      "texts": [
+        "MECARD:N:Sean Owen;TEL:+12125658770;EMAIL:srowen@google.com;;"
+      ]
+    },
+    "qrcode-5/04.png@0": {
+      "pass": true,
+      "ms": 0.23,
+      "texts": [
+        "MECARD:N:Sean Owen;TEL:+12125658770;EMAIL:srowen@google.com;;"
+      ]
+    },
+    "qrcode-5/05.png@0": {
+      "pass": true,
+      "ms": 0.219,
+      "texts": [
+        "MECARD:N:Sean Owen;TEL:+12125658770;EMAIL:srowen@google.com;;"
+      ]
+    },
+    "qrcode-5/06.png@0": {
+      "pass": true,
+      "ms": 0.219,
+      "texts": [
+        "MECARD:N:Sean Owen;TEL:+12125658770;EMAIL:srowen@google.com;;"
+      ]
+    },
+    "qrcode-5/07.png@0": {
+      "pass": true,
+      "ms": 0.22,
+      "texts": [
+        "MECARD:N:Sean Owen;TEL:+12125658770;EMAIL:srowen@google.com;;"
+      ]
+    },
+    "qrcode-5/08.png@0": {
+      "pass": true,
+      "ms": 0.208,
+      "texts": [
+        "MECARD:N:Sean Owen;TEL:+12125658770;EMAIL:srowen@google.com;;"
+      ]
+    },
+    "qrcode-5/09.png@0": {
+      "pass": true,
+      "ms": 0.21,
+      "texts": [
+        "MECARD:N:Sean Owen;TEL:+12125658770;EMAIL:srowen@google.com;;"
+      ]
+    },
+    "qrcode-5/10.png@0": {
+      "pass": true,
+      "ms": 0.228,
+      "texts": [
+        "MECARD:N:Sean Owen;TEL:+12125658770;EMAIL:srowen@google.com;;"
+      ]
+    },
+    "qrcode-5/11.png@0": {
+      "pass": true,
+      "ms": 0.211,
+      "texts": [
+        "MECARD:N:Sean Owen;TEL:+12125658770;EMAIL:srowen@google.com;;"
+      ]
+    },
+    "qrcode-5/12.png@0": {
+      "pass": true,
+      "ms": 0.21,
+      "texts": [
+        "MECARD:N:Sean Owen;TEL:+12125658770;EMAIL:srowen@google.com;;"
+      ]
+    },
+    "qrcode-5/13.png@0": {
+      "pass": true,
+      "ms": 0.2,
+      "texts": [
+        "MECARD:N:Sean Owen;TEL:+12125658770;EMAIL:srowen@google.com;;"
+      ]
+    },
+    "qrcode-5/14.png@0": {
+      "pass": true,
+      "ms": 0.225,
+      "texts": [
+        "MECARD:N:Sean Owen;TEL:+12125658770;EMAIL:srowen@google.com;;"
+      ]
+    },
+    "qrcode-5/15.png@0": {
+      "pass": true,
+      "ms": 0.234,
+      "texts": [
+        "MECARD:N:Sean Owen;TEL:+12125658770;EMAIL:srowen@google.com;;"
+      ]
+    },
+    "qrcode-5/16.png@0": {
+      "pass": true,
+      "ms": 1.396,
+      "texts": [
+        "THROUGH THE LOOKING-GLASS\n\nBy Lewis Carroll\n\n\nCHAPTER I. Looking-Glass house\n\nOne thing was certain, that the WHITE kitten had had nothing to do with\nit:--it was the black kitten's fault entirely. For the white kitten had\nbeen having its face washed by the old cat for the last quarter of\nan hour (and bearing it pretty well, considering); so you see that it\nCOULDN'T have had any hand in the mischief.\n\nThe way Dinah washed her children's faces was this: first she held the\npoor thing down by its ear with one paw, and then with the other paw she\nrubbed its face all over, the wrong way, beginning at the nose: and\njust now, as I said, she was hard at work on the white kitten, which was\nlying quite still and trying to purr--no doubt feeling that it was all\nmeant for its good.\n\nBut the black kitten had been finished with earlier in the afternoon,\nand so, while Alice was sitting curled up in a corner of the great\narm-chair, half talking to herself and half asleep, the kitten had been\nhaving a grand game of romps with the ball of worsted Alice had been\ntrying to wind up, and had been rolling it up and down till it had all\ncome undone again; and there it was, spread over the hearth-rug, all\nknots and tangles, with the kitten running after its own tail in the\nmiddle.\n\n'Oh, you wicked little thing!' cried Alice, catching up the kitten, and\ngiving it a little kiss to make it understand that it was in disgrace.\n'Really, Dinah ought to have taught you better manners! You OUGHT,\nDinah, you know you ought!' she added, looking reproachfully at the old\ncat, and speaking in as cross a voice as she could manage--and then she\nscrambled back into the arm-chair, taking the kitten and the worsted\nwith her, and began winding up the ball again. But she didn't get on\nvery fast, as she was talking all the time, sometimes to the kitten, and\nsometimes to herself. Kitty sat very demurely on her knee, pretending to\nwatch the progress of the winding, and now and then putting out one\npaw and gently touching the ball, as if it would be glad to help, if it\nmight.\n\n'Do you know what to-morrow is, Kitty?' Alice began. 'You'd have guessed\nif you'd been up in the window with me--only Dinah was making you tidy,\nso you couldn't. I was watching the boys getting in sticks for the\nbonfire--and it wants plenty of sticks, Kitty! Only it got so cold, and\nit snowed so, they had to leave off. Never mind, Kitty, we'll go and\nsee the bonfire to-morrow.' Here Alice wound two or three turns of the\nworsted round the kitten's neck, just to see how it would look: this led\nto a scramble, in which the ball rolled down upon the floor, and yards\nand yards of it got unwound again.\n\n'Do you know, I was so angry, Kitty,' Alice went on as soon as they were\ncomfortably settled again, 'when I saw all the mischief you had been\ndoing, I was very nearly opening the window, and putting you out into\nthe snow! And you'd have deserved it, you little mischievous darling!\nWha\n"
+      ]
+    },
+    "qrcode-5/17.png@0": {
+      "pass": true,
+      "ms": 1.378,
+      "texts": [
+        "THROUGH THE LOOKING-GLASS\n\nBy Lewis Carroll\n\n\nCHAPTER I. Looking-Glass house\n\nOne thing was certain, that the WHITE kitten had had nothing to do with\nit:--it was the black kitten's fault entirely. For the white kitten had\nbeen having its face washed by the old cat for the last quarter of\nan hour (and bearing it pretty well, considering); so you see that it\nCOULDN'T have had any hand in the mischief.\n\nThe way Dinah washed her children's faces was this: first she held the\npoor thing down by its ear with one paw, and then with the other paw she\nrubbed its face all over, the wrong way, beginning at the nose: and\njust now, as I said, she was hard at work on the white kitten, which was\nlying quite still and trying to purr--no doubt feeling that it was all\nmeant for its good.\n\nBut the black kitten had been finished with earlier in the afternoon,\nand so, while Alice was sitting curled up in a corner of the great\narm-chair, half talking to herself and half asleep, the kitten had been\nhaving a grand game of romps with the ball of worsted Alice had been\ntrying to wind up, and had been rolling it up and down till it had all\ncome undone again; and there it was, spread over the hearth-rug, all\nknots and tangles, with the kitten running after its own tail in the\nmiddle.\n\n'Oh, you wicked little thing!' cried Alice, catching up the kitten, and\ngiving it a little kiss to make it understand that it was in disgrace.\n'Really, Dinah ought to have taught you better manners! You OUGHT,\nDinah, you know you ought!' she added, looking reproachfully at the old\ncat, and speaking in as cross a voice as she could manage--and then she\nscrambled back into the arm-chair, taking the kitten and the worsted\nwith her, and began winding up the ball again. But she didn't get on\nvery fast, as she was talking all the time, sometimes to the kitten, and\nsometimes to herself. Kitty sat very demurely on her knee, pretending to\nwatch the progress of the winding, and now and then putting out one\npaw and gently touching the ball, as if it would be glad to help, if it\nmight.\n\n'Do you know what to-morrow is, Kitty?' Alice began. 'You'd have guessed\nif you'd been up in the window with me--only Dinah was making you tidy,\nso you couldn't. I was watching the boys getting in sticks for the\nbonfire--and it wants plenty of sticks, Kitty! Only it \n"
+      ]
+    },
+    "qrcode-5/18.png@0": {
+      "pass": true,
+      "ms": 1.383,
+      "texts": [
+        "THROUGH THE LOOKING-GLASS\n\nBy Lewis Carroll\n\n\nCHAPTER I. Looking-Glass house\n\nOne thing was certain, that the WHITE kitten had had nothing to do with\nit:--it was the black kitten's fault entirely. For the white kitten had\nbeen having its face washed by the old cat for the last quarter of\nan hour (and bearing it pretty well, considering); so you see that it\nCOULDN'T have had any hand in the mischief.\n\nThe way Dinah washed her children's faces was this: first she held the\npoor thing down by its ear with one paw, and then with the other paw she\nrubbed its face all over, the wrong way, beginning at the nose: and\njust now, as I said, she was hard at work on the white kitten, which was\nlying quite still and trying to purr--no doubt feeling that it was all\nmeant for its good.\n\nBut the black kitten had been finished with earlier in the afternoon,\nand so, while Alice was sitting curled up in a corner of the great\narm-chair, half talking to herself and half asleep, the kitten had been\nhaving a grand game of romps with the ball of worsted Alice had been\ntrying to wind up, and had been rolling it up and down till it had all\ncome undone again; and there it was, spread over the hearth-rug, all\nknots and tangles, with the kitten running after its own tail in the\nmiddle.\n\n'Oh, you wicked little thing!' cried Alice, catching up the kitten, and\ngiving it a little kiss to make it understand that it was in disgrace.\n'Really, Dinah ought to have taught you better manners! You OUGHT,\nDinah, you know you ought!' she added, looking reproachfully at the old\ncat, and speaking in as cross a voice as she could manage--and then she\nscrambled back into the arm-ch\n\n"
+      ]
+    },
+    "qrcode-5/19.png@0": {
+      "pass": true,
+      "ms": 1.392,
+      "texts": [
+        "THROUGH THE LOOKING-GLASS\n\nBy Lewis Carroll\n\n\nCHAPTER I. Looking-Glass house\n\nOne thing was certain, that the WHITE kitten had had nothing to do with\nit:--it was the black kitten's fault entirely. For the white kitten had\nbeen having its face washed by the old cat for the last quarter of\nan hour (and bearing it pretty well, considering); so you see that it\nCOULDN'T have had any hand in the mischief.\n\nThe way Dinah washed her children's faces was this: first she held the\npoor thing down by its ear with one paw, and then with the other paw she\nrubbed its face all over, the wrong way, beginning at the nose: and\njust now, as I said, she was hard at work on the white kitten, which was\nlying quite still and trying to purr--no doubt feeling that it was all\nmeant for its good.\n\nBut the black kitten had been finished with earlier in the afternoon,\nand so, while Alice was sitting curled up in a corner of the great\narm-chair, half talking to herself and half asleep, the kitten had been\nhaving a grand game of romps with the ball of worsted Alice had been\ntrying to wind up, and had been rolling it up and down till it had all\ncome undone again; and there it was, spread over the hearth-rug, all\nknots and tangles, with the kitten running after its own tail in the\nmidd\n"
+      ]
+    },
+    "qrcode-6/1.png@0": {
+      "pass": true,
+      "ms": 0.352,
+      "texts": [
+        "1234567890"
+      ]
+    },
+    "qrcode-6/2.png@0": {
+      "pass": true,
+      "ms": 0.327,
+      "texts": [
+        "1234567890"
+      ]
+    },
+    "qrcode-6/3.png@0": {
+      "pass": true,
+      "ms": 0.336,
+      "texts": [
+        "1234567890"
+      ]
+    },
+    "qrcode-6/4.png@0": {
+      "pass": true,
+      "ms": 0.33,
+      "texts": [
+        "1234567890"
+      ]
+    },
+    "qrcode-6/5.png@0": {
+      "pass": true,
+      "ms": 0.331,
+      "texts": [
+        "1234567890"
+      ]
+    },
+    "qrcode-6/6.png@0": {
+      "pass": true,
+      "ms": 0.337,
+      "texts": [
+        "1234567890"
+      ]
+    },
+    "qrcode-6/7.png@0": {
+      "pass": true,
+      "ms": 0.327,
+      "texts": [
+        "1234567890"
+      ]
+    },
+    "qrcode-6/8.png@0": {
+      "pass": true,
+      "ms": 0.35,
+      "texts": [
+        "1234567890"
+      ]
+    },
+    "qrcode-6/9.png@0": {
+      "pass": true,
+      "ms": 0.355,
+      "texts": [
+        "1234567890"
+      ]
+    },
+    "qrcode-6/10.png@0": {
+      "pass": true,
+      "ms": 0.345,
+      "texts": [
+        "1234567890"
+      ]
+    },
+    "qrcode-6/11.png@0": {
+      "pass": true,
+      "ms": 0.332,
+      "texts": [
+        "1234567890"
+      ]
+    },
+    "qrcode-6/12.png@0": {
+      "pass": true,
+      "ms": 0.33,
+      "texts": [
+        "1234567890"
+      ]
+    },
+    "qrcode-6/13.png@0": {
+      "pass": true,
+      "ms": 0.325,
+      "texts": [
+        "1234567890"
+      ]
+    },
+    "qrcode-6/14.png@0": {
+      "pass": true,
+      "ms": 0.327,
+      "texts": [
+        "1234567890"
+      ]
+    },
+    "qrcode-6/15.png@0": {
+      "pass": true,
+      "ms": 1.586,
+      "texts": [
+        "TEST"
+      ]
+    },
+    "qrcode-1/1.png@90": {
+      "pass": true,
+      "ms": 1.195,
+      "texts": [
+        "MEBKM:URL:http\\://en.wikipedia.org/wiki/Main_Page;;"
+      ]
+    },
+    "qrcode-1/2.png@90": {
+      "pass": true,
+      "ms": 0.757,
+      "texts": [
+        "MEBKM:URL:http\\://en.wikipedia.org/wiki/Main_Page;;"
+      ]
+    },
+    "qrcode-1/3.png@90": {
+      "pass": true,
+      "ms": 0.786,
+      "texts": [
+        "MEBKM:URL:http\\://en.wikipedia.org/wiki/Main_Page;;"
+      ]
+    },
+    "qrcode-1/4.png@90": {
+      "pass": true,
+      "ms": 0.859,
+      "texts": [
+        "MEBKM:URL:http\\://en.wikipedia.org/wiki/Main_Page;;"
+      ]
+    },
+    "qrcode-1/5.png@90": {
+      "pass": true,
+      "ms": 0.76,
+      "texts": [
+        "MEBKM:URL:http\\://en.wikipedia.org/wiki/Main_Page;;"
+      ]
+    },
+    "qrcode-1/6.png@90": {
+      "pass": true,
+      "ms": 0.711,
+      "texts": [
+        "MEBKM:URL:http\\://en.wikipedia.org/wiki/Main_Page;;"
+      ]
+    },
+    "qrcode-1/7.png@90": {
+      "pass": true,
+      "ms": 0.754,
+      "texts": [
+        "MEBKM:URL:http\\://en.wikipedia.org/wiki/Main_Page;;"
+      ]
+    },
+    "qrcode-1/8.png@90": {
+      "pass": true,
+      "ms": 0.676,
+      "texts": [
+        "MEBKM:URL:http\\://en.wikipedia.org/wiki/Main_Page;;"
+      ]
+    },
+    "qrcode-1/9.png@90": {
+      "pass": true,
+      "ms": 0.742,
+      "texts": [
+        "MEBKM:URL:http\\://en.wikipedia.org/wiki/Main_Page;;"
+      ]
+    },
+    "qrcode-1/10.png@90": {
+      "pass": true,
+      "ms": 0.692,
+      "texts": [
+        "MEBKM:URL:http\\://en.wikipedia.org/wiki/Main_Page;;"
+      ]
+    },
+    "qrcode-1/11.png@90": {
+      "pass": true,
+      "ms": 0.785,
+      "texts": [
+        "MEBKM:URL:http\\://en.wikipedia.org/wiki/Main_Page;;"
+      ]
+    },
+    "qrcode-1/12.png@90": {
+      "pass": true,
+      "ms": 0.783,
+      "texts": [
+        "MEBKM:URL:http\\://en.wikipedia.org/wiki/Main_Page;;"
+      ]
+    },
+    "qrcode-1/13.png@90": {
+      "pass": true,
+      "ms": 0.874,
+      "texts": [
+        "http://google.com/gwt/n?u=bluenile.com"
+      ]
+    },
+    "qrcode-1/14.png@90": {
+      "pass": true,
+      "ms": 0.772,
+      "texts": [
+        "http://google.com/gwt/n?u=bluenile.com"
+      ]
+    },
+    "qrcode-1/15.png@90": {
+      "pass": true,
+      "ms": 0.82,
+      "texts": [
+        "http://google.com/gwt/n?u=bluenile.com"
+      ]
+    },
+    "qrcode-1/16.png@90": {
+      "pass": true,
+      "ms": 1.443,
+      "texts": [
+        "Sean Owen\r\nsrowen@google.com\r\n917-364-2918\r\nhttp://awesome-thoughts.com"
+      ]
+    },
+    "qrcode-1/17.png@90": {
+      "pass": true,
+      "ms": 1.383,
+      "texts": [
+        "Sean Owen\r\nsrowen@google.com\r\n917-364-2918\r\nhttp://awesome-thoughts.com"
+      ]
+    },
+    "qrcode-1/18.png@90": {
+      "pass": true,
+      "ms": 1.317,
+      "texts": [
+        "Sean Owen\r\nsrowen@google.com\r\n917-364-2918\r\nhttp://awesome-thoughts.com"
+      ]
+    },
+    "qrcode-1/19.png@90": {
+      "pass": true,
+      "ms": 0.844,
+      "texts": [
+        "Sean Owen\r\nsrowen@google.com\r\n917-364-2918\r\nhttp://awesome-thoughts.com"
+      ]
+    },
+    "qrcode-1/20.png@90": {
+      "pass": true,
+      "ms": 1.354,
+      "texts": [
+        "Sean Owen\r\nsrowen@google.com\r\n917-364-2918\r\nhttp://awesome-thoughts.com"
+      ]
+    },
+    "qrcode-2/1.png@90": {
+      "pass": true,
+      "ms": 0.958,
+      "texts": [
+        "When we at WRT talk about \\\"text,\\\" we are generally talking about a particular kind of readable information encoding - and readable is a complex proposition. Text may be stylized in a way we are unfamiliar with, as in blackletter - it may be interspersed with some markup we don\\'t understand, such as HTML - it may be be a substitution system we aren\\'t familiar with, such as braille or morse code - or it may be a system that, while technically human-readable, isn\\'t particularly optimized for reading by humans, as with barcodes (although barcodes can be read)."
+      ]
+    },
+    "qrcode-2/2.png@90": {
+      "pass": true,
+      "ms": 3.311,
+      "texts": [
+        "LANDBYASCARC   PERCEPTIBLEC EEK,OOZI GITSWAYTHROU  AWILDERNESSOFBESUPPOSED,I  CANT,ORATL ASTDWARFISH.NO REESOFANYM  NITUDEARETOBESOMEMISERA  EFRAMEBUIL I GS,TENANTED, U INGSUMMER   THEFUGITIVE;BUTTHEWHO  ISLAND,WI H   EXCEPTIONOFT   W STERNPOI  ,ANDALINEOFLLIAMLEGR   .HEWASOF N    ENTHUGUENOTF    Y ANDHADON  BEENWEALTHTIONCONSE  ENTUPONH SD   STERS,HELEFTNE   LE NS,THEC   OFHISFOREOUTHCARO   A.THISISLA    AVERYSINGULARO    TCONSISTSO  ITTLEELSEDSAQUART   FAMILE. TI   PARATEDFROMTHEMA   AN BYASCAR   YPERCEPTERESORT     MARSH EN   EVEGETATION,ASMIGH   SU POSED,   CANT,ORATREMITY,      ORT OULTRIESTANDS,ANDWHEREARESOM MIS      FRAMEBUIFEVER,MAYBE      INDEED,                TO;BUTT      EISLAND,WITNYYEARSAGO,IC    ACTED                    LLIAM    AND.HEWASOFANNESHADREDUCEDHIM OWA                       IONC NSEQUENTUPONHISDSIDENCEATSULLIVA \\'S                          HC ROLINA.THISISLANOUTTHR    LESLON .        THATN  OINTE        U RTEROF    E.ITISTHROU       ERNE       DSANDSLI  ,AFAVOR        TOFT       HEN.T"
+      ]
+    },
+    "qrcode-2/4.png@90": {
+      "pass": true,
+      "ms": 1.229,
+      "texts": [
+        "http://wwws.keihin.ktr.mlit.go.jp/keitai/"
+      ]
+    },
+    "qrcode-2/5.png@90": {
+      "pass": true,
+      "ms": 0.561,
+      "texts": [
+        "2021200000"
+      ]
+    },
+    "qrcode-2/6.png@90": {
+      "pass": true,
+      "ms": 2.958,
+      "texts": [
+        "http://d.kaywa.com/20207100"
+      ]
+    },
+    "qrcode-2/7.png@90": {
+      "pass": true,
+      "ms": 0.324,
+      "texts": [
+        "BIZCARD:N:Todd;X:Ogasawara;T:Tech Geek;C:MobileViews.com;A:MobileTown USA;E:editor@mobileviews.com;;"
+      ]
+    },
+    "qrcode-2/8.png@90": {
+      "pass": true,
+      "ms": 0.291,
+      "texts": [
+        "http://staticrooster.com"
+      ]
+    },
+    "qrcode-2/9.png@90": {
+      "pass": true,
+      "ms": 0.189,
+      "texts": [
+        "Morden"
+      ]
+    },
+    "qrcode-2/10.png@90": {
+      "pass": true,
+      "ms": 0.126,
+      "texts": [
+        "Google モバイル\r\nhttp://google.jp"
+      ]
+    },
+    "qrcode-2/11.png@90": {
+      "pass": true,
+      "ms": 0.319,
+      "texts": [
+        "BEGIN:VCARD\r\nN:Kennedy;Steve\r\nTEL:+44 (0)7775 755503\r\nADR;HOME:;;Flat 2, 43 Howitt Road, Belsize Park;London;;NW34LU;UK\r\nORG:NetTek Ltd;\r\nTITLE:Consultant\r\nEMAIL:steve@nettek.co.uk\r\nURL:www.nettek.co.uk\r\nEMAIL;IM:MSN:steve@gbnet.net\r\nNOTE:Testing 1 2 3\r\nBDAY:19611105\r\nEND:VCARD"
+      ]
+    },
+    "qrcode-2/12.png@90": {
+      "pass": false,
+      "ms": 0.218,
+      "texts": []
+    },
+    "qrcode-2/13.png@90": {
+      "pass": false,
+      "ms": 0.257,
+      "texts": []
+    },
+    "qrcode-2/14.png@90": {
+      "pass": true,
+      "ms": 0.552,
+      "texts": [
+        "http://bbc.co.uk/programmes"
+      ]
+    },
+    "qrcode-2/15.png@90": {
+      "pass": true,
+      "ms": 0.727,
+      "texts": [
+        "In 25 words or less in the comments, below, tell us how QR codes will make the world less ordinary."
+      ]
+    },
+    "qrcode-2/16.png@90": {
+      "pass": true,
+      "ms": 0.527,
+      "texts": [
+        "[外側QRコード]\r\n \r\n*ﾀﾞﾌﾞﾙQR*\r\nhttp://d-qr.net/ex/",
+        "[内側QRコード]\r\n\r\n*ダブルQR*\r\nhttp://d-qr.net/ex/"
+      ]
+    },
+    "qrcode-2/17.png@90": {
+      "pass": true,
+      "ms": 0.269,
+      "texts": [
+        "ﾃﾞｻﾞｲﾝQR\r\nhttp://d-qr.net/ex/"
+      ]
+    },
+    "qrcode-2/18.png@90": {
+      "pass": true,
+      "ms": 0.282,
+      "texts": [
+        "*ﾃﾞｻﾞｲﾝQR*     \r\nhttp://d-qr.net/ex/       "
+      ]
+    },
+    "qrcode-2/19.png@90": {
+      "pass": true,
+      "ms": 0.279,
+      "texts": [
+        "*ﾃﾞｻﾞｲﾝQR*    \r\nhttp://d-qr.net/ex/         "
+      ]
+    },
+    "qrcode-2/20.png@90": {
+      "pass": true,
+      "ms": 0.301,
+      "texts": [
+        "*ﾃﾞｻﾞｲﾝQR*\r\nhttp://d-qr.net/ex/    "
+      ]
+    },
+    "qrcode-2/21.png@90": {
+      "pass": true,
+      "ms": 0.244,
+      "texts": [
+        "*ﾃﾞｻﾞｲﾝQR*  \r\nhttp://d-qr.net/ex/        "
+      ]
+    },
+    "qrcode-2/22.png@90": {
+      "pass": true,
+      "ms": 0.44,
+      "texts": [
+        "http://www.hotpepper.jp/mobile/cgi-bin/MBLC80100.cgi?SA=00&Z=AG&vos=hpp064&uid=NULLGWDOCOMO"
+      ]
+    },
+    "qrcode-2/23.png@90": {
+      "pass": true,
+      "ms": 0.274,
+      "texts": [
+        "http://aniful.jp/pr/  "
+      ]
+    },
+    "qrcode-2/24.png@90": {
+      "pass": true,
+      "ms": 0.207,
+      "texts": [
+        "*ﾃﾞｻﾞｲﾝQR* \r\nhttp://d-qr.net/ex/      "
+      ]
+    },
+    "qrcode-2/25.png@90": {
+      "pass": true,
+      "ms": 0.259,
+      "texts": [
+        "MEBKM:TITLE:;URL:http://d.kaywa.com/2020400102;;"
+      ]
+    },
+    "qrcode-2/26.png@90": {
+      "pass": true,
+      "ms": 0.236,
+      "texts": [
+        "<ﾃﾞｻﾞｲﾝQR> \r\nｲﾗｽﾄ入りｶﾗｰQRｺｰﾄﾞ\r\nhttp://d-qr.net/ex/ "
+      ]
+    },
+    "qrcode-2/27.png@90": {
+      "pass": true,
+      "ms": 0.18,
+      "texts": [
+        "*ﾃﾞｻﾞｲﾝQR*   \r\nhttp://d-qr.net/ex/ "
+      ]
+    },
+    "qrcode-2/28.png@90": {
+      "pass": false,
+      "ms": 0.514,
+      "texts": []
+    },
+    "qrcode-2/29.png@90": {
+      "pass": true,
+      "ms": 0.175,
+      "texts": [
+        "http://live.fdgm.jp/u/event/hype/hype_top.html \r\n\r\nMEBKM:TITLE:hypeモバイル;URL:http\\://live.fdgm.jp/u/event/hype/hype_top.html;;"
+      ]
+    },
+    "qrcode-2/30.png@90": {
+      "pass": true,
+      "ms": 0.269,
+      "texts": [
+        "MECARD:N:測試;;"
+      ]
+    },
+    "qrcode-2/31.png@90": {
+      "pass": true,
+      "ms": 0.725,
+      "texts": [
+        "今度のバージョンでは文章の暗号化ができます。"
+      ]
+    },
+    "qrcode-2/32.png@90": {
+      "pass": true,
+      "ms": 0.242,
+      "texts": [
+        "BEGIN:VCARD\r\nN:Kennedy;Steve\r\nTEL:+44 (0)7775 755503\r\nADR;HOME:;;Flat 2, 43 Howitt Road, Belsize Park;London;;NW34LU;UK\r\nORG:NetTek Ltd;\r\nTITLE:Consultant\r\nEMAIL:steve@nettek.co.uk\r\nURL:www.nettek.co.uk\r\nEMAIL;IM:MSN:steve@gbnet.net\r\nNOTE:Testing 1 2 3\r\nBDAY:19611105\r\nEND:VCARD"
+      ]
+    },
+    "qrcode-2/33.png@90": {
+      "pass": true,
+      "ms": 0.108,
+      "texts": [
+        "\u0001\u0010AD:SUB:阿;;"
+      ]
+    },
+    "qrcode-2/34.png@90": {
+      "pass": true,
+      "ms": 0.121,
+      "texts": [
+        "http://www.google.com/"
+      ]
+    },
+    "qrcode-2/35.png@90": {
+      "pass": true,
+      "ms": 0.112,
+      "texts": [
+        "http://www.google.com/"
+      ]
+    },
+    "qrcode-2/36.png@90": {
+      "pass": true,
+      "ms": 0.197,
+      "texts": [
+        "Morden"
+      ]
+    },
+    "qrcode-3/01.png@90": {
+      "pass": true,
+      "ms": 0.248,
+      "texts": [
+        "http://arnaud.sahuguet.com/graffiti/test.php?ll=-74.00309961503218,40.74102573163046,0"
+      ]
+    },
+    "qrcode-3/02.png@90": {
+      "pass": true,
+      "ms": 0.245,
+      "texts": [
+        "http://arnaud.sahuguet.com/graffiti/test.php?ll=-74.00309961503218,40.74102573163046,0"
+      ]
+    },
+    "qrcode-3/03.png@90": {
+      "pass": true,
+      "ms": 0.238,
+      "texts": [
+        "http://arnaud.sahuguet.com/graffiti/test.php?ll=-74.00309961503218,40.74102573163046,0"
+      ]
+    },
+    "qrcode-3/04.png@90": {
+      "pass": true,
+      "ms": 0.245,
+      "texts": [
+        "http://arnaud.sahuguet.com/graffiti/test.php?ll=-74.00309961503218,40.74102573163046,0"
+      ]
+    },
+    "qrcode-3/05.png@90": {
+      "pass": true,
+      "ms": 0.253,
+      "texts": [
+        "http://arnaud.sahuguet.com/graffiti/test.php?ll=-74.00309961503218,40.74102573163046,0"
+      ]
+    },
+    "qrcode-3/06.png@90": {
+      "pass": true,
+      "ms": 0.263,
+      "texts": [
+        "http://arnaud.sahuguet.com/graffiti/test.php?ll=-74.00309961503218,40.74102573163046,0"
+      ]
+    },
+    "qrcode-3/07.png@90": {
+      "pass": true,
+      "ms": 0.252,
+      "texts": [
+        "http://arnaud.sahuguet.com/graffiti/test.php?ll=-74.00309961503218,40.74102573163046,0"
+      ]
+    },
+    "qrcode-3/08.png@90": {
+      "pass": true,
+      "ms": 0.252,
+      "texts": [
+        "http://arnaud.sahuguet.com/graffiti/test.php?ll=-74.00309961503218,40.74102573163046,0"
+      ]
+    },
+    "qrcode-3/09.png@90": {
+      "pass": true,
+      "ms": 0.262,
+      "texts": [
+        "http://arnaud.sahuguet.com/graffiti/test.php?ll=-74.00309961503218,40.74102573163046,0"
+      ]
+    },
+    "qrcode-3/10.png@90": {
+      "pass": true,
+      "ms": 0.203,
+      "texts": [
+        "MECARD:N:Google 411,;TEL:18665881077;;"
+      ]
+    },
+    "qrcode-3/11.png@90": {
+      "pass": true,
+      "ms": 0.212,
+      "texts": [
+        "MECARD:N:Google 411,;TEL:18665881077;;"
+      ]
+    },
+    "qrcode-3/12.png@90": {
+      "pass": true,
+      "ms": 0.207,
+      "texts": [
+        "MECARD:N:Google 411,;TEL:18665881077;;"
+      ]
+    },
+    "qrcode-3/13.png@90": {
+      "pass": true,
+      "ms": 0.182,
+      "texts": [
+        "MECARD:N:Google 411,;TEL:18665881077;;"
+      ]
+    },
+    "qrcode-3/14.png@90": {
+      "pass": true,
+      "ms": 0.223,
+      "texts": [
+        "MECARD:N:Google 411,;TEL:18665881077;;"
+      ]
+    },
+    "qrcode-3/15.png@90": {
+      "pass": true,
+      "ms": 0.199,
+      "texts": [
+        "MECARD:N:Google 411,;TEL:18665881077;;"
+      ]
+    },
+    "qrcode-3/16.png@90": {
+      "pass": true,
+      "ms": 0.272,
+      "texts": [
+        "MECARD:N:Google 411,;TEL:18665881077;;"
+      ]
+    },
+    "qrcode-3/17.png@90": {
+      "pass": true,
+      "ms": 0.216,
+      "texts": [
+        "MECARD:N:Google 411,;TEL:18665881077;;"
+      ]
+    },
+    "qrcode-3/18.png@90": {
+      "pass": true,
+      "ms": 0.312,
+      "texts": [
+        "UI office hours signup\r\nhttp://www.corp.google.com/sparrow/ui_office_hours/ \r\n"
+      ]
+    },
+    "qrcode-3/19.png@90": {
+      "pass": true,
+      "ms": 0.269,
+      "texts": [
+        "UI office hours signup\r\nhttp://www.corp.google.com/sparrow/ui_office_hours/ \r\n"
+      ]
+    },
+    "qrcode-3/20.png@90": {
+      "pass": true,
+      "ms": 0.326,
+      "texts": [
+        "UI office hours signup\r\nhttp://www.corp.google.com/sparrow/ui_office_hours/ \r\n"
+      ]
+    },
+    "qrcode-3/21.png@90": {
+      "pass": true,
+      "ms": 0.295,
+      "texts": [
+        "UI office hours signup\r\nhttp://www.corp.google.com/sparrow/ui_office_hours/ \r\n"
+      ]
+    },
+    "qrcode-3/22.png@90": {
+      "pass": true,
+      "ms": 0.298,
+      "texts": [
+        "UI office hours signup\r\nhttp://www.corp.google.com/sparrow/ui_office_hours/ \r\n"
+      ]
+    },
+    "qrcode-3/23.png@90": {
+      "pass": true,
+      "ms": 0.284,
+      "texts": [
+        "UI office hours signup\r\nhttp://www.corp.google.com/sparrow/ui_office_hours/ \r\n"
+      ]
+    },
+    "qrcode-3/24.png@90": {
+      "pass": true,
+      "ms": 0.289,
+      "texts": [
+        "UI office hours signup\r\nhttp://www.corp.google.com/sparrow/ui_office_hours/ \r\n"
+      ]
+    },
+    "qrcode-3/25.png@90": {
+      "pass": true,
+      "ms": 0.29,
+      "texts": [
+        "UI office hours signup\r\nhttp://www.corp.google.com/sparrow/ui_office_hours/ \r\n"
+      ]
+    },
+    "qrcode-3/26.png@90": {
+      "pass": true,
+      "ms": 0.207,
+      "texts": [
+        "MECARD:N:Sean Owen;TEL:+12125658770;EMAIL:srowen@google.com;;"
+      ]
+    },
+    "qrcode-3/27.png@90": {
+      "pass": true,
+      "ms": 0.202,
+      "texts": [
+        "MECARD:N:Sean Owen;TEL:+12125658770;EMAIL:srowen@google.com;;"
+      ]
+    },
+    "qrcode-3/28.png@90": {
+      "pass": true,
+      "ms": 0.192,
+      "texts": [
+        "MECARD:N:Sean Owen;TEL:+12125658770;EMAIL:srowen@google.com;;"
+      ]
+    },
+    "qrcode-3/29.png@90": {
+      "pass": true,
+      "ms": 0.205,
+      "texts": [
+        "MECARD:N:Sean Owen;TEL:+12125658770;EMAIL:srowen@google.com;;"
+      ]
+    },
+    "qrcode-3/30.png@90": {
+      "pass": true,
+      "ms": 0.216,
+      "texts": [
+        "MECARD:N:Sean Owen;TEL:+12125658770;EMAIL:srowen@google.com;;"
+      ]
+    },
+    "qrcode-3/31.png@90": {
+      "pass": true,
+      "ms": 0.212,
+      "texts": [
+        "MECARD:N:Sean Owen;TEL:+12125658770;EMAIL:srowen@google.com;;"
+      ]
+    },
+    "qrcode-3/32.png@90": {
+      "pass": true,
+      "ms": 0.218,
+      "texts": [
+        "MECARD:N:Sean Owen;TEL:+12125658770;EMAIL:srowen@google.com;;"
+      ]
+    },
+    "qrcode-3/33.png@90": {
+      "pass": true,
+      "ms": 0.197,
+      "texts": [
+        "MECARD:N:Sean Owen;TEL:+12125658770;EMAIL:srowen@google.com;;"
+      ]
+    },
+    "qrcode-3/34.png@90": {
+      "pass": true,
+      "ms": 0.224,
+      "texts": [
+        "MECARD:N:Sean Owen;TEL:+12125658770;EMAIL:srowen@google.com;;"
+      ]
+    },
+    "qrcode-3/35.png@90": {
+      "pass": true,
+      "ms": 0.237,
+      "texts": [
+        "MECARD:N:Sean Owen;TEL:+12125658770;EMAIL:srowen@google.com;;"
+      ]
+    },
+    "qrcode-3/36.png@90": {
+      "pass": true,
+      "ms": 0.205,
+      "texts": [
+        "MECARD:N:Sean Owen;TEL:+12125658770;EMAIL:srowen@google.com;;"
+      ]
+    },
+    "qrcode-3/37.png@90": {
+      "pass": true,
+      "ms": 0.227,
+      "texts": [
+        "MECARD:N:Sean Owen;TEL:+12125658770;EMAIL:srowen@google.com;;"
+      ]
+    },
+    "qrcode-3/38.png@90": {
+      "pass": true,
+      "ms": 0.202,
+      "texts": [
+        "MECARD:N:Sean Owen;TEL:+12125658770;EMAIL:srowen@google.com;;"
+      ]
+    },
+    "qrcode-3/39.png@90": {
+      "pass": true,
+      "ms": 0.228,
+      "texts": [
+        "MECARD:N:Sean Owen;TEL:+12125658770;EMAIL:srowen@google.com;;"
+      ]
+    },
+    "qrcode-3/40.png@90": {
+      "pass": true,
+      "ms": 0.223,
+      "texts": [
+        "MECARD:N:Sean Owen;TEL:+12125658770;EMAIL:srowen@google.com;;"
+      ]
+    },
+    "qrcode-3/41.png@90": {
+      "pass": true,
+      "ms": 0.232,
+      "texts": [
+        "MECARD:N:Sean Owen;TEL:+12125658770;EMAIL:srowen@google.com;;"
+      ]
+    },
+    "qrcode-3/42.png@90": {
+      "pass": true,
+      "ms": 0.208,
+      "texts": [
+        "MECARD:N:Sean Owen;TEL:+12125658770;EMAIL:srowen@google.com;;"
+      ]
+    },
+    "qrcode-4/01.png@90": {
+      "pass": true,
+      "ms": 0.23,
+      "texts": [
+        "Google Print Ads - T.G.I.A.F. - January 31, 2008"
+      ]
+    },
+    "qrcode-4/02.png@90": {
+      "pass": true,
+      "ms": 0.206,
+      "texts": [
+        "Google Print Ads - T.G.I.A.F. - January 31, 2008"
+      ]
+    },
+    "qrcode-4/03.png@90": {
+      "pass": true,
+      "ms": 0.196,
+      "texts": [
+        "Google Print Ads - T.G.I.A.F. - January 31, 2008"
+      ]
+    },
+    "qrcode-4/04.png@90": {
+      "pass": true,
+      "ms": 0.204,
+      "texts": [
+        "Google Print Ads - T.G.I.A.F. - January 31, 2008"
+      ]
+    },
+    "qrcode-4/05.png@90": {
+      "pass": false,
+      "ms": 0.299,
+      "texts": []
+    },
+    "qrcode-4/06.png@90": {
+      "pass": false,
+      "ms": 0.296,
+      "texts": []
+    },
+    "qrcode-4/07.png@90": {
+      "pass": true,
+      "ms": 0.214,
+      "texts": [
+        "Google Print Ads - T.G.I.A.F. - January 31, 2008"
+      ]
+    },
+    "qrcode-4/08.png@90": {
+      "pass": false,
+      "ms": 0.301,
+      "texts": []
+    },
+    "qrcode-4/09.png@90": {
+      "pass": false,
+      "ms": 0.315,
+      "texts": []
+    },
+    "qrcode-4/10.png@90": {
+      "pass": true,
+      "ms": 0.203,
+      "texts": [
+        "Google Print Ads - T.G.I.A.F. - January 31, 2008"
+      ]
+    },
+    "qrcode-4/11.png@90": {
+      "pass": true,
+      "ms": 0.214,
+      "texts": [
+        "Google Print Ads - T.G.I.A.F. - January 31, 2008"
+      ]
+    },
+    "qrcode-4/12.png@90": {
+      "pass": true,
+      "ms": 0.211,
+      "texts": [
+        "Google Print Ads - T.G.I.A.F. - January 31, 2008"
+      ]
+    },
+    "qrcode-4/13.png@90": {
+      "pass": false,
+      "ms": 0.315,
+      "texts": []
+    },
+    "qrcode-4/14.png@90": {
+      "pass": true,
+      "ms": 0.198,
+      "texts": [
+        "Google Print Ads - T.G.I.A.F. - January 31, 2008"
+      ]
+    },
+    "qrcode-4/15.png@90": {
+      "pass": true,
+      "ms": 0.209,
+      "texts": [
+        "http://code.google.com"
+      ]
+    },
+    "qrcode-4/16.png@90": {
+      "pass": true,
+      "ms": 0.198,
+      "texts": [
+        "http://code.google.com"
+      ]
+    },
+    "qrcode-4/17.png@90": {
+      "pass": true,
+      "ms": 0.198,
+      "texts": [
+        "http://code.google.com"
+      ]
+    },
+    "qrcode-4/18.png@90": {
+      "pass": true,
+      "ms": 0.204,
+      "texts": [
+        "http://code.google.com"
+      ]
+    },
+    "qrcode-4/19.png@90": {
+      "pass": true,
+      "ms": 0.18,
+      "texts": [
+        "http://code.google.com"
+      ]
+    },
+    "qrcode-4/20.png@90": {
+      "pass": true,
+      "ms": 0.191,
+      "texts": [
+        "http://code.google.com"
+      ]
+    },
+    "qrcode-4/21.png@90": {
+      "pass": true,
+      "ms": 0.205,
+      "texts": [
+        "http://code.google.com"
+      ]
+    },
+    "qrcode-4/22.png@90": {
+      "pass": true,
+      "ms": 0.183,
+      "texts": [
+        "http://code.google.com"
+      ]
+    },
+    "qrcode-4/23.png@90": {
+      "pass": true,
+      "ms": 0.198,
+      "texts": [
+        "http://code.google.com"
+      ]
+    },
+    "qrcode-4/24.png@90": {
+      "pass": true,
+      "ms": 0.186,
+      "texts": [
+        "http://code.google.com"
+      ]
+    },
+    "qrcode-4/25.png@90": {
+      "pass": true,
+      "ms": 0.217,
+      "texts": [
+        "http://code.google.com"
+      ]
+    },
+    "qrcode-4/26.png@90": {
+      "pass": true,
+      "ms": 0.211,
+      "texts": [
+        "http://code.google.com"
+      ]
+    },
+    "qrcode-4/27.png@90": {
+      "pass": true,
+      "ms": 0.216,
+      "texts": [
+        "http://code.google.com"
+      ]
+    },
+    "qrcode-4/28.png@90": {
+      "pass": true,
+      "ms": 0.206,
+      "texts": [
+        "http://code.google.com"
+      ]
+    },
+    "qrcode-4/29.png@90": {
+      "pass": true,
+      "ms": 0.224,
+      "texts": [
+        "http://code.google.com"
+      ]
+    },
+    "qrcode-4/30.png@90": {
+      "pass": false,
+      "ms": 0.293,
+      "texts": []
+    },
+    "qrcode-4/31.png@90": {
+      "pass": false,
+      "ms": 0.294,
+      "texts": []
+    },
+    "qrcode-4/32.png@90": {
+      "pass": false,
+      "ms": 0.372,
+      "texts": []
+    },
+    "qrcode-4/33.png@90": {
+      "pass": false,
+      "ms": 0.346,
+      "texts": []
+    },
+    "qrcode-4/34.png@90": {
+      "pass": false,
+      "ms": 0.278,
+      "texts": []
+    },
+    "qrcode-4/35.png@90": {
+      "pass": true,
+      "ms": 0.188,
+      "texts": [
+        "http://code.google.com/p/zxing/"
+      ]
+    },
+    "qrcode-4/36.png@90": {
+      "pass": true,
+      "ms": 0.19,
+      "texts": [
+        "http://code.google.com/p/zxing/"
+      ]
+    },
+    "qrcode-4/37.png@90": {
+      "pass": true,
+      "ms": 0.197,
+      "texts": [
+        "http://code.google.com/p/zxing/"
+      ]
+    },
+    "qrcode-4/38.png@90": {
+      "pass": true,
+      "ms": 0.186,
+      "texts": [
+        "http://code.google.com/p/zxing/"
+      ]
+    },
+    "qrcode-4/39.png@90": {
+      "pass": true,
+      "ms": 0.2,
+      "texts": [
+        "http://code.google.com/p/zxing/"
+      ]
+    },
+    "qrcode-4/40.png@90": {
+      "pass": true,
+      "ms": 0.196,
+      "texts": [
+        "http://code.google.com/p/zxing/"
+      ]
+    },
+    "qrcode-4/41.png@90": {
+      "pass": true,
+      "ms": 0.21,
+      "texts": [
+        "http://code.google.com/p/zxing/"
+      ]
+    },
+    "qrcode-4/42.png@90": {
+      "pass": true,
+      "ms": 0.228,
+      "texts": [
+        "http://code.google.com/p/zxing/"
+      ]
+    },
+    "qrcode-4/43.png@90": {
+      "pass": true,
+      "ms": 0.194,
+      "texts": [
+        "http://code.google.com/p/zxing/"
+      ]
+    },
+    "qrcode-4/44.png@90": {
+      "pass": true,
+      "ms": 0.182,
+      "texts": [
+        "http://code.google.com/p/zxing/"
+      ]
+    },
+    "qrcode-4/45.png@90": {
+      "pass": true,
+      "ms": 0.187,
+      "texts": [
+        "http://code.google.com/p/zxing/"
+      ]
+    },
+    "qrcode-4/46.png@90": {
+      "pass": true,
+      "ms": 0.202,
+      "texts": [
+        "http://code.google.com/p/zxing/"
+      ]
+    },
+    "qrcode-4/47.png@90": {
+      "pass": true,
+      "ms": 0.185,
+      "texts": [
+        "http://code.google.com/p/zxing/"
+      ]
+    },
+    "qrcode-4/48.png@90": {
+      "pass": true,
+      "ms": 0.19,
+      "texts": [
+        "http://code.google.com/p/zxing/"
+      ]
+    },
+    "qrcode-5/01.png@90": {
+      "pass": true,
+      "ms": 0.242,
+      "texts": [
+        "MECARD:N:Sean Owen;TEL:+12125658770;EMAIL:srowen@google.com;;"
+      ]
+    },
+    "qrcode-5/02.png@90": {
+      "pass": true,
+      "ms": 0.244,
+      "texts": [
+        "MECARD:N:Sean Owen;TEL:+12125658770;EMAIL:srowen@google.com;;"
+      ]
+    },
+    "qrcode-5/03.png@90": {
+      "pass": true,
+      "ms": 0.238,
+      "texts": [
+        "MECARD:N:Sean Owen;TEL:+12125658770;EMAIL:srowen@google.com;;"
+      ]
+    },
+    "qrcode-5/04.png@90": {
+      "pass": true,
+      "ms": 0.292,
+      "texts": [
+        "MECARD:N:Sean Owen;TEL:+12125658770;EMAIL:srowen@google.com;;"
+      ]
+    },
+    "qrcode-5/05.png@90": {
+      "pass": true,
+      "ms": 0.231,
+      "texts": [
+        "MECARD:N:Sean Owen;TEL:+12125658770;EMAIL:srowen@google.com;;"
+      ]
+    },
+    "qrcode-5/06.png@90": {
+      "pass": true,
+      "ms": 0.251,
+      "texts": [
+        "MECARD:N:Sean Owen;TEL:+12125658770;EMAIL:srowen@google.com;;"
+      ]
+    },
+    "qrcode-5/07.png@90": {
+      "pass": true,
+      "ms": 0.221,
+      "texts": [
+        "MECARD:N:Sean Owen;TEL:+12125658770;EMAIL:srowen@google.com;;"
+      ]
+    },
+    "qrcode-5/08.png@90": {
+      "pass": true,
+      "ms": 0.217,
+      "texts": [
+        "MECARD:N:Sean Owen;TEL:+12125658770;EMAIL:srowen@google.com;;"
+      ]
+    },
+    "qrcode-5/09.png@90": {
+      "pass": true,
+      "ms": 0.242,
+      "texts": [
+        "MECARD:N:Sean Owen;TEL:+12125658770;EMAIL:srowen@google.com;;"
+      ]
+    },
+    "qrcode-5/10.png@90": {
+      "pass": true,
+      "ms": 0.262,
+      "texts": [
+        "MECARD:N:Sean Owen;TEL:+12125658770;EMAIL:srowen@google.com;;"
+      ]
+    },
+    "qrcode-5/11.png@90": {
+      "pass": true,
+      "ms": 0.227,
+      "texts": [
+        "MECARD:N:Sean Owen;TEL:+12125658770;EMAIL:srowen@google.com;;"
+      ]
+    },
+    "qrcode-5/12.png@90": {
+      "pass": true,
+      "ms": 0.241,
+      "texts": [
+        "MECARD:N:Sean Owen;TEL:+12125658770;EMAIL:srowen@google.com;;"
+      ]
+    },
+    "qrcode-5/13.png@90": {
+      "pass": true,
+      "ms": 0.232,
+      "texts": [
+        "MECARD:N:Sean Owen;TEL:+12125658770;EMAIL:srowen@google.com;;"
+      ]
+    },
+    "qrcode-5/14.png@90": {
+      "pass": true,
+      "ms": 0.254,
+      "texts": [
+        "MECARD:N:Sean Owen;TEL:+12125658770;EMAIL:srowen@google.com;;"
+      ]
+    },
+    "qrcode-5/15.png@90": {
+      "pass": true,
+      "ms": 0.241,
+      "texts": [
+        "MECARD:N:Sean Owen;TEL:+12125658770;EMAIL:srowen@google.com;;"
+      ]
+    },
+    "qrcode-5/16.png@90": {
+      "pass": true,
+      "ms": 1.425,
+      "texts": [
+        "THROUGH THE LOOKING-GLASS\n\nBy Lewis Carroll\n\n\nCHAPTER I. Looking-Glass house\n\nOne thing was certain, that the WHITE kitten had had nothing to do with\nit:--it was the black kitten's fault entirely. For the white kitten had\nbeen having its face washed by the old cat for the last quarter of\nan hour (and bearing it pretty well, considering); so you see that it\nCOULDN'T have had any hand in the mischief.\n\nThe way Dinah washed her children's faces was this: first she held the\npoor thing down by its ear with one paw, and then with the other paw she\nrubbed its face all over, the wrong way, beginning at the nose: and\njust now, as I said, she was hard at work on the white kitten, which was\nlying quite still and trying to purr--no doubt feeling that it was all\nmeant for its good.\n\nBut the black kitten had been finished with earlier in the afternoon,\nand so, while Alice was sitting curled up in a corner of the great\narm-chair, half talking to herself and half asleep, the kitten had been\nhaving a grand game of romps with the ball of worsted Alice had been\ntrying to wind up, and had been rolling it up and down till it had all\ncome undone again; and there it was, spread over the hearth-rug, all\nknots and tangles, with the kitten running after its own tail in the\nmiddle.\n\n'Oh, you wicked little thing!' cried Alice, catching up the kitten, and\ngiving it a little kiss to make it understand that it was in disgrace.\n'Really, Dinah ought to have taught you better manners! You OUGHT,\nDinah, you know you ought!' she added, looking reproachfully at the old\ncat, and speaking in as cross a voice as she could manage--and then she\nscrambled back into the arm-chair, taking the kitten and the worsted\nwith her, and began winding up the ball again. But she didn't get on\nvery fast, as she was talking all the time, sometimes to the kitten, and\nsometimes to herself. Kitty sat very demurely on her knee, pretending to\nwatch the progress of the winding, and now and then putting out one\npaw and gently touching the ball, as if it would be glad to help, if it\nmight.\n\n'Do you know what to-morrow is, Kitty?' Alice began. 'You'd have guessed\nif you'd been up in the window with me--only Dinah was making you tidy,\nso you couldn't. I was watching the boys getting in sticks for the\nbonfire--and it wants plenty of sticks, Kitty! Only it got so cold, and\nit snowed so, they had to leave off. Never mind, Kitty, we'll go and\nsee the bonfire to-morrow.' Here Alice wound two or three turns of the\nworsted round the kitten's neck, just to see how it would look: this led\nto a scramble, in which the ball rolled down upon the floor, and yards\nand yards of it got unwound again.\n\n'Do you know, I was so angry, Kitty,' Alice went on as soon as they were\ncomfortably settled again, 'when I saw all the mischief you had been\ndoing, I was very nearly opening the window, and putting you out into\nthe snow! And you'd have deserved it, you little mischievous darling!\nWha\n"
+      ]
+    },
+    "qrcode-5/17.png@90": {
+      "pass": true,
+      "ms": 1.421,
+      "texts": [
+        "THROUGH THE LOOKING-GLASS\n\nBy Lewis Carroll\n\n\nCHAPTER I. Looking-Glass house\n\nOne thing was certain, that the WHITE kitten had had nothing to do with\nit:--it was the black kitten's fault entirely. For the white kitten had\nbeen having its face washed by the old cat for the last quarter of\nan hour (and bearing it pretty well, considering); so you see that it\nCOULDN'T have had any hand in the mischief.\n\nThe way Dinah washed her children's faces was this: first she held the\npoor thing down by its ear with one paw, and then with the other paw she\nrubbed its face all over, the wrong way, beginning at the nose: and\njust now, as I said, she was hard at work on the white kitten, which was\nlying quite still and trying to purr--no doubt feeling that it was all\nmeant for its good.\n\nBut the black kitten had been finished with earlier in the afternoon,\nand so, while Alice was sitting curled up in a corner of the great\narm-chair, half talking to herself and half asleep, the kitten had been\nhaving a grand game of romps with the ball of worsted Alice had been\ntrying to wind up, and had been rolling it up and down till it had all\ncome undone again; and there it was, spread over the hearth-rug, all\nknots and tangles, with the kitten running after its own tail in the\nmiddle.\n\n'Oh, you wicked little thing!' cried Alice, catching up the kitten, and\ngiving it a little kiss to make it understand that it was in disgrace.\n'Really, Dinah ought to have taught you better manners! You OUGHT,\nDinah, you know you ought!' she added, looking reproachfully at the old\ncat, and speaking in as cross a voice as she could manage--and then she\nscrambled back into the arm-chair, taking the kitten and the worsted\nwith her, and began winding up the ball again. But she didn't get on\nvery fast, as she was talking all the time, sometimes to the kitten, and\nsometimes to herself. Kitty sat very demurely on her knee, pretending to\nwatch the progress of the winding, and now and then putting out one\npaw and gently touching the ball, as if it would be glad to help, if it\nmight.\n\n'Do you know what to-morrow is, Kitty?' Alice began. 'You'd have guessed\nif you'd been up in the window with me--only Dinah was making you tidy,\nso you couldn't. I was watching the boys getting in sticks for the\nbonfire--and it wants plenty of sticks, Kitty! Only it \n"
+      ]
+    },
+    "qrcode-5/18.png@90": {
+      "pass": true,
+      "ms": 1.437,
+      "texts": [
+        "THROUGH THE LOOKING-GLASS\n\nBy Lewis Carroll\n\n\nCHAPTER I. Looking-Glass house\n\nOne thing was certain, that the WHITE kitten had had nothing to do with\nit:--it was the black kitten's fault entirely. For the white kitten had\nbeen having its face washed by the old cat for the last quarter of\nan hour (and bearing it pretty well, considering); so you see that it\nCOULDN'T have had any hand in the mischief.\n\nThe way Dinah washed her children's faces was this: first she held the\npoor thing down by its ear with one paw, and then with the other paw she\nrubbed its face all over, the wrong way, beginning at the nose: and\njust now, as I said, she was hard at work on the white kitten, which was\nlying quite still and trying to purr--no doubt feeling that it was all\nmeant for its good.\n\nBut the black kitten had been finished with earlier in the afternoon,\nand so, while Alice was sitting curled up in a corner of the great\narm-chair, half talking to herself and half asleep, the kitten had been\nhaving a grand game of romps with the ball of worsted Alice had been\ntrying to wind up, and had been rolling it up and down till it had all\ncome undone again; and there it was, spread over the hearth-rug, all\nknots and tangles, with the kitten running after its own tail in the\nmiddle.\n\n'Oh, you wicked little thing!' cried Alice, catching up the kitten, and\ngiving it a little kiss to make it understand that it was in disgrace.\n'Really, Dinah ought to have taught you better manners! You OUGHT,\nDinah, you know you ought!' she added, looking reproachfully at the old\ncat, and speaking in as cross a voice as she could manage--and then she\nscrambled back into the arm-ch\n\n"
+      ]
+    },
+    "qrcode-5/19.png@90": {
+      "pass": true,
+      "ms": 1.467,
+      "texts": [
+        "THROUGH THE LOOKING-GLASS\n\nBy Lewis Carroll\n\n\nCHAPTER I. Looking-Glass house\n\nOne thing was certain, that the WHITE kitten had had nothing to do with\nit:--it was the black kitten's fault entirely. For the white kitten had\nbeen having its face washed by the old cat for the last quarter of\nan hour (and bearing it pretty well, considering); so you see that it\nCOULDN'T have had any hand in the mischief.\n\nThe way Dinah washed her children's faces was this: first she held the\npoor thing down by its ear with one paw, and then with the other paw she\nrubbed its face all over, the wrong way, beginning at the nose: and\njust now, as I said, she was hard at work on the white kitten, which was\nlying quite still and trying to purr--no doubt feeling that it was all\nmeant for its good.\n\nBut the black kitten had been finished with earlier in the afternoon,\nand so, while Alice was sitting curled up in a corner of the great\narm-chair, half talking to herself and half asleep, the kitten had been\nhaving a grand game of romps with the ball of worsted Alice had been\ntrying to wind up, and had been rolling it up and down till it had all\ncome undone again; and there it was, spread over the hearth-rug, all\nknots and tangles, with the kitten running after its own tail in the\nmidd\n"
+      ]
+    },
+    "qrcode-6/1.png@90": {
+      "pass": true,
+      "ms": 0.374,
+      "texts": [
+        "1234567890"
+      ]
+    },
+    "qrcode-6/2.png@90": {
+      "pass": true,
+      "ms": 0.357,
+      "texts": [
+        "1234567890"
+      ]
+    },
+    "qrcode-6/3.png@90": {
+      "pass": true,
+      "ms": 0.356,
+      "texts": [
+        "1234567890"
+      ]
+    },
+    "qrcode-6/4.png@90": {
+      "pass": true,
+      "ms": 0.353,
+      "texts": [
+        "1234567890"
+      ]
+    },
+    "qrcode-6/5.png@90": {
+      "pass": true,
+      "ms": 0.374,
+      "texts": [
+        "1234567890"
+      ]
+    },
+    "qrcode-6/6.png@90": {
+      "pass": true,
+      "ms": 0.38,
+      "texts": [
+        "1234567890"
+      ]
+    },
+    "qrcode-6/7.png@90": {
+      "pass": true,
+      "ms": 0.353,
+      "texts": [
+        "1234567890"
+      ]
+    },
+    "qrcode-6/8.png@90": {
+      "pass": true,
+      "ms": 0.34,
+      "texts": [
+        "1234567890"
+      ]
+    },
+    "qrcode-6/9.png@90": {
+      "pass": true,
+      "ms": 0.349,
+      "texts": [
+        "1234567890"
+      ]
+    },
+    "qrcode-6/10.png@90": {
+      "pass": true,
+      "ms": 0.348,
+      "texts": [
+        "1234567890"
+      ]
+    },
+    "qrcode-6/11.png@90": {
+      "pass": true,
+      "ms": 0.344,
+      "texts": [
+        "1234567890"
+      ]
+    },
+    "qrcode-6/12.png@90": {
+      "pass": true,
+      "ms": 0.347,
+      "texts": [
+        "1234567890"
+      ]
+    },
+    "qrcode-6/13.png@90": {
+      "pass": true,
+      "ms": 0.35,
+      "texts": [
+        "1234567890"
+      ]
+    },
+    "qrcode-6/14.png@90": {
+      "pass": true,
+      "ms": 0.349,
+      "texts": [
+        "1234567890"
+      ]
+    },
+    "qrcode-6/15.png@90": {
+      "pass": true,
+      "ms": 1.966,
+      "texts": [
+        "TEST"
+      ]
+    },
+    "qrcode-1/1.png@180": {
+      "pass": true,
+      "ms": 1.051,
+      "texts": [
+        "MEBKM:URL:http\\://en.wikipedia.org/wiki/Main_Page;;"
+      ]
+    },
+    "qrcode-1/2.png@180": {
+      "pass": true,
+      "ms": 0.726,
+      "texts": [
+        "MEBKM:URL:http\\://en.wikipedia.org/wiki/Main_Page;;"
+      ]
+    },
+    "qrcode-1/3.png@180": {
+      "pass": true,
+      "ms": 0.746,
+      "texts": [
+        "MEBKM:URL:http\\://en.wikipedia.org/wiki/Main_Page;;"
+      ]
+    },
+    "qrcode-1/4.png@180": {
+      "pass": true,
+      "ms": 0.834,
+      "texts": [
+        "MEBKM:URL:http\\://en.wikipedia.org/wiki/Main_Page;;"
+      ]
+    },
+    "qrcode-1/5.png@180": {
+      "pass": true,
+      "ms": 0.696,
+      "texts": [
+        "MEBKM:URL:http\\://en.wikipedia.org/wiki/Main_Page;;"
+      ]
+    },
+    "qrcode-1/6.png@180": {
+      "pass": true,
+      "ms": 0.711,
+      "texts": [
+        "MEBKM:URL:http\\://en.wikipedia.org/wiki/Main_Page;;"
+      ]
+    },
+    "qrcode-1/7.png@180": {
+      "pass": true,
+      "ms": 0.836,
+      "texts": [
+        "MEBKM:URL:http\\://en.wikipedia.org/wiki/Main_Page;;"
+      ]
+    },
+    "qrcode-1/8.png@180": {
+      "pass": true,
+      "ms": 0.862,
+      "texts": [
+        "MEBKM:URL:http\\://en.wikipedia.org/wiki/Main_Page;;"
+      ]
+    },
+    "qrcode-1/9.png@180": {
+      "pass": true,
+      "ms": 0.727,
+      "texts": [
+        "MEBKM:URL:http\\://en.wikipedia.org/wiki/Main_Page;;"
+      ]
+    },
+    "qrcode-1/10.png@180": {
+      "pass": true,
+      "ms": 0.722,
+      "texts": [
+        "MEBKM:URL:http\\://en.wikipedia.org/wiki/Main_Page;;"
+      ]
+    },
+    "qrcode-1/11.png@180": {
+      "pass": true,
+      "ms": 0.746,
+      "texts": [
+        "MEBKM:URL:http\\://en.wikipedia.org/wiki/Main_Page;;"
+      ]
+    },
+    "qrcode-1/12.png@180": {
+      "pass": true,
+      "ms": 0.708,
+      "texts": [
+        "MEBKM:URL:http\\://en.wikipedia.org/wiki/Main_Page;;"
+      ]
+    },
+    "qrcode-1/13.png@180": {
+      "pass": true,
+      "ms": 0.783,
+      "texts": [
+        "http://google.com/gwt/n?u=bluenile.com"
+      ]
+    },
+    "qrcode-1/14.png@180": {
+      "pass": true,
+      "ms": 0.776,
+      "texts": [
+        "http://google.com/gwt/n?u=bluenile.com"
+      ]
+    },
+    "qrcode-1/15.png@180": {
+      "pass": true,
+      "ms": 0.87,
+      "texts": [
+        "http://google.com/gwt/n?u=bluenile.com"
+      ]
+    },
+    "qrcode-1/16.png@180": {
+      "pass": true,
+      "ms": 1.082,
+      "texts": [
+        "Sean Owen\r\nsrowen@google.com\r\n917-364-2918\r\nhttp://awesome-thoughts.com"
+      ]
+    },
+    "qrcode-1/17.png@180": {
+      "pass": true,
+      "ms": 1.195,
+      "texts": [
+        "Sean Owen\r\nsrowen@google.com\r\n917-364-2918\r\nhttp://awesome-thoughts.com"
+      ]
+    },
+    "qrcode-1/18.png@180": {
+      "pass": true,
+      "ms": 1.119,
+      "texts": [
+        "Sean Owen\r\nsrowen@google.com\r\n917-364-2918\r\nhttp://awesome-thoughts.com"
+      ]
+    },
+    "qrcode-1/19.png@180": {
+      "pass": true,
+      "ms": 0.79,
+      "texts": [
+        "Sean Owen\r\nsrowen@google.com\r\n917-364-2918\r\nhttp://awesome-thoughts.com"
+      ]
+    },
+    "qrcode-1/20.png@180": {
+      "pass": true,
+      "ms": 0.804,
+      "texts": [
+        "Sean Owen\r\nsrowen@google.com\r\n917-364-2918\r\nhttp://awesome-thoughts.com"
+      ]
+    },
+    "qrcode-2/1.png@180": {
+      "pass": true,
+      "ms": 0.872,
+      "texts": [
+        "When we at WRT talk about \\\"text,\\\" we are generally talking about a particular kind of readable information encoding - and readable is a complex proposition. Text may be stylized in a way we are unfamiliar with, as in blackletter - it may be interspersed with some markup we don\\'t understand, such as HTML - it may be be a substitution system we aren\\'t familiar with, such as braille or morse code - or it may be a system that, while technically human-readable, isn\\'t particularly optimized for reading by humans, as with barcodes (although barcodes can be read)."
+      ]
+    },
+    "qrcode-2/2.png@180": {
+      "pass": true,
+      "ms": 3.221,
+      "texts": [
+        "LANDBYASCARC   PERCEPTIBLEC EEK,OOZI GITSWAYTHROU  AWILDERNESSOFBESUPPOSED,I  CANT,ORATL ASTDWARFISH.NO REESOFANYM  NITUDEARETOBESOMEMISERA  EFRAMEBUIL I GS,TENANTED, U INGSUMMER   THEFUGITIVE;BUTTHEWHO  ISLAND,WI H   EXCEPTIONOFT   W STERNPOI  ,ANDALINEOFLLIAMLEGR   .HEWASOF N    ENTHUGUENOTF    Y ANDHADON  BEENWEALTHTIONCONSE  ENTUPONH SD   STERS,HELEFTNE   LE NS,THEC   OFHISFOREOUTHCARO   A.THISISLA    AVERYSINGULARO    TCONSISTSO  ITTLEELSEDSAQUART   FAMILE. TI   PARATEDFROMTHEMA   AN BYASCAR   YPERCEPTERESORT     MARSH EN   EVEGETATION,ASMIGH   SU POSED,   CANT,ORATREMITY,      ORT OULTRIESTANDS,ANDWHEREARESOM MIS      FRAMEBUIFEVER,MAYBE      INDEED,                TO;BUTT      EISLAND,WITNYYEARSAGO,IC    ACTED                    LLIAM    AND.HEWASOFANNESHADREDUCEDHIM OWA                       IONC NSEQUENTUPONHISDSIDENCEATSULLIVA \\'S                          HC ROLINA.THISISLANOUTTHR    LESLON .        THATN  OINTE        U RTEROF    E.ITISTHROU       ERNE       DSANDSLI  ,AFAVOR        TOFT       HEN.T"
+      ]
+    },
+    "qrcode-2/4.png@180": {
+      "pass": true,
+      "ms": 1.169,
+      "texts": [
+        "http://wwws.keihin.ktr.mlit.go.jp/keitai/"
+      ]
+    },
+    "qrcode-2/5.png@180": {
+      "pass": true,
+      "ms": 0.56,
+      "texts": [
+        "2021200000"
+      ]
+    },
+    "qrcode-2/6.png@180": {
+      "pass": true,
+      "ms": 2.616,
+      "texts": [
+        "http://d.kaywa.com/20207100"
+      ]
+    },
+    "qrcode-2/7.png@180": {
+      "pass": true,
+      "ms": 0.34,
+      "texts": [
+        "BIZCARD:N:Todd;X:Ogasawara;T:Tech Geek;C:MobileViews.com;A:MobileTown USA;E:editor@mobileviews.com;;"
+      ]
+    },
+    "qrcode-2/8.png@180": {
+      "pass": true,
+      "ms": 0.295,
+      "texts": [
+        "http://staticrooster.com"
+      ]
+    },
+    "qrcode-2/9.png@180": {
+      "pass": true,
+      "ms": 0.165,
+      "texts": [
+        "Morden"
+      ]
+    },
+    "qrcode-2/10.png@180": {
+      "pass": true,
+      "ms": 0.127,
+      "texts": [
+        "Google モバイル\r\nhttp://google.jp"
+      ]
+    },
+    "qrcode-2/11.png@180": {
+      "pass": true,
+      "ms": 0.326,
+      "texts": [
+        "BEGIN:VCARD\r\nN:Kennedy;Steve\r\nTEL:+44 (0)7775 755503\r\nADR;HOME:;;Flat 2, 43 Howitt Road, Belsize Park;London;;NW34LU;UK\r\nORG:NetTek Ltd;\r\nTITLE:Consultant\r\nEMAIL:steve@nettek.co.uk\r\nURL:www.nettek.co.uk\r\nEMAIL;IM:MSN:steve@gbnet.net\r\nNOTE:Testing 1 2 3\r\nBDAY:19611105\r\nEND:VCARD"
+      ]
+    },
+    "qrcode-2/12.png@180": {
+      "pass": false,
+      "ms": 0.263,
+      "texts": []
+    },
+    "qrcode-2/13.png@180": {
+      "pass": false,
+      "ms": 0.256,
+      "texts": []
+    },
+    "qrcode-2/14.png@180": {
+      "pass": true,
+      "ms": 0.515,
+      "texts": [
+        "http://bbc.co.uk/programmes"
+      ]
+    },
+    "qrcode-2/15.png@180": {
+      "pass": true,
+      "ms": 0.765,
+      "texts": [
+        "In 25 words or less in the comments, below, tell us how QR codes will make the world less ordinary."
+      ]
+    },
+    "qrcode-2/16.png@180": {
+      "pass": true,
+      "ms": 0.574,
+      "texts": [
+        "[内側QRコード]\r\n\r\n*ダブルQR*\r\nhttp://d-qr.net/ex/",
+        "[外側QRコード]\r\n \r\n*ﾀﾞﾌﾞﾙQR*\r\nhttp://d-qr.net/ex/"
+      ]
+    },
+    "qrcode-2/17.png@180": {
+      "pass": true,
+      "ms": 0.269,
+      "texts": [
+        "ﾃﾞｻﾞｲﾝQR\r\nhttp://d-qr.net/ex/"
+      ]
+    },
+    "qrcode-2/18.png@180": {
+      "pass": true,
+      "ms": 0.262,
+      "texts": [
+        "*ﾃﾞｻﾞｲﾝQR*     \r\nhttp://d-qr.net/ex/       "
+      ]
+    },
+    "qrcode-2/19.png@180": {
+      "pass": true,
+      "ms": 0.257,
+      "texts": [
+        "*ﾃﾞｻﾞｲﾝQR*    \r\nhttp://d-qr.net/ex/         "
+      ]
+    },
+    "qrcode-2/20.png@180": {
+      "pass": true,
+      "ms": 0.282,
+      "texts": [
+        "*ﾃﾞｻﾞｲﾝQR*\r\nhttp://d-qr.net/ex/    "
+      ]
+    },
+    "qrcode-2/21.png@180": {
+      "pass": true,
+      "ms": 0.29,
+      "texts": [
+        "*ﾃﾞｻﾞｲﾝQR*  \r\nhttp://d-qr.net/ex/        "
+      ]
+    },
+    "qrcode-2/22.png@180": {
+      "pass": true,
+      "ms": 0.458,
+      "texts": [
+        "http://www.hotpepper.jp/mobile/cgi-bin/MBLC80100.cgi?SA=00&Z=AG&vos=hpp064&uid=NULLGWDOCOMO"
+      ]
+    },
+    "qrcode-2/23.png@180": {
+      "pass": true,
+      "ms": 0.291,
+      "texts": [
+        "http://aniful.jp/pr/  "
+      ]
+    },
+    "qrcode-2/24.png@180": {
+      "pass": true,
+      "ms": 0.207,
+      "texts": [
+        "*ﾃﾞｻﾞｲﾝQR* \r\nhttp://d-qr.net/ex/      "
+      ]
+    },
+    "qrcode-2/25.png@180": {
+      "pass": true,
+      "ms": 0.284,
+      "texts": [
+        "MEBKM:TITLE:;URL:http://d.kaywa.com/2020400102;;"
+      ]
+    },
+    "qrcode-2/26.png@180": {
+      "pass": true,
+      "ms": 0.236,
+      "texts": [
+        "<ﾃﾞｻﾞｲﾝQR> \r\nｲﾗｽﾄ入りｶﾗｰQRｺｰﾄﾞ\r\nhttp://d-qr.net/ex/ "
+      ]
+    },
+    "qrcode-2/27.png@180": {
+      "pass": true,
+      "ms": 0.212,
+      "texts": [
+        "*ﾃﾞｻﾞｲﾝQR*   \r\nhttp://d-qr.net/ex/ "
+      ]
+    },
+    "qrcode-2/28.png@180": {
+      "pass": false,
+      "ms": 0.546,
+      "texts": []
+    },
+    "qrcode-2/29.png@180": {
+      "pass": true,
+      "ms": 0.19,
+      "texts": [
+        "http://live.fdgm.jp/u/event/hype/hype_top.html \r\n\r\nMEBKM:TITLE:hypeモバイル;URL:http\\://live.fdgm.jp/u/event/hype/hype_top.html;;"
+      ]
+    },
+    "qrcode-2/30.png@180": {
+      "pass": true,
+      "ms": 0.311,
+      "texts": [
+        "MECARD:N:測試;;"
+      ]
+    },
+    "qrcode-2/31.png@180": {
+      "pass": true,
+      "ms": 0.752,
+      "texts": [
+        "今度のバージョンでは文章の暗号化ができます。"
+      ]
+    },
+    "qrcode-2/32.png@180": {
+      "pass": true,
+      "ms": 0.261,
+      "texts": [
+        "BEGIN:VCARD\r\nN:Kennedy;Steve\r\nTEL:+44 (0)7775 755503\r\nADR;HOME:;;Flat 2, 43 Howitt Road, Belsize Park;London;;NW34LU;UK\r\nORG:NetTek Ltd;\r\nTITLE:Consultant\r\nEMAIL:steve@nettek.co.uk\r\nURL:www.nettek.co.uk\r\nEMAIL;IM:MSN:steve@gbnet.net\r\nNOTE:Testing 1 2 3\r\nBDAY:19611105\r\nEND:VCARD"
+      ]
+    },
+    "qrcode-2/33.png@180": {
+      "pass": true,
+      "ms": 0.112,
+      "texts": [
+        "\u0001\u0010AD:SUB:阿;;"
+      ]
+    },
+    "qrcode-2/34.png@180": {
+      "pass": true,
+      "ms": 0.118,
+      "texts": [
+        "http://www.google.com/"
+      ]
+    },
+    "qrcode-2/35.png@180": {
+      "pass": true,
+      "ms": 0.12,
+      "texts": [
+        "http://www.google.com/"
+      ]
+    },
+    "qrcode-2/36.png@180": {
+      "pass": true,
+      "ms": 0.169,
+      "texts": [
+        "Morden"
+      ]
+    },
+    "qrcode-3/01.png@180": {
+      "pass": true,
+      "ms": 0.287,
+      "texts": [
+        "http://arnaud.sahuguet.com/graffiti/test.php?ll=-74.00309961503218,40.74102573163046,0"
+      ]
+    },
+    "qrcode-3/02.png@180": {
+      "pass": true,
+      "ms": 0.24,
+      "texts": [
+        "http://arnaud.sahuguet.com/graffiti/test.php?ll=-74.00309961503218,40.74102573163046,0"
+      ]
+    },
+    "qrcode-3/03.png@180": {
+      "pass": true,
+      "ms": 0.235,
+      "texts": [
+        "http://arnaud.sahuguet.com/graffiti/test.php?ll=-74.00309961503218,40.74102573163046,0"
+      ]
+    },
+    "qrcode-3/04.png@180": {
+      "pass": true,
+      "ms": 0.266,
+      "texts": [
+        "http://arnaud.sahuguet.com/graffiti/test.php?ll=-74.00309961503218,40.74102573163046,0"
+      ]
+    },
+    "qrcode-3/05.png@180": {
+      "pass": true,
+      "ms": 0.239,
+      "texts": [
+        "http://arnaud.sahuguet.com/graffiti/test.php?ll=-74.00309961503218,40.74102573163046,0"
+      ]
+    },
+    "qrcode-3/06.png@180": {
+      "pass": true,
+      "ms": 0.268,
+      "texts": [
+        "http://arnaud.sahuguet.com/graffiti/test.php?ll=-74.00309961503218,40.74102573163046,0"
+      ]
+    },
+    "qrcode-3/07.png@180": {
+      "pass": true,
+      "ms": 0.27,
+      "texts": [
+        "http://arnaud.sahuguet.com/graffiti/test.php?ll=-74.00309961503218,40.74102573163046,0"
+      ]
+    },
+    "qrcode-3/08.png@180": {
+      "pass": true,
+      "ms": 0.271,
+      "texts": [
+        "http://arnaud.sahuguet.com/graffiti/test.php?ll=-74.00309961503218,40.74102573163046,0"
+      ]
+    },
+    "qrcode-3/09.png@180": {
+      "pass": true,
+      "ms": 0.269,
+      "texts": [
+        "http://arnaud.sahuguet.com/graffiti/test.php?ll=-74.00309961503218,40.74102573163046,0"
+      ]
+    },
+    "qrcode-3/10.png@180": {
+      "pass": true,
+      "ms": 0.219,
+      "texts": [
+        "MECARD:N:Google 411,;TEL:18665881077;;"
+      ]
+    },
+    "qrcode-3/11.png@180": {
+      "pass": true,
+      "ms": 0.229,
+      "texts": [
+        "MECARD:N:Google 411,;TEL:18665881077;;"
+      ]
+    },
+    "qrcode-3/12.png@180": {
+      "pass": true,
+      "ms": 0.215,
+      "texts": [
+        "MECARD:N:Google 411,;TEL:18665881077;;"
+      ]
+    },
+    "qrcode-3/13.png@180": {
+      "pass": true,
+      "ms": 0.186,
+      "texts": [
+        "MECARD:N:Google 411,;TEL:18665881077;;"
+      ]
+    },
+    "qrcode-3/14.png@180": {
+      "pass": true,
+      "ms": 0.217,
+      "texts": [
+        "MECARD:N:Google 411,;TEL:18665881077;;"
+      ]
+    },
+    "qrcode-3/15.png@180": {
+      "pass": true,
+      "ms": 0.203,
+      "texts": [
+        "MECARD:N:Google 411,;TEL:18665881077;;"
+      ]
+    },
+    "qrcode-3/16.png@180": {
+      "pass": true,
+      "ms": 0.226,
+      "texts": [
+        "MECARD:N:Google 411,;TEL:18665881077;;"
+      ]
+    },
+    "qrcode-3/17.png@180": {
+      "pass": true,
+      "ms": 0.241,
+      "texts": [
+        "MECARD:N:Google 411,;TEL:18665881077;;"
+      ]
+    },
+    "qrcode-3/18.png@180": {
+      "pass": true,
+      "ms": 0.344,
+      "texts": [
+        "UI office hours signup\r\nhttp://www.corp.google.com/sparrow/ui_office_hours/ \r\n"
+      ]
+    },
+    "qrcode-3/19.png@180": {
+      "pass": true,
+      "ms": 0.302,
+      "texts": [
+        "UI office hours signup\r\nhttp://www.corp.google.com/sparrow/ui_office_hours/ \r\n"
+      ]
+    },
+    "qrcode-3/20.png@180": {
+      "pass": true,
+      "ms": 0.33,
+      "texts": [
+        "UI office hours signup\r\nhttp://www.corp.google.com/sparrow/ui_office_hours/ \r\n"
+      ]
+    },
+    "qrcode-3/21.png@180": {
+      "pass": true,
+      "ms": 0.319,
+      "texts": [
+        "UI office hours signup\r\nhttp://www.corp.google.com/sparrow/ui_office_hours/ \r\n"
+      ]
+    },
+    "qrcode-3/22.png@180": {
+      "pass": true,
+      "ms": 0.316,
+      "texts": [
+        "UI office hours signup\r\nhttp://www.corp.google.com/sparrow/ui_office_hours/ \r\n"
+      ]
+    },
+    "qrcode-3/23.png@180": {
+      "pass": true,
+      "ms": 0.355,
+      "texts": [
+        "UI office hours signup\r\nhttp://www.corp.google.com/sparrow/ui_office_hours/ \r\n"
+      ]
+    },
+    "qrcode-3/24.png@180": {
+      "pass": true,
+      "ms": 0.311,
+      "texts": [
+        "UI office hours signup\r\nhttp://www.corp.google.com/sparrow/ui_office_hours/ \r\n"
+      ]
+    },
+    "qrcode-3/25.png@180": {
+      "pass": true,
+      "ms": 0.342,
+      "texts": [
+        "UI office hours signup\r\nhttp://www.corp.google.com/sparrow/ui_office_hours/ \r\n"
+      ]
+    },
+    "qrcode-3/26.png@180": {
+      "pass": true,
+      "ms": 0.229,
+      "texts": [
+        "MECARD:N:Sean Owen;TEL:+12125658770;EMAIL:srowen@google.com;;"
+      ]
+    },
+    "qrcode-3/27.png@180": {
+      "pass": true,
+      "ms": 0.215,
+      "texts": [
+        "MECARD:N:Sean Owen;TEL:+12125658770;EMAIL:srowen@google.com;;"
+      ]
+    },
+    "qrcode-3/28.png@180": {
+      "pass": true,
+      "ms": 0.225,
+      "texts": [
+        "MECARD:N:Sean Owen;TEL:+12125658770;EMAIL:srowen@google.com;;"
+      ]
+    },
+    "qrcode-3/29.png@180": {
+      "pass": true,
+      "ms": 0.227,
+      "texts": [
+        "MECARD:N:Sean Owen;TEL:+12125658770;EMAIL:srowen@google.com;;"
+      ]
+    },
+    "qrcode-3/30.png@180": {
+      "pass": true,
+      "ms": 0.212,
+      "texts": [
+        "MECARD:N:Sean Owen;TEL:+12125658770;EMAIL:srowen@google.com;;"
+      ]
+    },
+    "qrcode-3/31.png@180": {
+      "pass": true,
+      "ms": 0.208,
+      "texts": [
+        "MECARD:N:Sean Owen;TEL:+12125658770;EMAIL:srowen@google.com;;"
+      ]
+    },
+    "qrcode-3/32.png@180": {
+      "pass": true,
+      "ms": 0.199,
+      "texts": [
+        "MECARD:N:Sean Owen;TEL:+12125658770;EMAIL:srowen@google.com;;"
+      ]
+    },
+    "qrcode-3/33.png@180": {
+      "pass": true,
+      "ms": 0.214,
+      "texts": [
+        "MECARD:N:Sean Owen;TEL:+12125658770;EMAIL:srowen@google.com;;"
+      ]
+    },
+    "qrcode-3/34.png@180": {
+      "pass": true,
+      "ms": 0.219,
+      "texts": [
+        "MECARD:N:Sean Owen;TEL:+12125658770;EMAIL:srowen@google.com;;"
+      ]
+    },
+    "qrcode-3/35.png@180": {
+      "pass": true,
+      "ms": 0.252,
+      "texts": [
+        "MECARD:N:Sean Owen;TEL:+12125658770;EMAIL:srowen@google.com;;"
+      ]
+    },
+    "qrcode-3/36.png@180": {
+      "pass": true,
+      "ms": 0.234,
+      "texts": [
+        "MECARD:N:Sean Owen;TEL:+12125658770;EMAIL:srowen@google.com;;"
+      ]
+    },
+    "qrcode-3/37.png@180": {
+      "pass": true,
+      "ms": 0.261,
+      "texts": [
+        "MECARD:N:Sean Owen;TEL:+12125658770;EMAIL:srowen@google.com;;"
+      ]
+    },
+    "qrcode-3/38.png@180": {
+      "pass": true,
+      "ms": 0.222,
+      "texts": [
+        "MECARD:N:Sean Owen;TEL:+12125658770;EMAIL:srowen@google.com;;"
+      ]
+    },
+    "qrcode-3/39.png@180": {
+      "pass": true,
+      "ms": 0.275,
+      "texts": [
+        "MECARD:N:Sean Owen;TEL:+12125658770;EMAIL:srowen@google.com;;"
+      ]
+    },
+    "qrcode-3/40.png@180": {
+      "pass": true,
+      "ms": 0.232,
+      "texts": [
+        "MECARD:N:Sean Owen;TEL:+12125658770;EMAIL:srowen@google.com;;"
+      ]
+    },
+    "qrcode-3/41.png@180": {
+      "pass": true,
+      "ms": 0.245,
+      "texts": [
+        "MECARD:N:Sean Owen;TEL:+12125658770;EMAIL:srowen@google.com;;"
+      ]
+    },
+    "qrcode-3/42.png@180": {
+      "pass": true,
+      "ms": 0.207,
+      "texts": [
+        "MECARD:N:Sean Owen;TEL:+12125658770;EMAIL:srowen@google.com;;"
+      ]
+    },
+    "qrcode-4/01.png@180": {
+      "pass": true,
+      "ms": 0.23,
+      "texts": [
+        "Google Print Ads - T.G.I.A.F. - January 31, 2008"
+      ]
+    },
+    "qrcode-4/02.png@180": {
+      "pass": true,
+      "ms": 0.209,
+      "texts": [
+        "Google Print Ads - T.G.I.A.F. - January 31, 2008"
+      ]
+    },
+    "qrcode-4/03.png@180": {
+      "pass": true,
+      "ms": 0.214,
+      "texts": [
+        "Google Print Ads - T.G.I.A.F. - January 31, 2008"
+      ]
+    },
+    "qrcode-4/04.png@180": {
+      "pass": true,
+      "ms": 0.202,
+      "texts": [
+        "Google Print Ads - T.G.I.A.F. - January 31, 2008"
+      ]
+    },
+    "qrcode-4/05.png@180": {
+      "pass": false,
+      "ms": 0.288,
+      "texts": []
+    },
+    "qrcode-4/06.png@180": {
+      "pass": false,
+      "ms": 0.296,
+      "texts": []
+    },
+    "qrcode-4/07.png@180": {
+      "pass": true,
+      "ms": 0.232,
+      "texts": [
+        "Google Print Ads - T.G.I.A.F. - January 31, 2008"
+      ]
+    },
+    "qrcode-4/08.png@180": {
+      "pass": false,
+      "ms": 0.316,
+      "texts": []
+    },
+    "qrcode-4/09.png@180": {
+      "pass": false,
+      "ms": 0.315,
+      "texts": []
+    },
+    "qrcode-4/10.png@180": {
+      "pass": true,
+      "ms": 0.212,
+      "texts": [
+        "Google Print Ads - T.G.I.A.F. - January 31, 2008"
+      ]
+    },
+    "qrcode-4/11.png@180": {
+      "pass": true,
+      "ms": 0.205,
+      "texts": [
+        "Google Print Ads - T.G.I.A.F. - January 31, 2008"
+      ]
+    },
+    "qrcode-4/12.png@180": {
+      "pass": true,
+      "ms": 0.213,
+      "texts": [
+        "Google Print Ads - T.G.I.A.F. - January 31, 2008"
+      ]
+    },
+    "qrcode-4/13.png@180": {
+      "pass": false,
+      "ms": 0.304,
+      "texts": []
+    },
+    "qrcode-4/14.png@180": {
+      "pass": true,
+      "ms": 0.209,
+      "texts": [
+        "Google Print Ads - T.G.I.A.F. - January 31, 2008"
+      ]
+    },
+    "qrcode-4/15.png@180": {
+      "pass": true,
+      "ms": 0.217,
+      "texts": [
+        "http://code.google.com"
+      ]
+    },
+    "qrcode-4/16.png@180": {
+      "pass": true,
+      "ms": 0.203,
+      "texts": [
+        "http://code.google.com"
+      ]
+    },
+    "qrcode-4/17.png@180": {
+      "pass": true,
+      "ms": 0.234,
+      "texts": [
+        "http://code.google.com"
+      ]
+    },
+    "qrcode-4/18.png@180": {
+      "pass": true,
+      "ms": 0.19,
+      "texts": [
+        "http://code.google.com"
+      ]
+    },
+    "qrcode-4/19.png@180": {
+      "pass": true,
+      "ms": 0.194,
+      "texts": [
+        "http://code.google.com"
+      ]
+    },
+    "qrcode-4/20.png@180": {
+      "pass": true,
+      "ms": 0.194,
+      "texts": [
+        "http://code.google.com"
+      ]
+    },
+    "qrcode-4/21.png@180": {
+      "pass": true,
+      "ms": 0.204,
+      "texts": [
+        "http://code.google.com"
+      ]
+    },
+    "qrcode-4/22.png@180": {
+      "pass": true,
+      "ms": 0.196,
+      "texts": [
+        "http://code.google.com"
+      ]
+    },
+    "qrcode-4/23.png@180": {
+      "pass": true,
+      "ms": 0.197,
+      "texts": [
+        "http://code.google.com"
+      ]
+    },
+    "qrcode-4/24.png@180": {
+      "pass": true,
+      "ms": 0.197,
+      "texts": [
+        "http://code.google.com"
+      ]
+    },
+    "qrcode-4/25.png@180": {
+      "pass": true,
+      "ms": 0.22,
+      "texts": [
+        "http://code.google.com"
+      ]
+    },
+    "qrcode-4/26.png@180": {
+      "pass": true,
+      "ms": 0.216,
+      "texts": [
+        "http://code.google.com"
+      ]
+    },
+    "qrcode-4/27.png@180": {
+      "pass": true,
+      "ms": 0.245,
+      "texts": [
+        "http://code.google.com"
+      ]
+    },
+    "qrcode-4/28.png@180": {
+      "pass": true,
+      "ms": 0.227,
+      "texts": [
+        "http://code.google.com"
+      ]
+    },
+    "qrcode-4/29.png@180": {
+      "pass": true,
+      "ms": 0.236,
+      "texts": [
+        "http://code.google.com"
+      ]
+    },
+    "qrcode-4/30.png@180": {
+      "pass": false,
+      "ms": 0.312,
+      "texts": []
+    },
+    "qrcode-4/31.png@180": {
+      "pass": false,
+      "ms": 0.315,
+      "texts": []
+    },
+    "qrcode-4/32.png@180": {
+      "pass": false,
+      "ms": 0.336,
+      "texts": []
+    },
+    "qrcode-4/33.png@180": {
+      "pass": false,
+      "ms": 0.333,
+      "texts": []
+    },
+    "qrcode-4/34.png@180": {
+      "pass": false,
+      "ms": 0.297,
+      "texts": []
+    },
+    "qrcode-4/35.png@180": {
+      "pass": true,
+      "ms": 0.195,
+      "texts": [
+        "http://code.google.com/p/zxing/"
+      ]
+    },
+    "qrcode-4/36.png@180": {
+      "pass": true,
+      "ms": 0.244,
+      "texts": [
+        "http://code.google.com/p/zxing/"
+      ]
+    },
+    "qrcode-4/37.png@180": {
+      "pass": true,
+      "ms": 0.216,
+      "texts": [
+        "http://code.google.com/p/zxing/"
+      ]
+    },
+    "qrcode-4/38.png@180": {
+      "pass": true,
+      "ms": 0.199,
+      "texts": [
+        "http://code.google.com/p/zxing/"
+      ]
+    },
+    "qrcode-4/39.png@180": {
+      "pass": true,
+      "ms": 0.196,
+      "texts": [
+        "http://code.google.com/p/zxing/"
+      ]
+    },
+    "qrcode-4/40.png@180": {
+      "pass": true,
+      "ms": 0.188,
+      "texts": [
+        "http://code.google.com/p/zxing/"
+      ]
+    },
+    "qrcode-4/41.png@180": {
+      "pass": true,
+      "ms": 0.199,
+      "texts": [
+        "http://code.google.com/p/zxing/"
+      ]
+    },
+    "qrcode-4/42.png@180": {
+      "pass": true,
+      "ms": 0.203,
+      "texts": [
+        "http://code.google.com/p/zxing/"
+      ]
+    },
+    "qrcode-4/43.png@180": {
+      "pass": true,
+      "ms": 0.181,
+      "texts": [
+        "http://code.google.com/p/zxing/"
+      ]
+    },
+    "qrcode-4/44.png@180": {
+      "pass": true,
+      "ms": 0.18,
+      "texts": [
+        "http://code.google.com/p/zxing/"
+      ]
+    },
+    "qrcode-4/45.png@180": {
+      "pass": true,
+      "ms": 0.185,
+      "texts": [
+        "http://code.google.com/p/zxing/"
+      ]
+    },
+    "qrcode-4/46.png@180": {
+      "pass": true,
+      "ms": 0.213,
+      "texts": [
+        "http://code.google.com/p/zxing/"
+      ]
+    },
+    "qrcode-4/47.png@180": {
+      "pass": true,
+      "ms": 0.207,
+      "texts": [
+        "http://code.google.com/p/zxing/"
+      ]
+    },
+    "qrcode-4/48.png@180": {
+      "pass": true,
+      "ms": 0.192,
+      "texts": [
+        "http://code.google.com/p/zxing/"
+      ]
+    },
+    "qrcode-5/01.png@180": {
+      "pass": true,
+      "ms": 0.221,
+      "texts": [
+        "MECARD:N:Sean Owen;TEL:+12125658770;EMAIL:srowen@google.com;;"
+      ]
+    },
+    "qrcode-5/02.png@180": {
+      "pass": true,
+      "ms": 0.213,
+      "texts": [
+        "MECARD:N:Sean Owen;TEL:+12125658770;EMAIL:srowen@google.com;;"
+      ]
+    },
+    "qrcode-5/03.png@180": {
+      "pass": true,
+      "ms": 0.232,
+      "texts": [
+        "MECARD:N:Sean Owen;TEL:+12125658770;EMAIL:srowen@google.com;;"
+      ]
+    },
+    "qrcode-5/04.png@180": {
+      "pass": true,
+      "ms": 0.237,
+      "texts": [
+        "MECARD:N:Sean Owen;TEL:+12125658770;EMAIL:srowen@google.com;;"
+      ]
+    },
+    "qrcode-5/05.png@180": {
+      "pass": true,
+      "ms": 0.208,
+      "texts": [
+        "MECARD:N:Sean Owen;TEL:+12125658770;EMAIL:srowen@google.com;;"
+      ]
+    },
+    "qrcode-5/06.png@180": {
+      "pass": true,
+      "ms": 0.217,
+      "texts": [
+        "MECARD:N:Sean Owen;TEL:+12125658770;EMAIL:srowen@google.com;;"
+      ]
+    },
+    "qrcode-5/07.png@180": {
+      "pass": true,
+      "ms": 0.212,
+      "texts": [
+        "MECARD:N:Sean Owen;TEL:+12125658770;EMAIL:srowen@google.com;;"
+      ]
+    },
+    "qrcode-5/08.png@180": {
+      "pass": true,
+      "ms": 0.216,
+      "texts": [
+        "MECARD:N:Sean Owen;TEL:+12125658770;EMAIL:srowen@google.com;;"
+      ]
+    },
+    "qrcode-5/09.png@180": {
+      "pass": true,
+      "ms": 0.229,
+      "texts": [
+        "MECARD:N:Sean Owen;TEL:+12125658770;EMAIL:srowen@google.com;;"
+      ]
+    },
+    "qrcode-5/10.png@180": {
+      "pass": true,
+      "ms": 0.218,
+      "texts": [
+        "MECARD:N:Sean Owen;TEL:+12125658770;EMAIL:srowen@google.com;;"
+      ]
+    },
+    "qrcode-5/11.png@180": {
+      "pass": true,
+      "ms": 0.208,
+      "texts": [
+        "MECARD:N:Sean Owen;TEL:+12125658770;EMAIL:srowen@google.com;;"
+      ]
+    },
+    "qrcode-5/12.png@180": {
+      "pass": true,
+      "ms": 0.21,
+      "texts": [
+        "MECARD:N:Sean Owen;TEL:+12125658770;EMAIL:srowen@google.com;;"
+      ]
+    },
+    "qrcode-5/13.png@180": {
+      "pass": true,
+      "ms": 0.209,
+      "texts": [
+        "MECARD:N:Sean Owen;TEL:+12125658770;EMAIL:srowen@google.com;;"
+      ]
+    },
+    "qrcode-5/14.png@180": {
+      "pass": true,
+      "ms": 0.222,
+      "texts": [
+        "MECARD:N:Sean Owen;TEL:+12125658770;EMAIL:srowen@google.com;;"
+      ]
+    },
+    "qrcode-5/15.png@180": {
+      "pass": true,
+      "ms": 0.215,
+      "texts": [
+        "MECARD:N:Sean Owen;TEL:+12125658770;EMAIL:srowen@google.com;;"
+      ]
+    },
+    "qrcode-5/16.png@180": {
+      "pass": true,
+      "ms": 1.407,
+      "texts": [
+        "THROUGH THE LOOKING-GLASS\n\nBy Lewis Carroll\n\n\nCHAPTER I. Looking-Glass house\n\nOne thing was certain, that the WHITE kitten had had nothing to do with\nit:--it was the black kitten's fault entirely. For the white kitten had\nbeen having its face washed by the old cat for the last quarter of\nan hour (and bearing it pretty well, considering); so you see that it\nCOULDN'T have had any hand in the mischief.\n\nThe way Dinah washed her children's faces was this: first she held the\npoor thing down by its ear with one paw, and then with the other paw she\nrubbed its face all over, the wrong way, beginning at the nose: and\njust now, as I said, she was hard at work on the white kitten, which was\nlying quite still and trying to purr--no doubt feeling that it was all\nmeant for its good.\n\nBut the black kitten had been finished with earlier in the afternoon,\nand so, while Alice was sitting curled up in a corner of the great\narm-chair, half talking to herself and half asleep, the kitten had been\nhaving a grand game of romps with the ball of worsted Alice had been\ntrying to wind up, and had been rolling it up and down till it had all\ncome undone again; and there it was, spread over the hearth-rug, all\nknots and tangles, with the kitten running after its own tail in the\nmiddle.\n\n'Oh, you wicked little thing!' cried Alice, catching up the kitten, and\ngiving it a little kiss to make it understand that it was in disgrace.\n'Really, Dinah ought to have taught you better manners! You OUGHT,\nDinah, you know you ought!' she added, looking reproachfully at the old\ncat, and speaking in as cross a voice as she could manage--and then she\nscrambled back into the arm-chair, taking the kitten and the worsted\nwith her, and began winding up the ball again. But she didn't get on\nvery fast, as she was talking all the time, sometimes to the kitten, and\nsometimes to herself. Kitty sat very demurely on her knee, pretending to\nwatch the progress of the winding, and now and then putting out one\npaw and gently touching the ball, as if it would be glad to help, if it\nmight.\n\n'Do you know what to-morrow is, Kitty?' Alice began. 'You'd have guessed\nif you'd been up in the window with me--only Dinah was making you tidy,\nso you couldn't. I was watching the boys getting in sticks for the\nbonfire--and it wants plenty of sticks, Kitty! Only it got so cold, and\nit snowed so, they had to leave off. Never mind, Kitty, we'll go and\nsee the bonfire to-morrow.' Here Alice wound two or three turns of the\nworsted round the kitten's neck, just to see how it would look: this led\nto a scramble, in which the ball rolled down upon the floor, and yards\nand yards of it got unwound again.\n\n'Do you know, I was so angry, Kitty,' Alice went on as soon as they were\ncomfortably settled again, 'when I saw all the mischief you had been\ndoing, I was very nearly opening the window, and putting you out into\nthe snow! And you'd have deserved it, you little mischievous darling!\nWha\n"
+      ]
+    },
+    "qrcode-5/17.png@180": {
+      "pass": true,
+      "ms": 1.383,
+      "texts": [
+        "THROUGH THE LOOKING-GLASS\n\nBy Lewis Carroll\n\n\nCHAPTER I. Looking-Glass house\n\nOne thing was certain, that the WHITE kitten had had nothing to do with\nit:--it was the black kitten's fault entirely. For the white kitten had\nbeen having its face washed by the old cat for the last quarter of\nan hour (and bearing it pretty well, considering); so you see that it\nCOULDN'T have had any hand in the mischief.\n\nThe way Dinah washed her children's faces was this: first she held the\npoor thing down by its ear with one paw, and then with the other paw she\nrubbed its face all over, the wrong way, beginning at the nose: and\njust now, as I said, she was hard at work on the white kitten, which was\nlying quite still and trying to purr--no doubt feeling that it was all\nmeant for its good.\n\nBut the black kitten had been finished with earlier in the afternoon,\nand so, while Alice was sitting curled up in a corner of the great\narm-chair, half talking to herself and half asleep, the kitten had been\nhaving a grand game of romps with the ball of worsted Alice had been\ntrying to wind up, and had been rolling it up and down till it had all\ncome undone again; and there it was, spread over the hearth-rug, all\nknots and tangles, with the kitten running after its own tail in the\nmiddle.\n\n'Oh, you wicked little thing!' cried Alice, catching up the kitten, and\ngiving it a little kiss to make it understand that it was in disgrace.\n'Really, Dinah ought to have taught you better manners! You OUGHT,\nDinah, you know you ought!' she added, looking reproachfully at the old\ncat, and speaking in as cross a voice as she could manage--and then she\nscrambled back into the arm-chair, taking the kitten and the worsted\nwith her, and began winding up the ball again. But she didn't get on\nvery fast, as she was talking all the time, sometimes to the kitten, and\nsometimes to herself. Kitty sat very demurely on her knee, pretending to\nwatch the progress of the winding, and now and then putting out one\npaw and gently touching the ball, as if it would be glad to help, if it\nmight.\n\n'Do you know what to-morrow is, Kitty?' Alice began. 'You'd have guessed\nif you'd been up in the window with me--only Dinah was making you tidy,\nso you couldn't. I was watching the boys getting in sticks for the\nbonfire--and it wants plenty of sticks, Kitty! Only it \n"
+      ]
+    },
+    "qrcode-5/18.png@180": {
+      "pass": true,
+      "ms": 1.516,
+      "texts": [
+        "THROUGH THE LOOKING-GLASS\n\nBy Lewis Carroll\n\n\nCHAPTER I. Looking-Glass house\n\nOne thing was certain, that the WHITE kitten had had nothing to do with\nit:--it was the black kitten's fault entirely. For the white kitten had\nbeen having its face washed by the old cat for the last quarter of\nan hour (and bearing it pretty well, considering); so you see that it\nCOULDN'T have had any hand in the mischief.\n\nThe way Dinah washed her children's faces was this: first she held the\npoor thing down by its ear with one paw, and then with the other paw she\nrubbed its face all over, the wrong way, beginning at the nose: and\njust now, as I said, she was hard at work on the white kitten, which was\nlying quite still and trying to purr--no doubt feeling that it was all\nmeant for its good.\n\nBut the black kitten had been finished with earlier in the afternoon,\nand so, while Alice was sitting curled up in a corner of the great\narm-chair, half talking to herself and half asleep, the kitten had been\nhaving a grand game of romps with the ball of worsted Alice had been\ntrying to wind up, and had been rolling it up and down till it had all\ncome undone again; and there it was, spread over the hearth-rug, all\nknots and tangles, with the kitten running after its own tail in the\nmiddle.\n\n'Oh, you wicked little thing!' cried Alice, catching up the kitten, and\ngiving it a little kiss to make it understand that it was in disgrace.\n'Really, Dinah ought to have taught you better manners! You OUGHT,\nDinah, you know you ought!' she added, looking reproachfully at the old\ncat, and speaking in as cross a voice as she could manage--and then she\nscrambled back into the arm-ch\n\n"
+      ]
+    },
+    "qrcode-5/19.png@180": {
+      "pass": true,
+      "ms": 1.406,
+      "texts": [
+        "THROUGH THE LOOKING-GLASS\n\nBy Lewis Carroll\n\n\nCHAPTER I. Looking-Glass house\n\nOne thing was certain, that the WHITE kitten had had nothing to do with\nit:--it was the black kitten's fault entirely. For the white kitten had\nbeen having its face washed by the old cat for the last quarter of\nan hour (and bearing it pretty well, considering); so you see that it\nCOULDN'T have had any hand in the mischief.\n\nThe way Dinah washed her children's faces was this: first she held the\npoor thing down by its ear with one paw, and then with the other paw she\nrubbed its face all over, the wrong way, beginning at the nose: and\njust now, as I said, she was hard at work on the white kitten, which was\nlying quite still and trying to purr--no doubt feeling that it was all\nmeant for its good.\n\nBut the black kitten had been finished with earlier in the afternoon,\nand so, while Alice was sitting curled up in a corner of the great\narm-chair, half talking to herself and half asleep, the kitten had been\nhaving a grand game of romps with the ball of worsted Alice had been\ntrying to wind up, and had been rolling it up and down till it had all\ncome undone again; and there it was, spread over the hearth-rug, all\nknots and tangles, with the kitten running after its own tail in the\nmidd\n"
+      ]
+    },
+    "qrcode-6/1.png@180": {
+      "pass": true,
+      "ms": 0.353,
+      "texts": [
+        "1234567890"
+      ]
+    },
+    "qrcode-6/2.png@180": {
+      "pass": true,
+      "ms": 0.359,
+      "texts": [
+        "1234567890"
+      ]
+    },
+    "qrcode-6/3.png@180": {
+      "pass": true,
+      "ms": 0.351,
+      "texts": [
+        "1234567890"
+      ]
+    },
+    "qrcode-6/4.png@180": {
+      "pass": true,
+      "ms": 0.331,
+      "texts": [
+        "1234567890"
+      ]
+    },
+    "qrcode-6/5.png@180": {
+      "pass": true,
+      "ms": 0.351,
+      "texts": [
+        "1234567890"
+      ]
+    },
+    "qrcode-6/6.png@180": {
+      "pass": true,
+      "ms": 0.338,
+      "texts": [
+        "1234567890"
+      ]
+    },
+    "qrcode-6/7.png@180": {
+      "pass": true,
+      "ms": 0.336,
+      "texts": [
+        "1234567890"
+      ]
+    },
+    "qrcode-6/8.png@180": {
+      "pass": true,
+      "ms": 0.328,
+      "texts": [
+        "1234567890"
+      ]
+    },
+    "qrcode-6/9.png@180": {
+      "pass": true,
+      "ms": 0.339,
+      "texts": [
+        "1234567890"
+      ]
+    },
+    "qrcode-6/10.png@180": {
+      "pass": true,
+      "ms": 0.328,
+      "texts": [
+        "1234567890"
+      ]
+    },
+    "qrcode-6/11.png@180": {
+      "pass": true,
+      "ms": 0.33,
+      "texts": [
+        "1234567890"
+      ]
+    },
+    "qrcode-6/12.png@180": {
+      "pass": true,
+      "ms": 0.349,
+      "texts": [
+        "1234567890"
+      ]
+    },
+    "qrcode-6/13.png@180": {
+      "pass": true,
+      "ms": 0.339,
+      "texts": [
+        "1234567890"
+      ]
+    },
+    "qrcode-6/14.png@180": {
+      "pass": true,
+      "ms": 0.326,
+      "texts": [
+        "1234567890"
+      ]
+    },
+    "qrcode-6/15.png@180": {
+      "pass": true,
+      "ms": 1.63,
+      "texts": [
+        "TEST"
+      ]
+    },
+    "qrcode-1/1.png@270": {
+      "pass": true,
+      "ms": 1.268,
+      "texts": [
+        "MEBKM:URL:http\\://en.wikipedia.org/wiki/Main_Page;;"
+      ]
+    },
+    "qrcode-1/2.png@270": {
+      "pass": true,
+      "ms": 1.062,
+      "texts": [
+        "MEBKM:URL:http\\://en.wikipedia.org/wiki/Main_Page;;"
+      ]
+    },
+    "qrcode-1/3.png@270": {
+      "pass": true,
+      "ms": 0.916,
+      "texts": [
+        "MEBKM:URL:http\\://en.wikipedia.org/wiki/Main_Page;;"
+      ]
+    },
+    "qrcode-1/4.png@270": {
+      "pass": true,
+      "ms": 0.805,
+      "texts": [
+        "MEBKM:URL:http\\://en.wikipedia.org/wiki/Main_Page;;"
+      ]
+    },
+    "qrcode-1/5.png@270": {
+      "pass": true,
+      "ms": 0.817,
+      "texts": [
+        "MEBKM:URL:http\\://en.wikipedia.org/wiki/Main_Page;;"
+      ]
+    },
+    "qrcode-1/6.png@270": {
+      "pass": true,
+      "ms": 0.828,
+      "texts": [
+        "MEBKM:URL:http\\://en.wikipedia.org/wiki/Main_Page;;"
+      ]
+    },
+    "qrcode-1/7.png@270": {
+      "pass": true,
+      "ms": 0.885,
+      "texts": [
+        "MEBKM:URL:http\\://en.wikipedia.org/wiki/Main_Page;;"
+      ]
+    },
+    "qrcode-1/8.png@270": {
+      "pass": true,
+      "ms": 0.906,
+      "texts": [
+        "MEBKM:URL:http\\://en.wikipedia.org/wiki/Main_Page;;"
+      ]
+    },
+    "qrcode-1/9.png@270": {
+      "pass": true,
+      "ms": 0.828,
+      "texts": [
+        "MEBKM:URL:http\\://en.wikipedia.org/wiki/Main_Page;;"
+      ]
+    },
+    "qrcode-1/10.png@270": {
+      "pass": true,
+      "ms": 0.838,
+      "texts": [
+        "MEBKM:URL:http\\://en.wikipedia.org/wiki/Main_Page;;"
+      ]
+    },
+    "qrcode-1/11.png@270": {
+      "pass": true,
+      "ms": 0.895,
+      "texts": [
+        "MEBKM:URL:http\\://en.wikipedia.org/wiki/Main_Page;;"
+      ]
+    },
+    "qrcode-1/12.png@270": {
+      "pass": true,
+      "ms": 0.796,
+      "texts": [
+        "MEBKM:URL:http\\://en.wikipedia.org/wiki/Main_Page;;"
+      ]
+    },
+    "qrcode-1/13.png@270": {
+      "pass": true,
+      "ms": 0.835,
+      "texts": [
+        "http://google.com/gwt/n?u=bluenile.com"
+      ]
+    },
+    "qrcode-1/14.png@270": {
+      "pass": true,
+      "ms": 0.767,
+      "texts": [
+        "http://google.com/gwt/n?u=bluenile.com"
+      ]
+    },
+    "qrcode-1/15.png@270": {
+      "pass": true,
+      "ms": 0.816,
+      "texts": [
+        "http://google.com/gwt/n?u=bluenile.com"
+      ]
+    },
+    "qrcode-1/16.png@270": {
+      "pass": true,
+      "ms": 1.31,
+      "texts": [
+        "Sean Owen\r\nsrowen@google.com\r\n917-364-2918\r\nhttp://awesome-thoughts.com"
+      ]
+    },
+    "qrcode-1/17.png@270": {
+      "pass": true,
+      "ms": 1.17,
+      "texts": [
+        "Sean Owen\r\nsrowen@google.com\r\n917-364-2918\r\nhttp://awesome-thoughts.com"
+      ]
+    },
+    "qrcode-1/18.png@270": {
+      "pass": true,
+      "ms": 1.193,
+      "texts": [
+        "Sean Owen\r\nsrowen@google.com\r\n917-364-2918\r\nhttp://awesome-thoughts.com"
+      ]
+    },
+    "qrcode-1/19.png@270": {
+      "pass": true,
+      "ms": 0.756,
+      "texts": [
+        "Sean Owen\r\nsrowen@google.com\r\n917-364-2918\r\nhttp://awesome-thoughts.com"
+      ]
+    },
+    "qrcode-1/20.png@270": {
+      "pass": true,
+      "ms": 0.866,
+      "texts": [
+        "Sean Owen\r\nsrowen@google.com\r\n917-364-2918\r\nhttp://awesome-thoughts.com"
+      ]
+    },
+    "qrcode-2/1.png@270": {
+      "pass": true,
+      "ms": 0.957,
+      "texts": [
+        "When we at WRT talk about \\\"text,\\\" we are generally talking about a particular kind of readable information encoding - and readable is a complex proposition. Text may be stylized in a way we are unfamiliar with, as in blackletter - it may be interspersed with some markup we don\\'t understand, such as HTML - it may be be a substitution system we aren\\'t familiar with, such as braille or morse code - or it may be a system that, while technically human-readable, isn\\'t particularly optimized for reading by humans, as with barcodes (although barcodes can be read)."
+      ]
+    },
+    "qrcode-2/2.png@270": {
+      "pass": true,
+      "ms": 3.264,
+      "texts": [
+        "LANDBYASCARC   PERCEPTIBLEC EEK,OOZI GITSWAYTHROU  AWILDERNESSOFBESUPPOSED,I  CANT,ORATL ASTDWARFISH.NO REESOFANYM  NITUDEARETOBESOMEMISERA  EFRAMEBUIL I GS,TENANTED, U INGSUMMER   THEFUGITIVE;BUTTHEWHO  ISLAND,WI H   EXCEPTIONOFT   W STERNPOI  ,ANDALINEOFLLIAMLEGR   .HEWASOF N    ENTHUGUENOTF    Y ANDHADON  BEENWEALTHTIONCONSE  ENTUPONH SD   STERS,HELEFTNE   LE NS,THEC   OFHISFOREOUTHCARO   A.THISISLA    AVERYSINGULARO    TCONSISTSO  ITTLEELSEDSAQUART   FAMILE. TI   PARATEDFROMTHEMA   AN BYASCAR   YPERCEPTERESORT     MARSH EN   EVEGETATION,ASMIGH   SU POSED,   CANT,ORATREMITY,      ORT OULTRIESTANDS,ANDWHEREARESOM MIS      FRAMEBUIFEVER,MAYBE      INDEED,                TO;BUTT      EISLAND,WITNYYEARSAGO,IC    ACTED                    LLIAM    AND.HEWASOFANNESHADREDUCEDHIM OWA                       IONC NSEQUENTUPONHISDSIDENCEATSULLIVA \\'S                          HC ROLINA.THISISLANOUTTHR    LESLON .        THATN  OINTE        U RTEROF    E.ITISTHROU       ERNE       DSANDSLI  ,AFAVOR        TOFT       HEN.T"
+      ]
+    },
+    "qrcode-2/4.png@270": {
+      "pass": true,
+      "ms": 1.168,
+      "texts": [
+        "http://wwws.keihin.ktr.mlit.go.jp/keitai/"
+      ]
+    },
+    "qrcode-2/5.png@270": {
+      "pass": true,
+      "ms": 0.535,
+      "texts": [
+        "2021200000"
+      ]
+    },
+    "qrcode-2/6.png@270": {
+      "pass": true,
+      "ms": 2.76,
+      "texts": [
+        "http://d.kaywa.com/20207100"
+      ]
+    },
+    "qrcode-2/7.png@270": {
+      "pass": true,
+      "ms": 0.358,
+      "texts": [
+        "BIZCARD:N:Todd;X:Ogasawara;T:Tech Geek;C:MobileViews.com;A:MobileTown USA;E:editor@mobileviews.com;;"
+      ]
+    },
+    "qrcode-2/8.png@270": {
+      "pass": true,
+      "ms": 0.271,
+      "texts": [
+        "http://staticrooster.com"
+      ]
+    },
+    "qrcode-2/9.png@270": {
+      "pass": true,
+      "ms": 0.165,
+      "texts": [
+        "Morden"
+      ]
+    },
+    "qrcode-2/10.png@270": {
+      "pass": true,
+      "ms": 0.125,
+      "texts": [
+        "Google モバイル\r\nhttp://google.jp"
+      ]
+    },
+    "qrcode-2/11.png@270": {
+      "pass": true,
+      "ms": 0.307,
+      "texts": [
+        "BEGIN:VCARD\r\nN:Kennedy;Steve\r\nTEL:+44 (0)7775 755503\r\nADR;HOME:;;Flat 2, 43 Howitt Road, Belsize Park;London;;NW34LU;UK\r\nORG:NetTek Ltd;\r\nTITLE:Consultant\r\nEMAIL:steve@nettek.co.uk\r\nURL:www.nettek.co.uk\r\nEMAIL;IM:MSN:steve@gbnet.net\r\nNOTE:Testing 1 2 3\r\nBDAY:19611105\r\nEND:VCARD"
+      ]
+    },
+    "qrcode-2/12.png@270": {
+      "pass": false,
+      "ms": 0.223,
+      "texts": []
+    },
+    "qrcode-2/13.png@270": {
+      "pass": false,
+      "ms": 0.241,
+      "texts": []
+    },
+    "qrcode-2/14.png@270": {
+      "pass": true,
+      "ms": 0.531,
+      "texts": [
+        "http://bbc.co.uk/programmes"
+      ]
+    },
+    "qrcode-2/15.png@270": {
+      "pass": true,
+      "ms": 0.673,
+      "texts": [
+        "In 25 words or less in the comments, below, tell us how QR codes will make the world less ordinary."
+      ]
+    },
+    "qrcode-2/16.png@270": {
+      "pass": true,
+      "ms": 0.502,
+      "texts": [
+        "[内側QRコード]\r\n\r\n*ダブルQR*\r\nhttp://d-qr.net/ex/",
+        "[外側QRコード]\r\n \r\n*ﾀﾞﾌﾞﾙQR*\r\nhttp://d-qr.net/ex/"
+      ]
+    },
+    "qrcode-2/17.png@270": {
+      "pass": true,
+      "ms": 0.282,
+      "texts": [
+        "ﾃﾞｻﾞｲﾝQR\r\nhttp://d-qr.net/ex/"
+      ]
+    },
+    "qrcode-2/18.png@270": {
+      "pass": true,
+      "ms": 0.26,
+      "texts": [
+        "*ﾃﾞｻﾞｲﾝQR*     \r\nhttp://d-qr.net/ex/       "
+      ]
+    },
+    "qrcode-2/19.png@270": {
+      "pass": true,
+      "ms": 0.264,
+      "texts": [
+        "*ﾃﾞｻﾞｲﾝQR*    \r\nhttp://d-qr.net/ex/         "
+      ]
+    },
+    "qrcode-2/20.png@270": {
+      "pass": true,
+      "ms": 0.275,
+      "texts": [
+        "*ﾃﾞｻﾞｲﾝQR*\r\nhttp://d-qr.net/ex/    "
+      ]
+    },
+    "qrcode-2/21.png@270": {
+      "pass": true,
+      "ms": 0.235,
+      "texts": [
+        "*ﾃﾞｻﾞｲﾝQR*  \r\nhttp://d-qr.net/ex/        "
+      ]
+    },
+    "qrcode-2/22.png@270": {
+      "pass": true,
+      "ms": 0.407,
+      "texts": [
+        "http://www.hotpepper.jp/mobile/cgi-bin/MBLC80100.cgi?SA=00&Z=AG&vos=hpp064&uid=NULLGWDOCOMO"
+      ]
+    },
+    "qrcode-2/23.png@270": {
+      "pass": true,
+      "ms": 0.3,
+      "texts": [
+        "http://aniful.jp/pr/  "
+      ]
+    },
+    "qrcode-2/24.png@270": {
+      "pass": true,
+      "ms": 0.201,
+      "texts": [
+        "*ﾃﾞｻﾞｲﾝQR* \r\nhttp://d-qr.net/ex/      "
+      ]
+    },
+    "qrcode-2/25.png@270": {
+      "pass": true,
+      "ms": 0.284,
+      "texts": [
+        "MEBKM:TITLE:;URL:http://d.kaywa.com/2020400102;;"
+      ]
+    },
+    "qrcode-2/26.png@270": {
+      "pass": true,
+      "ms": 0.255,
+      "texts": [
+        "<ﾃﾞｻﾞｲﾝQR> \r\nｲﾗｽﾄ入りｶﾗｰQRｺｰﾄﾞ\r\nhttp://d-qr.net/ex/ "
+      ]
+    },
+    "qrcode-2/27.png@270": {
+      "pass": true,
+      "ms": 0.188,
+      "texts": [
+        "*ﾃﾞｻﾞｲﾝQR*   \r\nhttp://d-qr.net/ex/ "
+      ]
+    },
+    "qrcode-2/28.png@270": {
+      "pass": false,
+      "ms": 0.529,
+      "texts": []
+    },
+    "qrcode-2/29.png@270": {
+      "pass": true,
+      "ms": 0.178,
+      "texts": [
+        "http://live.fdgm.jp/u/event/hype/hype_top.html \r\n\r\nMEBKM:TITLE:hypeモバイル;URL:http\\://live.fdgm.jp/u/event/hype/hype_top.html;;"
+      ]
+    },
+    "qrcode-2/30.png@270": {
+      "pass": true,
+      "ms": 0.273,
+      "texts": [
+        "MECARD:N:測試;;"
+      ]
+    },
+    "qrcode-2/31.png@270": {
+      "pass": true,
+      "ms": 0.724,
+      "texts": [
+        "今度のバージョンでは文章の暗号化ができます。"
+      ]
+    },
+    "qrcode-2/32.png@270": {
+      "pass": true,
+      "ms": 0.243,
+      "texts": [
+        "BEGIN:VCARD\r\nN:Kennedy;Steve\r\nTEL:+44 (0)7775 755503\r\nADR;HOME:;;Flat 2, 43 Howitt Road, Belsize Park;London;;NW34LU;UK\r\nORG:NetTek Ltd;\r\nTITLE:Consultant\r\nEMAIL:steve@nettek.co.uk\r\nURL:www.nettek.co.uk\r\nEMAIL;IM:MSN:steve@gbnet.net\r\nNOTE:Testing 1 2 3\r\nBDAY:19611105\r\nEND:VCARD"
+      ]
+    },
+    "qrcode-2/33.png@270": {
+      "pass": true,
+      "ms": 0.109,
+      "texts": [
+        "\u0001\u0010AD:SUB:阿;;"
+      ]
+    },
+    "qrcode-2/34.png@270": {
+      "pass": true,
+      "ms": 0.153,
+      "texts": [
+        "http://www.google.com/"
+      ]
+    },
+    "qrcode-2/35.png@270": {
+      "pass": true,
+      "ms": 0.127,
+      "texts": [
+        "http://www.google.com/"
+      ]
+    },
+    "qrcode-2/36.png@270": {
+      "pass": true,
+      "ms": 0.162,
+      "texts": [
+        "Morden"
+      ]
+    },
+    "qrcode-3/01.png@270": {
+      "pass": true,
+      "ms": 0.312,
+      "texts": [
+        "http://arnaud.sahuguet.com/graffiti/test.php?ll=-74.00309961503218,40.74102573163046,0"
+      ]
+    },
+    "qrcode-3/02.png@270": {
+      "pass": true,
+      "ms": 0.258,
+      "texts": [
+        "http://arnaud.sahuguet.com/graffiti/test.php?ll=-74.00309961503218,40.74102573163046,0"
+      ]
+    },
+    "qrcode-3/03.png@270": {
+      "pass": true,
+      "ms": 0.254,
+      "texts": [
+        "http://arnaud.sahuguet.com/graffiti/test.php?ll=-74.00309961503218,40.74102573163046,0"
+      ]
+    },
+    "qrcode-3/04.png@270": {
+      "pass": true,
+      "ms": 0.254,
+      "texts": [
+        "http://arnaud.sahuguet.com/graffiti/test.php?ll=-74.00309961503218,40.74102573163046,0"
+      ]
+    },
+    "qrcode-3/05.png@270": {
+      "pass": true,
+      "ms": 0.303,
+      "texts": [
+        "http://arnaud.sahuguet.com/graffiti/test.php?ll=-74.00309961503218,40.74102573163046,0"
+      ]
+    },
+    "qrcode-3/06.png@270": {
+      "pass": true,
+      "ms": 0.272,
+      "texts": [
+        "http://arnaud.sahuguet.com/graffiti/test.php?ll=-74.00309961503218,40.74102573163046,0"
+      ]
+    },
+    "qrcode-3/07.png@270": {
+      "pass": true,
+      "ms": 0.236,
+      "texts": [
+        "http://arnaud.sahuguet.com/graffiti/test.php?ll=-74.00309961503218,40.74102573163046,0"
+      ]
+    },
+    "qrcode-3/08.png@270": {
+      "pass": true,
+      "ms": 0.282,
+      "texts": [
+        "http://arnaud.sahuguet.com/graffiti/test.php?ll=-74.00309961503218,40.74102573163046,0"
+      ]
+    },
+    "qrcode-3/09.png@270": {
+      "pass": true,
+      "ms": 0.282,
+      "texts": [
+        "http://arnaud.sahuguet.com/graffiti/test.php?ll=-74.00309961503218,40.74102573163046,0"
+      ]
+    },
+    "qrcode-3/10.png@270": {
+      "pass": true,
+      "ms": 0.194,
+      "texts": [
+        "MECARD:N:Google 411,;TEL:18665881077;;"
+      ]
+    },
+    "qrcode-3/11.png@270": {
+      "pass": true,
+      "ms": 0.216,
+      "texts": [
+        "MECARD:N:Google 411,;TEL:18665881077;;"
+      ]
+    },
+    "qrcode-3/12.png@270": {
+      "pass": true,
+      "ms": 0.199,
+      "texts": [
+        "MECARD:N:Google 411,;TEL:18665881077;;"
+      ]
+    },
+    "qrcode-3/13.png@270": {
+      "pass": true,
+      "ms": 0.175,
+      "texts": [
+        "MECARD:N:Google 411,;TEL:18665881077;;"
+      ]
+    },
+    "qrcode-3/14.png@270": {
+      "pass": true,
+      "ms": 0.207,
+      "texts": [
+        "MECARD:N:Google 411,;TEL:18665881077;;"
+      ]
+    },
+    "qrcode-3/15.png@270": {
+      "pass": true,
+      "ms": 0.276,
+      "texts": [
+        "MECARD:N:Google 411,;TEL:18665881077;;"
+      ]
+    },
+    "qrcode-3/16.png@270": {
+      "pass": true,
+      "ms": 0.204,
+      "texts": [
+        "MECARD:N:Google 411,;TEL:18665881077;;"
+      ]
+    },
+    "qrcode-3/17.png@270": {
+      "pass": true,
+      "ms": 0.232,
+      "texts": [
+        "MECARD:N:Google 411,;TEL:18665881077;;"
+      ]
+    },
+    "qrcode-3/18.png@270": {
+      "pass": true,
+      "ms": 0.31,
+      "texts": [
+        "UI office hours signup\r\nhttp://www.corp.google.com/sparrow/ui_office_hours/ \r\n"
+      ]
+    },
+    "qrcode-3/19.png@270": {
+      "pass": true,
+      "ms": 0.302,
+      "texts": [
+        "UI office hours signup\r\nhttp://www.corp.google.com/sparrow/ui_office_hours/ \r\n"
+      ]
+    },
+    "qrcode-3/20.png@270": {
+      "pass": true,
+      "ms": 0.288,
+      "texts": [
+        "UI office hours signup\r\nhttp://www.corp.google.com/sparrow/ui_office_hours/ \r\n"
+      ]
+    },
+    "qrcode-3/21.png@270": {
+      "pass": true,
+      "ms": 0.31,
+      "texts": [
+        "UI office hours signup\r\nhttp://www.corp.google.com/sparrow/ui_office_hours/ \r\n"
+      ]
+    },
+    "qrcode-3/22.png@270": {
+      "pass": true,
+      "ms": 0.315,
+      "texts": [
+        "UI office hours signup\r\nhttp://www.corp.google.com/sparrow/ui_office_hours/ \r\n"
+      ]
+    },
+    "qrcode-3/23.png@270": {
+      "pass": true,
+      "ms": 0.295,
+      "texts": [
+        "UI office hours signup\r\nhttp://www.corp.google.com/sparrow/ui_office_hours/ \r\n"
+      ]
+    },
+    "qrcode-3/24.png@270": {
+      "pass": true,
+      "ms": 0.296,
+      "texts": [
+        "UI office hours signup\r\nhttp://www.corp.google.com/sparrow/ui_office_hours/ \r\n"
+      ]
+    },
+    "qrcode-3/25.png@270": {
+      "pass": true,
+      "ms": 0.295,
+      "texts": [
+        "UI office hours signup\r\nhttp://www.corp.google.com/sparrow/ui_office_hours/ \r\n"
+      ]
+    },
+    "qrcode-3/26.png@270": {
+      "pass": true,
+      "ms": 0.218,
+      "texts": [
+        "MECARD:N:Sean Owen;TEL:+12125658770;EMAIL:srowen@google.com;;"
+      ]
+    },
+    "qrcode-3/27.png@270": {
+      "pass": true,
+      "ms": 0.218,
+      "texts": [
+        "MECARD:N:Sean Owen;TEL:+12125658770;EMAIL:srowen@google.com;;"
+      ]
+    },
+    "qrcode-3/28.png@270": {
+      "pass": true,
+      "ms": 0.221,
+      "texts": [
+        "MECARD:N:Sean Owen;TEL:+12125658770;EMAIL:srowen@google.com;;"
+      ]
+    },
+    "qrcode-3/29.png@270": {
+      "pass": true,
+      "ms": 0.234,
+      "texts": [
+        "MECARD:N:Sean Owen;TEL:+12125658770;EMAIL:srowen@google.com;;"
+      ]
+    },
+    "qrcode-3/30.png@270": {
+      "pass": true,
+      "ms": 0.199,
+      "texts": [
+        "MECARD:N:Sean Owen;TEL:+12125658770;EMAIL:srowen@google.com;;"
+      ]
+    },
+    "qrcode-3/31.png@270": {
+      "pass": true,
+      "ms": 0.234,
+      "texts": [
+        "MECARD:N:Sean Owen;TEL:+12125658770;EMAIL:srowen@google.com;;"
+      ]
+    },
+    "qrcode-3/32.png@270": {
+      "pass": true,
+      "ms": 0.208,
+      "texts": [
+        "MECARD:N:Sean Owen;TEL:+12125658770;EMAIL:srowen@google.com;;"
+      ]
+    },
+    "qrcode-3/33.png@270": {
+      "pass": true,
+      "ms": 0.212,
+      "texts": [
+        "MECARD:N:Sean Owen;TEL:+12125658770;EMAIL:srowen@google.com;;"
+      ]
+    },
+    "qrcode-3/34.png@270": {
+      "pass": true,
+      "ms": 0.212,
+      "texts": [
+        "MECARD:N:Sean Owen;TEL:+12125658770;EMAIL:srowen@google.com;;"
+      ]
+    },
+    "qrcode-3/35.png@270": {
+      "pass": true,
+      "ms": 0.25,
+      "texts": [
+        "MECARD:N:Sean Owen;TEL:+12125658770;EMAIL:srowen@google.com;;"
+      ]
+    },
+    "qrcode-3/36.png@270": {
+      "pass": true,
+      "ms": 0.204,
+      "texts": [
+        "MECARD:N:Sean Owen;TEL:+12125658770;EMAIL:srowen@google.com;;"
+      ]
+    },
+    "qrcode-3/37.png@270": {
+      "pass": true,
+      "ms": 0.252,
+      "texts": [
+        "MECARD:N:Sean Owen;TEL:+12125658770;EMAIL:srowen@google.com;;"
+      ]
+    },
+    "qrcode-3/38.png@270": {
+      "pass": true,
+      "ms": 0.234,
+      "texts": [
+        "MECARD:N:Sean Owen;TEL:+12125658770;EMAIL:srowen@google.com;;"
+      ]
+    },
+    "qrcode-3/39.png@270": {
+      "pass": true,
+      "ms": 0.223,
+      "texts": [
+        "MECARD:N:Sean Owen;TEL:+12125658770;EMAIL:srowen@google.com;;"
+      ]
+    },
+    "qrcode-3/40.png@270": {
+      "pass": true,
+      "ms": 0.225,
+      "texts": [
+        "MECARD:N:Sean Owen;TEL:+12125658770;EMAIL:srowen@google.com;;"
+      ]
+    },
+    "qrcode-3/41.png@270": {
+      "pass": true,
+      "ms": 0.228,
+      "texts": [
+        "MECARD:N:Sean Owen;TEL:+12125658770;EMAIL:srowen@google.com;;"
+      ]
+    },
+    "qrcode-3/42.png@270": {
+      "pass": true,
+      "ms": 0.249,
+      "texts": [
+        "MECARD:N:Sean Owen;TEL:+12125658770;EMAIL:srowen@google.com;;"
+      ]
+    },
+    "qrcode-4/01.png@270": {
+      "pass": true,
+      "ms": 0.214,
+      "texts": [
+        "Google Print Ads - T.G.I.A.F. - January 31, 2008"
+      ]
+    },
+    "qrcode-4/02.png@270": {
+      "pass": true,
+      "ms": 0.218,
+      "texts": [
+        "Google Print Ads - T.G.I.A.F. - January 31, 2008"
+      ]
+    },
+    "qrcode-4/03.png@270": {
+      "pass": true,
+      "ms": 0.244,
+      "texts": [
+        "Google Print Ads - T.G.I.A.F. - January 31, 2008"
+      ]
+    },
+    "qrcode-4/04.png@270": {
+      "pass": true,
+      "ms": 0.222,
+      "texts": [
+        "Google Print Ads - T.G.I.A.F. - January 31, 2008"
+      ]
+    },
+    "qrcode-4/05.png@270": {
+      "pass": false,
+      "ms": 0.333,
+      "texts": []
+    },
+    "qrcode-4/06.png@270": {
+      "pass": false,
+      "ms": 0.329,
+      "texts": []
+    },
+    "qrcode-4/07.png@270": {
+      "pass": true,
+      "ms": 0.281,
+      "texts": [
+        "Google Print Ads - T.G.I.A.F. - January 31, 2008"
+      ]
+    },
+    "qrcode-4/08.png@270": {
+      "pass": false,
+      "ms": 0.332,
+      "texts": []
+    },
+    "qrcode-4/09.png@270": {
+      "pass": false,
+      "ms": 0.322,
+      "texts": []
+    },
+    "qrcode-4/10.png@270": {
+      "pass": true,
+      "ms": 0.217,
+      "texts": [
+        "Google Print Ads - T.G.I.A.F. - January 31, 2008"
+      ]
+    },
+    "qrcode-4/11.png@270": {
+      "pass": true,
+      "ms": 0.22,
+      "texts": [
+        "Google Print Ads - T.G.I.A.F. - January 31, 2008"
+      ]
+    },
+    "qrcode-4/12.png@270": {
+      "pass": true,
+      "ms": 0.277,
+      "texts": [
+        "Google Print Ads - T.G.I.A.F. - January 31, 2008"
+      ]
+    },
+    "qrcode-4/13.png@270": {
+      "pass": false,
+      "ms": 0.321,
+      "texts": []
+    },
+    "qrcode-4/14.png@270": {
+      "pass": true,
+      "ms": 0.21,
+      "texts": [
+        "Google Print Ads - T.G.I.A.F. - January 31, 2008"
+      ]
+    },
+    "qrcode-4/15.png@270": {
+      "pass": true,
+      "ms": 0.217,
+      "texts": [
+        "http://code.google.com"
+      ]
+    },
+    "qrcode-4/16.png@270": {
+      "pass": true,
+      "ms": 0.215,
+      "texts": [
+        "http://code.google.com"
+      ]
+    },
+    "qrcode-4/17.png@270": {
+      "pass": true,
+      "ms": 0.227,
+      "texts": [
+        "http://code.google.com"
+      ]
+    },
+    "qrcode-4/18.png@270": {
+      "pass": true,
+      "ms": 0.229,
+      "texts": [
+        "http://code.google.com"
+      ]
+    },
+    "qrcode-4/19.png@270": {
+      "pass": true,
+      "ms": 0.204,
+      "texts": [
+        "http://code.google.com"
+      ]
+    },
+    "qrcode-4/20.png@270": {
+      "pass": true,
+      "ms": 0.219,
+      "texts": [
+        "http://code.google.com"
+      ]
+    },
+    "qrcode-4/21.png@270": {
+      "pass": true,
+      "ms": 0.241,
+      "texts": [
+        "http://code.google.com"
+      ]
+    },
+    "qrcode-4/22.png@270": {
+      "pass": true,
+      "ms": 0.203,
+      "texts": [
+        "http://code.google.com"
+      ]
+    },
+    "qrcode-4/23.png@270": {
+      "pass": true,
+      "ms": 0.216,
+      "texts": [
+        "http://code.google.com"
+      ]
+    },
+    "qrcode-4/24.png@270": {
+      "pass": true,
+      "ms": 0.214,
+      "texts": [
+        "http://code.google.com"
+      ]
+    },
+    "qrcode-4/25.png@270": {
+      "pass": true,
+      "ms": 0.221,
+      "texts": [
+        "http://code.google.com"
+      ]
+    },
+    "qrcode-4/26.png@270": {
+      "pass": true,
+      "ms": 0.242,
+      "texts": [
+        "http://code.google.com"
+      ]
+    },
+    "qrcode-4/27.png@270": {
+      "pass": true,
+      "ms": 0.217,
+      "texts": [
+        "http://code.google.com"
+      ]
+    },
+    "qrcode-4/28.png@270": {
+      "pass": true,
+      "ms": 0.231,
+      "texts": [
+        "http://code.google.com"
+      ]
+    },
+    "qrcode-4/29.png@270": {
+      "pass": true,
+      "ms": 0.248,
+      "texts": [
+        "http://code.google.com"
+      ]
+    },
+    "qrcode-4/30.png@270": {
+      "pass": false,
+      "ms": 0.32,
+      "texts": []
+    },
+    "qrcode-4/31.png@270": {
+      "pass": false,
+      "ms": 0.328,
+      "texts": []
+    },
+    "qrcode-4/32.png@270": {
+      "pass": false,
+      "ms": 0.35,
+      "texts": []
+    },
+    "qrcode-4/33.png@270": {
+      "pass": false,
+      "ms": 0.317,
+      "texts": []
+    },
+    "qrcode-4/34.png@270": {
+      "pass": false,
+      "ms": 0.292,
+      "texts": []
+    },
+    "qrcode-4/35.png@270": {
+      "pass": true,
+      "ms": 0.287,
+      "texts": [
+        "http://code.google.com/p/zxing/"
+      ]
+    },
+    "qrcode-4/36.png@270": {
+      "pass": true,
+      "ms": 0.206,
+      "texts": [
+        "http://code.google.com/p/zxing/"
+      ]
+    },
+    "qrcode-4/37.png@270": {
+      "pass": true,
+      "ms": 0.211,
+      "texts": [
+        "http://code.google.com/p/zxing/"
+      ]
+    },
+    "qrcode-4/38.png@270": {
+      "pass": true,
+      "ms": 0.193,
+      "texts": [
+        "http://code.google.com/p/zxing/"
+      ]
+    },
+    "qrcode-4/39.png@270": {
+      "pass": true,
+      "ms": 0.192,
+      "texts": [
+        "http://code.google.com/p/zxing/"
+      ]
+    },
+    "qrcode-4/40.png@270": {
+      "pass": true,
+      "ms": 0.224,
+      "texts": [
+        "http://code.google.com/p/zxing/"
+      ]
+    },
+    "qrcode-4/41.png@270": {
+      "pass": true,
+      "ms": 0.201,
+      "texts": [
+        "http://code.google.com/p/zxing/"
+      ]
+    },
+    "qrcode-4/42.png@270": {
+      "pass": true,
+      "ms": 0.188,
+      "texts": [
+        "http://code.google.com/p/zxing/"
+      ]
+    },
+    "qrcode-4/43.png@270": {
+      "pass": true,
+      "ms": 0.183,
+      "texts": [
+        "http://code.google.com/p/zxing/"
+      ]
+    },
+    "qrcode-4/44.png@270": {
+      "pass": true,
+      "ms": 0.191,
+      "texts": [
+        "http://code.google.com/p/zxing/"
+      ]
+    },
+    "qrcode-4/45.png@270": {
+      "pass": true,
+      "ms": 0.224,
+      "texts": [
+        "http://code.google.com/p/zxing/"
+      ]
+    },
+    "qrcode-4/46.png@270": {
+      "pass": true,
+      "ms": 0.226,
+      "texts": [
+        "http://code.google.com/p/zxing/"
+      ]
+    },
+    "qrcode-4/47.png@270": {
+      "pass": true,
+      "ms": 0.302,
+      "texts": [
+        "http://code.google.com/p/zxing/"
+      ]
+    },
+    "qrcode-4/48.png@270": {
+      "pass": true,
+      "ms": 0.23,
+      "texts": [
+        "http://code.google.com/p/zxing/"
+      ]
+    },
+    "qrcode-5/01.png@270": {
+      "pass": true,
+      "ms": 0.267,
+      "texts": [
+        "MECARD:N:Sean Owen;TEL:+12125658770;EMAIL:srowen@google.com;;"
+      ]
+    },
+    "qrcode-5/02.png@270": {
+      "pass": true,
+      "ms": 0.23,
+      "texts": [
+        "MECARD:N:Sean Owen;TEL:+12125658770;EMAIL:srowen@google.com;;"
+      ]
+    },
+    "qrcode-5/03.png@270": {
+      "pass": true,
+      "ms": 0.246,
+      "texts": [
+        "MECARD:N:Sean Owen;TEL:+12125658770;EMAIL:srowen@google.com;;"
+      ]
+    },
+    "qrcode-5/04.png@270": {
+      "pass": true,
+      "ms": 0.247,
+      "texts": [
+        "MECARD:N:Sean Owen;TEL:+12125658770;EMAIL:srowen@google.com;;"
+      ]
+    },
+    "qrcode-5/05.png@270": {
+      "pass": true,
+      "ms": 0.263,
+      "texts": [
+        "MECARD:N:Sean Owen;TEL:+12125658770;EMAIL:srowen@google.com;;"
+      ]
+    },
+    "qrcode-5/06.png@270": {
+      "pass": true,
+      "ms": 0.262,
+      "texts": [
+        "MECARD:N:Sean Owen;TEL:+12125658770;EMAIL:srowen@google.com;;"
+      ]
+    },
+    "qrcode-5/07.png@270": {
+      "pass": true,
+      "ms": 0.248,
+      "texts": [
+        "MECARD:N:Sean Owen;TEL:+12125658770;EMAIL:srowen@google.com;;"
+      ]
+    },
+    "qrcode-5/08.png@270": {
+      "pass": true,
+      "ms": 0.229,
+      "texts": [
+        "MECARD:N:Sean Owen;TEL:+12125658770;EMAIL:srowen@google.com;;"
+      ]
+    },
+    "qrcode-5/09.png@270": {
+      "pass": true,
+      "ms": 0.232,
+      "texts": [
+        "MECARD:N:Sean Owen;TEL:+12125658770;EMAIL:srowen@google.com;;"
+      ]
+    },
+    "qrcode-5/10.png@270": {
+      "pass": true,
+      "ms": 0.231,
+      "texts": [
+        "MECARD:N:Sean Owen;TEL:+12125658770;EMAIL:srowen@google.com;;"
+      ]
+    },
+    "qrcode-5/11.png@270": {
+      "pass": true,
+      "ms": 0.253,
+      "texts": [
+        "MECARD:N:Sean Owen;TEL:+12125658770;EMAIL:srowen@google.com;;"
+      ]
+    },
+    "qrcode-5/12.png@270": {
+      "pass": true,
+      "ms": 0.256,
+      "texts": [
+        "MECARD:N:Sean Owen;TEL:+12125658770;EMAIL:srowen@google.com;;"
+      ]
+    },
+    "qrcode-5/13.png@270": {
+      "pass": true,
+      "ms": 0.203,
+      "texts": [
+        "MECARD:N:Sean Owen;TEL:+12125658770;EMAIL:srowen@google.com;;"
+      ]
+    },
+    "qrcode-5/14.png@270": {
+      "pass": true,
+      "ms": 0.292,
+      "texts": [
+        "MECARD:N:Sean Owen;TEL:+12125658770;EMAIL:srowen@google.com;;"
+      ]
+    },
+    "qrcode-5/15.png@270": {
+      "pass": true,
+      "ms": 0.253,
+      "texts": [
+        "MECARD:N:Sean Owen;TEL:+12125658770;EMAIL:srowen@google.com;;"
+      ]
+    },
+    "qrcode-5/16.png@270": {
+      "pass": true,
+      "ms": 1.483,
+      "texts": [
+        "THROUGH THE LOOKING-GLASS\n\nBy Lewis Carroll\n\n\nCHAPTER I. Looking-Glass house\n\nOne thing was certain, that the WHITE kitten had had nothing to do with\nit:--it was the black kitten's fault entirely. For the white kitten had\nbeen having its face washed by the old cat for the last quarter of\nan hour (and bearing it pretty well, considering); so you see that it\nCOULDN'T have had any hand in the mischief.\n\nThe way Dinah washed her children's faces was this: first she held the\npoor thing down by its ear with one paw, and then with the other paw she\nrubbed its face all over, the wrong way, beginning at the nose: and\njust now, as I said, she was hard at work on the white kitten, which was\nlying quite still and trying to purr--no doubt feeling that it was all\nmeant for its good.\n\nBut the black kitten had been finished with earlier in the afternoon,\nand so, while Alice was sitting curled up in a corner of the great\narm-chair, half talking to herself and half asleep, the kitten had been\nhaving a grand game of romps with the ball of worsted Alice had been\ntrying to wind up, and had been rolling it up and down till it had all\ncome undone again; and there it was, spread over the hearth-rug, all\nknots and tangles, with the kitten running after its own tail in the\nmiddle.\n\n'Oh, you wicked little thing!' cried Alice, catching up the kitten, and\ngiving it a little kiss to make it understand that it was in disgrace.\n'Really, Dinah ought to have taught you better manners! You OUGHT,\nDinah, you know you ought!' she added, looking reproachfully at the old\ncat, and speaking in as cross a voice as she could manage--and then she\nscrambled back into the arm-chair, taking the kitten and the worsted\nwith her, and began winding up the ball again. But she didn't get on\nvery fast, as she was talking all the time, sometimes to the kitten, and\nsometimes to herself. Kitty sat very demurely on her knee, pretending to\nwatch the progress of the winding, and now and then putting out one\npaw and gently touching the ball, as if it would be glad to help, if it\nmight.\n\n'Do you know what to-morrow is, Kitty?' Alice began. 'You'd have guessed\nif you'd been up in the window with me--only Dinah was making you tidy,\nso you couldn't. I was watching the boys getting in sticks for the\nbonfire--and it wants plenty of sticks, Kitty! Only it got so cold, and\nit snowed so, they had to leave off. Never mind, Kitty, we'll go and\nsee the bonfire to-morrow.' Here Alice wound two or three turns of the\nworsted round the kitten's neck, just to see how it would look: this led\nto a scramble, in which the ball rolled down upon the floor, and yards\nand yards of it got unwound again.\n\n'Do you know, I was so angry, Kitty,' Alice went on as soon as they were\ncomfortably settled again, 'when I saw all the mischief you had been\ndoing, I was very nearly opening the window, and putting you out into\nthe snow! And you'd have deserved it, you little mischievous darling!\nWha\n"
+      ]
+    },
+    "qrcode-5/17.png@270": {
+      "pass": true,
+      "ms": 1.48,
+      "texts": [
+        "THROUGH THE LOOKING-GLASS\n\nBy Lewis Carroll\n\n\nCHAPTER I. Looking-Glass house\n\nOne thing was certain, that the WHITE kitten had had nothing to do with\nit:--it was the black kitten's fault entirely. For the white kitten had\nbeen having its face washed by the old cat for the last quarter of\nan hour (and bearing it pretty well, considering); so you see that it\nCOULDN'T have had any hand in the mischief.\n\nThe way Dinah washed her children's faces was this: first she held the\npoor thing down by its ear with one paw, and then with the other paw she\nrubbed its face all over, the wrong way, beginning at the nose: and\njust now, as I said, she was hard at work on the white kitten, which was\nlying quite still and trying to purr--no doubt feeling that it was all\nmeant for its good.\n\nBut the black kitten had been finished with earlier in the afternoon,\nand so, while Alice was sitting curled up in a corner of the great\narm-chair, half talking to herself and half asleep, the kitten had been\nhaving a grand game of romps with the ball of worsted Alice had been\ntrying to wind up, and had been rolling it up and down till it had all\ncome undone again; and there it was, spread over the hearth-rug, all\nknots and tangles, with the kitten running after its own tail in the\nmiddle.\n\n'Oh, you wicked little thing!' cried Alice, catching up the kitten, and\ngiving it a little kiss to make it understand that it was in disgrace.\n'Really, Dinah ought to have taught you better manners! You OUGHT,\nDinah, you know you ought!' she added, looking reproachfully at the old\ncat, and speaking in as cross a voice as she could manage--and then she\nscrambled back into the arm-chair, taking the kitten and the worsted\nwith her, and began winding up the ball again. But she didn't get on\nvery fast, as she was talking all the time, sometimes to the kitten, and\nsometimes to herself. Kitty sat very demurely on her knee, pretending to\nwatch the progress of the winding, and now and then putting out one\npaw and gently touching the ball, as if it would be glad to help, if it\nmight.\n\n'Do you know what to-morrow is, Kitty?' Alice began. 'You'd have guessed\nif you'd been up in the window with me--only Dinah was making you tidy,\nso you couldn't. I was watching the boys getting in sticks for the\nbonfire--and it wants plenty of sticks, Kitty! Only it \n"
+      ]
+    },
+    "qrcode-5/18.png@270": {
+      "pass": true,
+      "ms": 1.448,
+      "texts": [
+        "THROUGH THE LOOKING-GLASS\n\nBy Lewis Carroll\n\n\nCHAPTER I. Looking-Glass house\n\nOne thing was certain, that the WHITE kitten had had nothing to do with\nit:--it was the black kitten's fault entirely. For the white kitten had\nbeen having its face washed by the old cat for the last quarter of\nan hour (and bearing it pretty well, considering); so you see that it\nCOULDN'T have had any hand in the mischief.\n\nThe way Dinah washed her children's faces was this: first she held the\npoor thing down by its ear with one paw, and then with the other paw she\nrubbed its face all over, the wrong way, beginning at the nose: and\njust now, as I said, she was hard at work on the white kitten, which was\nlying quite still and trying to purr--no doubt feeling that it was all\nmeant for its good.\n\nBut the black kitten had been finished with earlier in the afternoon,\nand so, while Alice was sitting curled up in a corner of the great\narm-chair, half talking to herself and half asleep, the kitten had been\nhaving a grand game of romps with the ball of worsted Alice had been\ntrying to wind up, and had been rolling it up and down till it had all\ncome undone again; and there it was, spread over the hearth-rug, all\nknots and tangles, with the kitten running after its own tail in the\nmiddle.\n\n'Oh, you wicked little thing!' cried Alice, catching up the kitten, and\ngiving it a little kiss to make it understand that it was in disgrace.\n'Really, Dinah ought to have taught you better manners! You OUGHT,\nDinah, you know you ought!' she added, looking reproachfully at the old\ncat, and speaking in as cross a voice as she could manage--and then she\nscrambled back into the arm-ch\n\n"
+      ]
+    },
+    "qrcode-5/19.png@270": {
+      "pass": true,
+      "ms": 1.487,
+      "texts": [
+        "THROUGH THE LOOKING-GLASS\n\nBy Lewis Carroll\n\n\nCHAPTER I. Looking-Glass house\n\nOne thing was certain, that the WHITE kitten had had nothing to do with\nit:--it was the black kitten's fault entirely. For the white kitten had\nbeen having its face washed by the old cat for the last quarter of\nan hour (and bearing it pretty well, considering); so you see that it\nCOULDN'T have had any hand in the mischief.\n\nThe way Dinah washed her children's faces was this: first she held the\npoor thing down by its ear with one paw, and then with the other paw she\nrubbed its face all over, the wrong way, beginning at the nose: and\njust now, as I said, she was hard at work on the white kitten, which was\nlying quite still and trying to purr--no doubt feeling that it was all\nmeant for its good.\n\nBut the black kitten had been finished with earlier in the afternoon,\nand so, while Alice was sitting curled up in a corner of the great\narm-chair, half talking to herself and half asleep, the kitten had been\nhaving a grand game of romps with the ball of worsted Alice had been\ntrying to wind up, and had been rolling it up and down till it had all\ncome undone again; and there it was, spread over the hearth-rug, all\nknots and tangles, with the kitten running after its own tail in the\nmidd\n"
+      ]
+    },
+    "qrcode-6/1.png@270": {
+      "pass": true,
+      "ms": 0.372,
+      "texts": [
+        "1234567890"
+      ]
+    },
+    "qrcode-6/2.png@270": {
+      "pass": true,
+      "ms": 0.373,
+      "texts": [
+        "1234567890"
+      ]
+    },
+    "qrcode-6/3.png@270": {
+      "pass": true,
+      "ms": 0.365,
+      "texts": [
+        "1234567890"
+      ]
+    },
+    "qrcode-6/4.png@270": {
+      "pass": true,
+      "ms": 0.346,
+      "texts": [
+        "1234567890"
+      ]
+    },
+    "qrcode-6/5.png@270": {
+      "pass": true,
+      "ms": 0.363,
+      "texts": [
+        "1234567890"
+      ]
+    },
+    "qrcode-6/6.png@270": {
+      "pass": true,
+      "ms": 0.356,
+      "texts": [
+        "1234567890"
+      ]
+    },
+    "qrcode-6/7.png@270": {
+      "pass": true,
+      "ms": 0.347,
+      "texts": [
+        "1234567890"
+      ]
+    },
+    "qrcode-6/8.png@270": {
+      "pass": true,
+      "ms": 0.353,
+      "texts": [
+        "1234567890"
+      ]
+    },
+    "qrcode-6/9.png@270": {
+      "pass": true,
+      "ms": 0.354,
+      "texts": [
+        "1234567890"
+      ]
+    },
+    "qrcode-6/10.png@270": {
+      "pass": true,
+      "ms": 0.359,
+      "texts": [
+        "1234567890"
+      ]
+    },
+    "qrcode-6/11.png@270": {
+      "pass": true,
+      "ms": 0.362,
+      "texts": [
+        "1234567890"
+      ]
+    },
+    "qrcode-6/12.png@270": {
+      "pass": true,
+      "ms": 0.346,
+      "texts": [
+        "1234567890"
+      ]
+    },
+    "qrcode-6/13.png@270": {
+      "pass": true,
+      "ms": 0.351,
+      "texts": [
+        "1234567890"
+      ]
+    },
+    "qrcode-6/14.png@270": {
+      "pass": true,
+      "ms": 0.363,
+      "texts": [
+        "1234567890"
+      ]
+    },
+    "qrcode-6/15.png@270": {
+      "pass": true,
+      "ms": 1.883,
+      "texts": [
+        "TEST"
+      ]
+    }
+  }
+}

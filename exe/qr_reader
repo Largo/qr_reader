@@ -1,0 +1,66 @@
+#!/usr/bin/env ruby
+# frozen_string_literal: true
+
+require "optparse"
+require "json"
+require_relative "../lib/qr_reader"
+
+options = { all: false, format: :text, try_harder: true, inverted: :auto }
+parser = OptionParser.new do |o|
+  o.banner = "Usage: qr_reader [options] IMAGE...\n" \
+             "Decodes QR codes in PNG, JPEG, GIF, BMP and PNM images (use - for stdin)."
+  o.on("-a", "--all", "Print every code found (default: first code only)") { options[:all] = true }
+  o.on("-j", "--json", "Print results as JSON lines with metadata") { options[:format] = :json }
+  o.on("-v", "--verbose", "Print metadata (version, EC level, position) after the text") { options[:format] = :verbose }
+  o.on("--fast", "Skip the slower fallback strategies") { options[:try_harder] = false }
+  o.on("--[no-]inverted", "Only / never look for light-on-dark codes (default: both)") { |v| options[:inverted] = v }
+  o.on("--version", "Print version") { puts QrReader::VERSION; exit }
+end
+
+begin
+  files = parser.parse(ARGV)
+rescue OptionParser::ParseError => e
+  warn e.message, parser.help
+  exit 2
+end
+if files.empty?
+  warn parser.help
+  exit 2
+end
+
+status = 0
+reader = QrReader::Reader.new(try_harder: options[:try_harder], inverted: options[:inverted])
+files.each do |file|
+  input = file == "-" ? $stdin.binmode.read : file
+  results = begin
+    options[:all] ? reader.read_all(input) : [reader.read(input)].compact
+  rescue QrReader::Error, SystemCallError => e
+    warn "#{file}: #{e.message}"
+    status = 2
+    next
+  end
+  if results.empty?
+    warn "#{file}: no QR code found"
+    status = 1 if status.zero?
+    next
+  end
+
+  results.each do |r|
+    case options[:format]
+    when :json
+      puts JSON.generate(file: file, text: r.text, version: r.version, ec_level: r.ec_level, mask: r.mask,
+                         points: r.points&.map { |pt| pt.map { |c| c.round(1) } }, mirrored: r.mirrored,
+                         errors_corrected: r.errors_corrected, eci: r.eci,
+                         symbology_identifier: r.symbology_identifier)
+    when :verbose
+      puts r.text
+      corners = r.points&.map { |x, y| "(#{x.round},#{y.round})" }&.join(" ")
+      warn "  #{file}: version #{r.version}, EC #{r.ec_level}, mask #{r.mask}, " \
+           "#{r.errors_corrected} codewords corrected#{r.mirrored ? ', mirrored' : ''}" \
+           "#{corners ? ", corners #{corners}" : ''}"
+    else
+      puts files.size > 1 ? "#{file}: #{r.text}" : r.text
+    end
+  end
+end
+exit status

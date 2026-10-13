@@ -7,3 +7,4 @@
 /bench/results/
 *.gem
 Gemfile.lock
+/test/corpus/scans/

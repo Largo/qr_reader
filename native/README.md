@@ -27,6 +27,29 @@ QrReader.native?          # => true when the native kernels are in use
   used when its kernel digest matches the installed qr_reader.
 - `QR_READER_NATIVE=0` disables it at runtime.
 
+## Which kernels run natively
+
+Each kernel is used natively only where that was measured to be faster
+(`QrReader::NativeKernels::ALWAYS`/`WITHOUT_YJIT`/`NEVER`):
+
+| kernel | with YJIT | without YJIT |
+|---|---|---|
+| hybrid binarization | 2.6x faster | 8.9x faster |
+| finder-pattern scan | 9.6x faster | 6.3x faster |
+| downscale | ~same | 8x faster |
+| CCITT G3/G4 | ~same | 3.6x faster |
+| JPEG IDCT rendering | 4-20x faster | 4-20x faster |
+| PNG / pixel conversion | slower -> Ruby | 3x faster |
+| JPEG entropy decoding | not used | not used |
+
+JPEG entropy decoding compiled by the current Spinel (see
+ext/qr_reader_native/SPINEL_VERSION) is 2x faster on small images but slows
+down superlinearly with image size (32 ms at 640x480, 3 s at 2560x1920, versus
+83 ms in Ruby), so it stays Ruby until that is fixed in Spinel. The usual
+suspects (`byteindex`, `byteslice`, `getbyte` on strings passed from CRuby,
+appends, Strings held in Arrays) are all linear in isolation (see
+bench/spinel/ in the qr_reader repository).
+
 Installing compiles about 4 MB of generated C (Spinel's runtime included);
 Spinel itself is not needed.
 

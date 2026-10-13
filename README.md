@@ -28,9 +28,26 @@ end
 bundle add qr_reader
 ```
 
-Requires Ruby 3.2 or newer. Enable YJIT for the best speed
-(`RUBY_YJIT_ENABLE=1`, `ruby --yjit`, or `RubyVM::YJIT.enable` at boot) — it
-makes reading 3–10x faster.
+Requires Ruby 3.2 or newer and nothing else: no C compiler, no ImageMagick,
+no native libraries — it also runs on Rubies without C extensions. Enable YJIT
+for the best speed (`RUBY_YJIT_ENABLE=1`, `ruby --yjit`, or
+`RubyVM::YJIT.enable` at boot).
+
+### Optional: native kernels (qr_reader-native)
+
+The hot loops (image decoding, binarization, pattern scanning) are written as
+plain-Ruby "kernels" that the [Spinel](https://github.com/matz/spinel) AOT
+compiler can turn into C. The separate gem `qr_reader-native` contains exactly
+those kernels compiled; with it installed, qr_reader uses them automatically:
+
+```ruby
+gem "qr_reader"
+gem "qr_reader-native"   # optional, needs a C compiler at install time
+```
+
+`QrReader.native?` tells whether they are in use. It mainly pays off on Rubies
+running without YJIT (see "Accuracy and speed"); results are identical, and
+without the gem — or with `QR_READER_NATIVE=0` — the same code runs as Ruby.
 
 ## Usage
 
@@ -118,13 +135,18 @@ What does help with big inputs:
   light-on-dark codes.
 - Photos: perspective, rotation, uneven lighting, blur, noise, JPEG artifacts.
 - Scans: small codes on large pages (searched through a resolution pyramid),
-  300/600 DPI, 1-bit fax-style images, multi-page TIFF and PDF, Swiss QR-bills
-  (the cross in the middle is just damage the error correction repairs).
+  150–600 DPI, fax pages (CCITT G3/G4, non-square 204x98 dpi pixels),
+  B&W/dithered scanner modes, multi-page TIFF and PDF, Swiss QR-bills (the
+  cross in the middle is just damage the error correction repairs).
+- Scanned PDFs: images compressed with JPEG, CCITT fax, JBIG2 (generic
+  regions), Flate, LZW, run-length; xref and object streams; PDFs encrypted
+  with an empty user password.
 - Multiple codes per image (`decode_all` / `read_all`).
 
 Vector-drawn QR codes in digitally created PDFs are not rendered — only raster
-images embedded in the PDF are scanned. JBIG2 and JPEG 2000 images in PDFs are
-skipped.
+images embedded in the PDF are scanned. JPEG 2000 images in PDFs are skipped.
+Images larger than 67 megapixels (JPEG) or 134 megapixels (other formats) are
+rejected rather than risking huge memory use.
 
 ## Accuracy and speed
 
@@ -132,9 +154,33 @@ On the ZXing blackbox QR corpus (179 real-world photos, each also rotated by
 90°, 180° and 270°) qr_reader decodes **688 of 716** cases, more than
 zxing-cpp (664) and ZXing Java (~619), and every case zxing-cpp decodes.
 
+On a corpus of 259 simulated scanned documents (`rake scans:generate`; A4
+letters, invoices, Swiss QR-bills, receipts, labels, fax pages; 150–600 DPI;
+skew, blur, noise, dot gain, fading, dithering, JPEG/TIFF/PDF output) it reads
+**233 of 259** — all 109 "common" office-scanner cases, 91 of 97 "hard" and 33
+of 53 "extreme" ones — against 226 for zxing-cpp, and never returns a wrong
+text. A scanned page takes about 0.7 s on average (YJIT).
+
+Time per reading (warm, one process; i7-10750H, Ruby 4.0), with and without
+YJIT, and with the optional qr_reader-native kernels:
+
+| input | YJIT | YJIT + native | no YJIT | no YJIT + native | peak RAM |
+|---|---|---|---|---|---|
+| small photo (ZXing corpus PNG) | 23 ms | 21 ms | 29 ms | 14 ms | 2 MB |
+| 12 MP phone photo (JPEG) | 506 ms | 491 ms | 2.2 s | 1.8 s | 24 MB |
+| A4 300 dpi scan (JPEG) | 199 ms | 165 ms | 712 ms | 555 ms | 13 MB |
+| A4 300 dpi scan (PDF with JPEG) | 202 ms | 180 ms | 676 ms | 541 ms | 14 MB |
+| A4 300 dpi scan (1-bit TIFF G4) | 121 ms | 97 ms | 444 ms | 72 ms | 28 MB |
+| A4 300 dpi scan (gray PNG) | 567 ms | 545 ms | 2.6 s | 857 ms | 63 MB |
+| A4 page without a code | 953 ms | 507 ms | 3.9 s | 853 ms | 63 MB |
+| 12 MP photo without a code | 1.9 s | 1.1 s | 7.7 s | 2.3 s | 89 MB |
+
+Images without a code are the slowest case: every strategy runs to the end
+(`try_harder: false` stops early). The library itself needs about 10 MB.
+
 Benchmarks: `bundle exec ruby bench/reading.rb` (time and memory per reading),
-`bench/corpus.rb` (ZXing corpus), `bench/synthetic.rb` (distortion stress
-test).
+`bench/corpus.rb` (ZXing corpus), `bench/scans/run.rb` (scanned documents),
+`bench/synthetic.rb` (distortion stress test).
 
 ## Development
 
@@ -144,11 +190,26 @@ bundle exec rake corpus:fetch   # ZXing test images (Apache-2.0), used by some t
 bundle exec rake test
 ```
 
+### Native kernels
+
+Hot loops live in `lib/qr_reader/kernels/` and must stay within the Ruby
+subset Spinel compiles (see DESIGN.md, "Kernels"). After changing them,
+regenerate the qr_reader-native sources with a Spinel checkout:
+
+```bash
+SPINEL_HOME=~/workspace/spinel bundle exec rake native:generate
+bundle exec rake native:compile native:test
+```
+
+CI fails when the generated sources are out of date.
+
 ### Releasing
 
 Releases are published from GitHub Actions with RubyGems
 [trusted publishing](https://guides.rubygems.org/trusted-publishing/) — no API
-key is stored anywhere. Bump `QrReader::VERSION`, update `CHANGELOG.md`, then:
+key is stored anywhere. One tag releases both gems, qr_reader and
+qr_reader-native, at the same version. Bump `QrReader::VERSION`, update
+`CHANGELOG.md`, then:
 
 ```bash
 git tag v0.1.0

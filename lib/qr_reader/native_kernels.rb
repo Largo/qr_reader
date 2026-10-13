@@ -9,6 +9,17 @@ module QrReader
   # if it was built from exactly the kernel sources of this qr_reader version
   # (compared by digest). Otherwise everything keeps running as pure Ruby.
   module NativeKernels
+    # Which native entries are used (measured with tmp/kernel_bench-style
+    # comparisons on real inputs; entries not listed stay pure Ruby):
+    # faster in every mode,
+    ALWAYS = %i[binarize_hybrid binarize_local_mean finder_scan ccitt_decode lzw_decode downscale
+                jpeg_render jpeg_info].freeze
+    # only faster than Ruby without YJIT (on par or slower with it),
+    WITHOUT_YJIT = %i[png_rows png_adam7 png_unpack_rows pixels_luma].freeze
+    # not used: JPEG entropy decoding compiled by the current Spinel slows
+    # down superlinearly with image size (native/README.md).
+    NEVER = %i[jpeg_luma jpeg_luma_keep].freeze
+
     @active = false
     @pure = {}
 
@@ -50,23 +61,40 @@ module QrReader
         end
 
         names = QrReaderNative.singleton_methods(false) - %i[kernels_digest kernel_files]
-        names.each { |name| replace(name) if QrReaderKernels.respond_to?(name) }
+        names.each do |name|
+          next unless QrReaderKernels.respond_to?(name)
+
+          if ALWAYS.include?(name) then replace(name)
+          elsif WITHOUT_YJIT.include?(name) then replace(name, unless_yjit: true)
+          end
+        end
         @reason = nil
         @active = true
       end
 
       private
 
-      def replace(name)
-        @pure[name] = QrReaderKernels.method(name)
+      def replace(name, unless_yjit: false)
+        pure = @pure[name] = QrReaderKernels.method(name)
         native = QrReaderNative.method(name)
         # Strings come back from the extension tagged UTF-8; kernels work on bytes.
-        QrReaderKernels.define_singleton_method(name) do |*args|
-          NativeKernels.binary(native.call(*args))
+        if unless_yjit
+          QrReaderKernels.define_singleton_method(name) do |*args|
+            # YJIT may be enabled after loading (e.g. by Rails), so check per call.
+            NativeKernels.yjit? ? pure.call(*args) : NativeKernels.binary(native.call(*args))
+          end
+        else
+          QrReaderKernels.define_singleton_method(name) do |*args|
+            NativeKernels.binary(native.call(*args))
+          end
         end
       end
 
       public
+
+      def yjit?
+        defined?(RubyVM::YJIT) && RubyVM::YJIT.enabled? ? true : false
+      end
 
       # Result of a native entry with Strings re-tagged as binary (internal).
       def binary(value)

@@ -92,7 +92,7 @@ class TestPNG < Minitest::Test
   end
 
   def test_paeth_table_matches_definition
-    table = PNG.const_get(:Filters).const_get(:PAETH)
+    table = QrReaderKernels::PNG_PAETH
     rng = Random.new(3)
     2000.times do
       a, b, c = Array.new(3) { rng.rand(256) }

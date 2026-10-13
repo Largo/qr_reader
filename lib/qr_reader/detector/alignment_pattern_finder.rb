@@ -44,7 +44,9 @@ module QrReader
 
         best = nil
         best_score = Float::INFINITY
-        # Rows through the same pattern confirm the same centre: verify once.
+        # Rows through the same pattern confirm the same centre: verify each
+        # centre once. (Exact keys: verification samples whole pixels, so a
+        # centre a fraction of a pixel away can verify when this one fails.)
         verified = {}
         mid = y.floor.clamp(y0, y1)
         max_offset = [mid - y0, y1 - mid].max
@@ -57,10 +59,9 @@ module QrReader
               centre = confirm(cx, row, module_size)
               next unless centre
 
-              key = ((centre[1] * 2).round << 24) | (centre[0] * 2).round
-              next if verified.key?(key)
+              next if verified.key?(centre)
 
-              verified[key] = true
+              verified[centre] = true
               mismatches = verify(centre[0], centre[1], ux, uy, vx, vy)
               next if mismatches > MAX_MISMATCHES
 

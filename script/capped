@@ -1,0 +1,5 @@
+#!/bin/sh
+# Runs a command with a hard memory limit (default 3G, QR_MEM_MAX to change),
+# so a runaway decoder or test is killed instead of exhausting the machine:
+#   script/capped bundle exec ruby -Itest test/formats/test_jpeg.rb
+exec systemd-run --user --scope --quiet -p "MemoryMax=${QR_MEM_MAX:-3G}" -p MemorySwapMax=0 -- "$@"

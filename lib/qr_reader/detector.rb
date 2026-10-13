@@ -1,6 +1,7 @@
 # frozen_string_literal: true
 
 require_relative "binarizer"
+require_relative "kernels/detector"
 require_relative "detector/geometry"
 require_relative "detector/finder_pattern"
 require_relative "detector/finder_pattern_finder"

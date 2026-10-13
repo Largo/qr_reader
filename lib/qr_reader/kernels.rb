@@ -5,3 +5,10 @@
 # optional qr_reader-native gem compiles the same files with Spinel and
 # swaps in the native versions (see DESIGN.md, "Kernels").
 require_relative "kernels/image"
+require_relative "kernels/pixels"
+require_relative "kernels/png"
+require_relative "kernels/jpeg"
+require_relative "kernels/ccitt"
+require_relative "kernels/lzw"
+require_relative "kernels/binarizer"
+require_relative "kernels/detector"

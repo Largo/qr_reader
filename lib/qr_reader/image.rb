@@ -181,6 +181,20 @@ module QrReader
       Image.new(w, @height, out)
     end
 
+    # The image stretched (or shrunk) vertically to +new_height+ rows by
+    # repeating (or dropping) whole rows - nearest neighbour, C-speed copies.
+    def stretch_rows(new_height)
+      raise ArgumentError, "invalid height #{new_height}" unless new_height.positive?
+
+      out = Image.buffer(@width * new_height)
+      y = 0
+      while y < new_height
+        out << row(y * @height / new_height)
+        y += 1
+      end
+      Image.new(@width, new_height, out)
+    end
+
     def crop(x, y, w, h)
       raise ArgumentError, "crop rectangle outside image" if x.negative? || y.negative? || w < 1 || h < 1 || x + w > @width || y + h > @height
 

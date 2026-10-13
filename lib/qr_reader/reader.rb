@@ -19,6 +19,8 @@ module QrReader
     # this size: at full resolution of a 12 MP photo they cost seconds and
     # mostly chase texture noise, while the fast strategies still run there.
     HARD_MAX_SIDE = 2600
+    # Pixels at most this far from square (width / height) are used as they are.
+    SQUARE_TOLERANCE = 0.15
     # Upper bound on alternative samplings tried per candidate.
     MAX_ALTERNATIVES = 6
 
@@ -115,6 +117,7 @@ module QrReader
       @multi = multi
       @emit = block
       @seen = []
+      @y_scale = 1.0
 
       if input.is_a?(Image)
         scan_pyramid(input, nil)
@@ -127,33 +130,72 @@ module QrReader
         return
       end
 
+      @y_scale = 1.0
       case self.class.container_format(bytes)
       when :tiff
-        Formats::TIFF.each_page(bytes).each_with_index do |image, page|
-          return if scan_pyramid(image, page) && !multi
+        # Pages that cannot be decoded are skipped.
+        Formats::TIFF.each_image(bytes) do |image, info|
+          return if scan_page(image, info) && !multi
         end
       when :pdf
-        Formats::PDF.each_image(bytes) do |image, info|
-          return if scan_pyramid(image, info[:page]) && !multi
+        # Plain JPEG page images come undecoded, for the reduced-size pass.
+        Formats::PDF.each_image(bytes, raw_jpeg: true) do |image, info|
+          found = if info[:format] == :jpeg
+                    scan_jpeg_or_full(image, info[:page], info[:pixel_aspect])
+                  else
+                    scan_page(image, info)
+                  end
+          return if found && !multi
         end
       else
-        if Formats.format_of(bytes) == :jpeg && (scale = jpeg_prescale(bytes))
-          scan_jpeg(bytes, scale)
+        if Formats.format_of(bytes) == :jpeg
+          scan_jpeg_or_full(bytes, nil, 1.0)
         else
           scan_pyramid(Formats.decode(bytes), nil)
         end
       end
     end
 
-    # Big JPEGs: the coarsest pyramid level comes straight from a reduced-size
-    # decode (much cheaper than a full decode); full resolution only if needed.
-    def scan_jpeg(bytes, scale)
-      @page = nil
-      @tried = {}
-      small = Formats::JPEG.decode(bytes, scale: scale)
-      return if run_strategies(small, scale.to_f, quick: true) && !@multi
+    # One page of a TIFF or PDF, resampled to square pixels if needed.
+    def scan_page(image, info)
+      image, @y_scale = square_pixels(image, info[:pixel_aspect])
+      scan_pyramid(image, info[:page])
+    ensure
+      @y_scale = 1.0
+    end
 
-      scan_pyramid(Formats.decode(bytes), nil, skip_factor: scale)
+    def scan_jpeg_or_full(bytes, page, aspect)
+      aspect ||= 1.0
+      if (scale = jpeg_prescale(bytes)) && (aspect - 1.0).abs < SQUARE_TOLERANCE
+        scan_jpeg(bytes, scale, page)
+      else
+        scan_page(Formats::JPEG.decode(bytes), page: page, pixel_aspect: aspect)
+      end
+    end
+
+    # Big JPEGs: the coarsest pyramid level comes straight from a reduced-size
+    # decode; the coefficients are kept, so the full resolution (only needed
+    # when that finds nothing) costs IDCTs but no second entropy decoding.
+    def scan_jpeg(bytes, scale, page)
+      @page = page
+      @tried = {}
+      small, coefficients = Formats::JPEG.decode_keeping_coefficients(bytes, scale: scale)
+      return true if run_strategies(small, scale.to_f, quick: true) && !@multi
+
+      small = nil
+      full = coefficients ? coefficients.image(scale: 1) : Formats::JPEG.decode(bytes)
+      coefficients = nil
+      scan_pyramid(full, page, skip_factor: scale)
+    end
+
+    # [image with square pixels, factor mapping its rows back to the original].
+    # Fax pages (204 x 98 dpi) have pixels about twice as tall as wide: their
+    # rows are repeated so that finder patterns are square again.
+    def square_pixels(image, aspect)
+      return [image, 1.0] if aspect.nil? || aspect >= 1.0 - SQUARE_TOLERANCE
+
+      height = (image.height / aspect).round
+      [image.stretch_rows(height), image.height.to_f / height]
     end
 
     # Reduced decode scale (2, 4 or 8) for big JPEGs, or nil.
@@ -269,7 +311,8 @@ module QrReader
       end
       return nil unless result
 
-      points = candidate.points&.map { |x, y| [x * factor, y * factor] }
+      y_factor = factor * @y_scale
+      points = candidate.points&.map { |x, y| [x * factor, y * y_factor] }
       # A mirrored symbol was decoded from the transposed grid: its top-right
       # and bottom-left corners are the grid's bottom-left and top-right.
       points = [points[0], points[3], points[2], points[1]] if points && result.mirrored

@@ -355,10 +355,12 @@ class TestFormatsAdversarial < Minitest::Test
 
   # --- dispatcher ---------------------------------------------------------------
 
-  def test_tiff_and_pdf_errors_point_to_their_readers
-    { "II*\0\x08\0\0\0" => "TIFF", "MM\0*\0\0\0\x08" => "TIFF", "%PDF-1.7\n" => "PDF" }.each do |bytes, name|
-      error = assert_raises(QrReader::UnsupportedImageError) { F.decode(bytes.b) }
-      assert_includes error.message, "QrReader::Formats::#{name}"
+  # TIFF and PDF go to their own decoders (first page); truncated headers are
+  # reported by those decoders as corrupt data.
+  def test_tiff_and_pdf_headers_reach_their_decoders
+    { "II*\0\x08\0\0\0" => :tiff, "MM\0*\0\0\0\x08" => :tiff, "%PDF-1.7\n" => :pdf }.each do |bytes, format|
+      assert_equal format, F.format_of(bytes.b)
+      assert_raises(QrReader::ImageError) { F.decode(bytes.b) }
     end
   end
 

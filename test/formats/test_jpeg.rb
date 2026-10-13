@@ -74,6 +74,23 @@ class TestJPEG < Minitest::Test
     end
   end
 
+  # cmyk: :plain reads 4-component samples as ink amounts (PDFs without an
+  # inverting /Decode); references from generate_plain_cmyk.rb.
+  def test_plain_cmyk
+    %w[cmyk ycck ycck_progressive adv_ycck_420].each do |name|
+      [1, 2].each do |scale|
+        expected = Zlib::Inflate.inflate(File.binread(File.join(FIXTURES, "#{name}.plain.#{scale}.gray.z")))
+        jpeg = File.binread(File.join(FIXTURES, "#{name}.jpg"))
+        image = JPEG.decode(jpeg, scale: scale, cmyk: :plain)
+        assert_equal expected.bytes, image.data.bytes, "#{name} 1/#{scale}"
+        refute_equal JPEG.decode(jpeg, scale: scale).data, image.data, name
+      end
+    end
+    # Other components are not affected.
+    assert_equal JPEG.decode(fixture("rgb")).data, JPEG.decode(fixture("rgb"), cmyk: :plain).data
+    assert_raises(ArgumentError) { JPEG.decode(fixture("cmyk"), cmyk: :adobe) }
+  end
+
   def test_manifest_covers_the_required_variants
     names = MANIFEST.keys
     %w[q5 q100 sample_4x1 sample_1x2 sample_3x1 luma_h2v2 prog_successive prog_restart restart_1 gray rgb

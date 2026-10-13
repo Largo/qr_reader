@@ -90,13 +90,20 @@ module QrReader
         left = w
         right = 0
         y = top
+        off = top * w
         while y < bottom
-          row = bits.byteslice(y * w, w)
-          if (l = row.index(DARK))
-            left = l if l < left
-            r = row.rindex(DARK)
-            right = r + 1 if r >= right
+          # No substring per row: the first dark pixel at or after the row
+          # start is in this row, or rows without any are skipped at once.
+          l = bits.index(DARK, off)
+          if l >= off + w
+            y = l / w
+            off = y * w
+            next
           end
+          left = l - off if l - off < left
+          r = bits.rindex(DARK, off + w - 1)
+          right = r - off + 1 if r - off >= right
+          off += w
           y += 1
         end
         [left, top, right, bottom]

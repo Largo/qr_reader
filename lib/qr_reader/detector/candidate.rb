@@ -289,10 +289,16 @@ module QrReader
         @matrix.bits.getbyte(y.to_i * @matrix.width + x.to_i)
       end
 
-      # Bit of module (mx, my) under transform t (0 when outside the image).
+      # Bit of module (mx, my) under transform t (0 when outside the image
+      # or at infinity). Same as pixel(*t.apply(...)) without allocating.
       def module_at(t, mx, my)
-        x, y = t.apply(mx + 0.5, my + 0.5)
-        x ? pixel(x, y) : 0
+        m = t.m
+        u = mx + 0.5
+        v = my + 0.5
+        den = m[6] * u + m[7] * v + m[8]
+        return 0 if den.abs < 1e-12
+
+        pixel((m[0] * u + m[1] * v + m[2]) / den, (m[3] * u + m[4] * v + m[5]) / den)
       end
 
       # Fraction of the timing pattern modules (row and column 6 between the

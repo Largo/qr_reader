@@ -339,7 +339,9 @@ class TestPdfSynthetic < Minitest::Test
     bottom_up = "q 2 0 0 2 0 0 cm q 50 0 0 5 0 0 cm /S2 Do Q q 50 0 0 5 0 5 cm /S1 Do Q q 50 0 0 5 0 10 cm /S0 Do Q Q"
     [top_down, bottom_up].each do |content|
       pairs = PDF.each_image(w.document([[content, resources]])).to_a
-      assert_equal [[picture.bytes, { page: 0, name: content == top_down ? "S0" : "S2", width: 50, height: 30 }]],
+      info = { page: 0, name: content == top_down ? "S0" : "S2", width: 50, height: 30, pixel_aspect: 2.0,
+               dpi: [36.0, 72.0] }
+      assert_equal [[picture.bytes, info]],
                    pairs.map { |image, info| [image.data.bytes, info] }
     end
     inline = "q 100 0 0 10 0 20 cm /S0 Do Q q 100 0 0 10 0 10 cm BI /W 50 /H 10 /BPC 8 /CS /G ID ".b +

@@ -13,10 +13,12 @@ module QrReader
     # The image data is inflated as a stream and handed to the PNG kernel
     # (QrReaderKernels.png_rows, kernels/png.rb) about a megabyte at a time:
     # the kernel unfilters the rows and converts them to luminance in one
-    # pass, so the whole inflated image never exists at once. Palette, low
-    # bit depth and grayscale images come out of the kernel as sample values
-    # and are mapped to luminance with a single String#tr at the end. 16-bit
-    # samples keep their high byte.
+    # pass, so the whole inflated image never exists at once. Palette and
+    # grayscale images of up to 8 bits come out of the kernel as unfiltered
+    # rows; 1 and 4-bit samples are spread to one character per sample with
+    # String#unpack1 ("B" / "H", C speed) and everything is mapped to
+    # luminance with a single String#tr at the end. 16-bit samples keep
+    # their high byte.
     module PNG
       SIGNATURE = "\x89PNG\r\n\x1A\n".b
 
@@ -31,6 +33,10 @@ module QrReader
 
       # Adam7 passes: [x0, y0, dx, dy].
       ADAM7 = [[0, 0, 8, 8], [4, 0, 8, 8], [0, 4, 4, 8], [2, 0, 4, 4], [0, 2, 2, 4], [1, 0, 2, 2], [0, 1, 1, 2]].freeze
+
+      # Bytes standing for the sample values 0, 1, ... after String#unpack1
+      # spread 1-bit ("B") and 4-bit ("H") rows: the String#tr sources.
+      UNPACKED_CODES = { 1 => "01".bytes.freeze, 4 => "0123456789abcdef".bytes.freeze }.freeze
 
       # Compressed bytes fed to zlib at a time (bounds the work done for
       # zip bombs: the output of one slice is at most ~66 MB, streamed).
@@ -68,14 +74,16 @@ module QrReader
           setup_conversion
           w = @width
           h = @height
-          out =
-            if @interlaced
-              raw = inflate_all(ADAM7.sum { |pass| pass_size(pass) })
-              QrReaderKernels.png_adam7(raw, w, h, @depth, @channels, @key)
-            else
-              decode_stream
-            end
-          Support.translate!(out, @tr_from, @tr_to) if @tr_from
+          if @interlaced
+            raw = inflate_all(ADAM7.sum { |pass| pass_size(pass) })
+            out = QrReaderKernels.png_adam7(raw, w, h, @depth, @channels, @key)
+            codes = ALL_BYTES
+          else
+            out = decode_stream
+            codes = ALL_BYTES
+            out, codes = unpack_samples(out) if @depth < 8
+          end
+          Support.translate!(out, codes.first(@tr_to.size), @tr_to) if @tr_to
           Image.new(w, h, out)
         end
 
@@ -146,7 +154,7 @@ module QrReader
         end
 
         # Chooses the colour key passed to the kernel and the final
-        # String#tr mapping of sample values.
+        # String#tr mapping of sample values (@tr_to[value] = luminance).
         def setup_conversion
           depth = @depth
           trns = @trns
@@ -158,9 +166,11 @@ module QrReader
             if depth == 16
               @key = trns.byteslice(0, 2) if key
             elsif depth == 8
-              @tr_from, @tr_to = [key], [255] if key && key <= 255
+              if key && key <= 255
+                @tr_to = ALL_BYTES.dup
+                @tr_to[key] = 255
+              end
             else
-              @tr_from = Array.new(max + 1) { |v| v }
               @tr_to = Array.new(max + 1) { |v| v * 255 / max }
               @tr_to[key] = 255 if key && key <= max
             end
@@ -171,20 +181,46 @@ module QrReader
               @key = depth == 16 ? trns.byteslice(0, 6) : (rgb.max <= 255 ? rgb.pack("C3") : "".b)
             end
           when 3
-            @tr_from = Array.new(1 << depth) { |v| v }
             @tr_to = Support.palette_lumas(@palette, alpha: trns).first(1 << depth)
           end
         end
 
+        # Packed 1, 2 and 4-bit rows -> one byte per sample, and the bytes
+        # that stand for the sample values 0, 1, ...
+        def unpack_samples(packed)
+          w = @width
+          depth = @depth
+          len = row_bytes(w)
+          if depth == 2
+            return [QrReaderKernels.png_unpack_rows(packed, @height, w, len, 2), ALL_BYTES]
+          end
+
+          format = depth == 1 ? "B" : "H"
+          if (w * depth) % 8 == 0
+            out = packed.unpack1("#{format}*")
+          else
+            out = Support.buffer(w * @height)
+            spec = "#{format}#{w}"
+            off = 0
+            while off < packed.bytesize
+              out << packed.unpack1(spec, offset: off)
+              off += len
+            end
+          end
+          [out.b, UNPACKED_CODES[depth]]
+        end
+
         # Inflates the image data in slices and feeds complete rows to the
-        # kernel; returns the converted image (width * height bytes).
+        # kernel; returns the converted image (width * height bytes, or the
+        # unfiltered rows of gray/palette images of less than 8 bits).
         def decode_stream
           w = @width
           rows_left = @height
           len = row_bytes(w)
           stride = len + 1
+          @row_out = @channels == 1 && @depth <= 8 ? len : w
           batch = [KERNEL_SLICE / stride, 1].max * stride
-          out = Support.buffer([w * @height, compressed_size * 1032 + 1024].min)
+          out = Support.buffer([@row_out * @height, compressed_size * 1032 + 1024].min)
           prev = "".b
           pending = nil
           each_inflated do |data|
@@ -222,7 +258,7 @@ module QrReader
         # output to +out+; returns the last unfiltered row.
         def convert_rows(raw, n, w, prev, out)
           res = QrReaderKernels.png_rows(raw, 0, n, w, @depth, @channels, prev, @key)
-          size = n * w
+          size = n * @row_out
           out << res.byteslice(0, size)
           res.byteslice(size, res.bytesize - size)
         end

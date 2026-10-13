@@ -91,6 +91,94 @@ class TestPNG < Minitest::Test
     check(pixels, color_type: 2, depth: 8, filters: [3])
   end
 
+  # Mostly opaque alpha images: the decoder unfilters opaque rows without
+  # their alpha lane and switches to the full path for translucent ones
+  # (first, middle, last pixel; whole rows), and repeats rows whose Up
+  # filter bytes are all zero. 16-bit alpha with a high byte of 255 counts
+  # as opaque (only high bytes are used).
+  def test_opaque_and_translucent_rows_with_every_filter
+    [[4, 8], [4, 16], [6, 8], [6, 16]].each do |ct, depth|
+      max = (1 << depth) - 1
+      pixels = random_pixels(9, 16, ct, depth, seed: ct * 7 + depth)
+      pixels.each { |row| row.each { |px| px[-1] = max } }
+      pixels[2][0][-1] = max - 1
+      pixels[3][2][-1] = max - 0x80 if depth == 16
+      pixels[5][4][-1] = 0
+      pixels[8][8][-1] = max >> 1
+      pixels[9].each { |px| px[-1] = 0 }
+      pixels[11] = pixels[10].map(&:dup)
+      pixels[12] = pixels[10].map(&:dup)
+      pixels[14] = pixels[13].map { |px| px.dup.tap { |q| q[-1] = 3 } }
+      pixels[15] = pixels[14].map(&:dup)
+      # one pixel per row: the first pixel's alpha is all there is
+      column = random_pixels(1, 8, ct, depth, seed: depth)
+      column.each_with_index { |row, y| row[0][-1] = [max, max, max - 1, max, 0, max, max, max >> 2][y] }
+      [[0], [1], [2], [3], [4], [0, 1, 2, 3, 4], [4, 3, 2, 1, 2]].each do |filters|
+        check(pixels, color_type: ct, depth: depth, filters: filters)
+        check(pixels, color_type: ct, depth: depth, filters: filters, interlace: true)
+        check(column, color_type: ct, depth: depth, filters: filters)
+      end
+    end
+  end
+
+  # Flat areas: repeated rows (Up filter, all-zero bytes) of every layout.
+  def test_repeated_rows_of_every_layout
+    { 0 => [1, 2, 4, 8, 16], 2 => [8, 16], 3 => [2, 8], 4 => [8, 16], 6 => [8, 16] }.each do |ct, depths|
+      depths.each do |depth|
+        palette = random_palette(1 << depth, seed: depth) if ct == 3
+        base = random_pixels(21, 3, ct, depth, seed: ct + depth)
+        pixels = [base[0], base[0], base[0], base[1], base[2], base[2]].map { |row| row.map(&:dup) }
+        [[2], [0, 2, 2], [4, 2, 2, 3, 1, 2]].each do |filters|
+          check(pixels, color_type: ct, depth: depth, palette: palette, filters: filters)
+        end
+      end
+    end
+  end
+
+  # The decoder calls the kernel on slices of rows, threading the last row
+  # through: any slicing must give the same result as one call.
+  def test_kernel_slices_agree_with_one_call
+    [[0, 8], [0, 16], [0, 1], [3, 4], [2, 8], [2, 16], [4, 8], [4, 16], [6, 8], [6, 16]].each do |ct, depth|
+      channels = W::CHANNELS[ct]
+      width = 7
+      height = 40
+      pixels = random_pixels(width, height, ct, depth, seed: 40 + ct + depth)
+      if ct == 4 || ct == 6
+        max = (1 << depth) - 1
+        pixels.each_with_index { |row, y| row.each { |px| px[-1] = max } unless y % 9 == 4 }
+      end
+      pixels[20] = pixels[19].map(&:dup)
+      raw = W.filter_rows(pixels, ct, depth, [0, 1, 2, 3, 4, 2, 2, 3])
+      per = channels == 1 && depth <= 8 ? (width * depth + 7) / 8 : width
+      whole = QrReaderKernels.png_rows(raw, 0, height, width, depth, channels, "".b, "".b).byteslice(0, height * per)
+      rng = Random.new(depth + ct)
+      3.times do
+        out = +"".b
+        prev = "".b
+        pos = 0
+        y = 0
+        while y < height
+          n = [1 + rng.rand(7), height - y].min
+          res = QrReaderKernels.png_rows(raw, pos, n, width, depth, channels, prev, "".b)
+          out << res.byteslice(0, n * per)
+          prev = res.byteslice(n * per, res.bytesize - n * per)
+          pos += n * (1 + (width * channels * depth + 7) / 8)
+          y += n
+        end
+        assert_equal whole, out, "colour type #{ct}, depth #{depth}"
+      end
+    end
+  end
+
+  # The kernels composite over white with (x * 0x8081) >> 23 for x / 255.
+  def test_over_white_multiply_shift_matches_division
+    256.times do |a|
+      256.times do |v|
+        assert_equal (v * a + 255 * (255 - a) + 127) / 255, (((v - 255) * a + 65_152) * 0x8081) >> 23
+      end
+    end
+  end
+
   def test_paeth_table_matches_definition
     table = QrReaderKernels::PNG_PAETH
     rng = Random.new(3)

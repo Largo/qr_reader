@@ -32,8 +32,16 @@ module QrReader
     FAST_TRIPLES = 12
     HARD_TRIPLES = 40
     MULTI_TRIPLES = 120
-    # With multi, up to this many finder patterns are considered.
+    # With multi, up to this many finder patterns are considered...
     MULTI_PATTERNS = 400
+    # ... and at most this many "foreign" triples (with other finder
+    # patterns inside, see PatternSets.partition_clean): on pages with
+    # several symbols nearly all triples joining finders of different
+    # symbols are foreign, real symbols practically never.
+    MULTI_FOREIGN = 12
+    # Score penalty of foreign triples in single-symbol mode (a perfect
+    # triple scores 0, see PatternSets.evaluate).
+    FOREIGN_PENALTY = 0.5
     # Besides the best scored triples overall, each finder pattern is
     # combined with pairs of this many of its nearest neighbours.
     NEIGHBOURS = 8
@@ -137,19 +145,25 @@ module QrReader
 
     # [patterns, triples] for single-symbol detection: the best scored
     # triples of the most consistent finder patterns and of each pattern's
-    # nearest neighbours, those without another symbol's finder pattern
-    # inside first (on a sheet of labels the best shaped triples join
-    # finders of neighbouring symbols).
+    # nearest neighbours, those with other symbols' finder patterns inside
+    # (foreign, see PatternSets.partition_clean) ranked as if their score
+    # were FOREIGN_PENALTY worse: on a sheet of labels the best shaped
+    # triples join finders of neighbouring symbols, but a large symbol
+    # with small modules can have finder look-alikes in its data area and
+    # must still beat the ill-shaped triples of those look-alikes.
     def single_triples(try_harder)
       patterns = finder_patterns(try_harder: try_harder)
       limit = try_harder ? HARD_TRIPLES : FAST_TRIPLES
       clean, foreign = ranked_triples(PatternSets.generate(patterns, 4 * limit), patterns, patterns)
-      [patterns, (clean + foreign).first(limit)]
+      ranked = clean.each_with_index.map { |t, i| [t.score, i, t] }
+      foreign.each_with_index { |t, i| ranked << [t.score + FOREIGN_PENALTY, clean.size + i, t] }
+      [patterns, ranked.sort!.first(limit).map(&:last)]
     end
 
     # [patterns, triples] for multi-symbol detection: as for a single
     # symbol, but from up to MULTI_PATTERNS patterns and MULTI_TRIPLES
-    # triples (a page with that many symbols).
+    # triples (a page with that many symbols), MULTI_FOREIGN of them
+    # foreign.
     def multi_triples(try_harder)
       all = @finder.find(try_harder: try_harder, limit: MULTI_PATTERNS)
       best = if all.size > FinderPatternFinder::MAX_PATTERNS
@@ -158,7 +172,7 @@ module QrReader
                all
              end
       clean, foreign = ranked_triples(PatternSets.generate(best, MULTI_TRIPLES), all, all)
-      [all, (clean + foreign).first(MULTI_TRIPLES)]
+      [all, (clean + foreign.first(MULTI_FOREIGN)).first(MULTI_TRIPLES)]
     end
 
     # +triples+ plus the neighbourhood triples of +near+, split into

@@ -7,12 +7,25 @@ require_relative "pixels"
 # Plain Ruby in the subset Spinel compiles (see DESIGN.md, "Kernels").
 #
 # Rows are unfiltered into a fresh String per row (appending with String#<<
-# is much cheaper than setbyte). 8-bit gray+alpha, RGB and RGBA rows are
-# unfiltered and converted in one pass by fused helpers (one per filter
-# type and pixel layout); other layouts are unfiltered first and then
-# converted. Each helper is a small method called once per row: YJIT
-# compiles methods, not loops, and keeping dispatch out of the loops means
-# that one layout never makes another one's loop side-exit.
+# is much cheaper than setbyte under YJIT). PNG filters work on bytes, each
+# byte predicted from the same byte of the pixel to the left, above and
+# above-left, so the bytes of every sample position form independent lanes:
+# for 16-bit samples only the high-byte lanes are unfiltered (the low bytes
+# never reach the luminance), which halves the work. 8 and 16-bit gray,
+# gray+alpha, RGB and RGBA rows are unfiltered and converted in one pass by
+# fused helpers (one per filter type and layout); rows whose filtered bytes
+# are all zero with the Up filter (flat areas: margins, backgrounds) are
+# the previous row again and cost a memcmp.
+#
+# Each helper is a small method called once per row: YJIT compiles methods,
+# not loops, and keeping dispatch out of the loops means that one layout
+# never makes another one's loop side-exit. Methods with a byte loop
+# reference no constants and call nothing that does (tables are passed in
+# as arguments, buffers come from png_buf): with YJIT (Ruby 4.0), when a
+# constant cache in the loop method or in a method it calls is invalidated
+# after compilation - e.g. Encoding::BINARY once any constant named BINARY
+# is defined anywhere (decoder/character_set.rb, Zlib) - the loop keeps
+# running at interpreter speed, 5-7x slower, for the rest of the process.
 module QrReaderKernels
   # Paeth predictor without branches: with da = b - c and db = a - c (a =
   # left, b = up, c = up-left) the predictor is c + PNG_PAETH[...], where
@@ -62,7 +75,7 @@ module QrReaderKernels
     table = []
     b = 0
     while b < 256
-      s = String.new(capacity: 8, encoding: Encoding::BINARY)
+      s = png_buf(8)
       shift = 8 - depth
       while shift >= 0
         s << ((b >> shift) & mask)
@@ -74,8 +87,15 @@ module QrReaderKernels
     table
   end
 
+  # An empty binary String with room for +size+ bytes. (String.new without
+  # a source String is binary; naming Encoding::BINARY here would put a
+  # constant cache into every row helper's call path, see the module
+  # comment.)
+  def self.png_buf(size)
+    String.new(capacity: size)
+  end
+
   PNG_PAETH = png_paeth_table.freeze
-  PNG_PAETH_CENTER = 255 * 511 + 255
   PNG_UNPACK1 = png_unpack_table(1).freeze
   PNG_UNPACK2 = png_unpack_table(2).freeze
   PNG_UNPACK4 = png_unpack_table(4).freeze
@@ -84,53 +104,258 @@ module QrReaderKernels
 
   # Unfilters +rows+ rows of +width+ pixels (+channels+ samples of +depth+
   # bits each), stored from byte +pos+ of +raw+ as a filter type byte
-  # followed by the filtered row, and converts them: to luminance with alpha
-  # over white for 8/16-bit colour or alpha, to one byte per sample value
-  # (0 .. 2**depth - 1) for gray/palette images of depth <= 8, which the
-  # caller maps with String#tr. 16-bit samples keep their high byte.
-  # +prev+ is the unfiltered row above the first one ("" at the top of an
-  # image or pass). +key+ is the tRNS colour key as raw sample bytes (16-bit
-  # gray, RGB): matching pixels become white; "" for none.
-  # Returns rows * width output bytes followed by the last unfiltered row
-  # (the +prev+ of the next call when an image is decoded in slices).
+  # followed by the filtered row, and converts them:
+  #
+  # * gray/palette of depth <= 8 (+channels+ 1): the unfiltered rows as
+  #   they are, (width * depth + 7) / 8 bytes each (sample values, packed
+  #   below 8 bits), for the caller to map;
+  # * otherwise: width bytes of luminance per row, alpha over white, 16-bit
+  #   samples by their high byte. +key+ is the tRNS colour key as raw sample
+  #   bytes (16-bit gray, 8/16-bit RGB): matching pixels become white; ""
+  #   for none.
+  #
+  # +prev+ is the previous row as this kernel returned it ("" at the top of
+  # an image or pass). Returns the converted rows followed by the last
+  # unfiltered row (the +prev+ of the next call when an image is decoded in
+  # slices; its size depends on the layout).
   # spinel-sample: QrReaderKernels.png_rows("\x01\x10\x20\x03\x01\x02".b, 0, 2, 2, 8, 1, "".b, "".b)
   def self.png_rows(raw, pos, rows, width, depth, channels, prev, key)
+    t = PNG_PAETH
+    if channels == 1 && depth <= 8
+      png_rows_bytes(raw, pos, rows, (width * depth + 7) >> 3, prev, t)
+    elsif key.bytesize > 0
+      png_rows_keyed(raw, pos, rows, width, depth, channels, prev, key, t)
+    elsif channels == 2 || channels == 4
+      png_rows_alpha(raw, pos, rows, width, channels, depth >> 3, prev, t)
+    else
+      png_rows_luma(raw, pos, rows, width, channels, depth >> 3, prev, t)
+    end
+  end
+
+  def self.png_check(raw, pos, rows, len)
+    raise QrReader::ImageError, "truncated PNG image data" if pos + rows * (len + 1) > raw.bytesize
+  end
+
+  def self.png_bad_filter(filter)
+    raise QrReader::ImageError, "invalid PNG filter type #{filter}"
+  end
+
+  # +len+ zero bytes.
+  def self.png_zeros(len)
+    "\0".b * len
+  end
+
+  # True if the +len+ filtered bytes at +ri+ are all zero (cheap rejection
+  # first: noisy rows rarely start and end with zero).
+  def self.png_zero_row(raw, ri, len, zeros)
+    raw.getbyte(ri) == 0 && raw.getbyte(ri + len - 1) == 0 && raw.byteslice(ri, len) == zeros
+  end
+
+  # Rows of +len+ one-byte samples (gray or palette, any depth <= 8).
+  def self.png_rows_bytes(raw, pos, rows, len, prev, t)
+    png_check(raw, pos, rows, len)
+    prev = png_zeros(len) if prev.bytesize < len
+    zeros = png_zeros(len)
+    out = png_buf(rows * len + len)
+    y = 0
+    while y < rows
+      filter = raw.getbyte(pos)
+      ri = pos + 1
+      cur =
+        if filter == 0
+          raw.byteslice(ri, len) || ""
+        elsif filter == 2 && png_zero_row(raw, ri, len, zeros)
+          prev
+        else
+          png_bad_filter(filter) if filter > 4
+          png_gray_row(raw, ri, prev, len, 1, filter, t)
+        end
+      out << cur
+      prev = cur
+      pos = ri + len
+      y += 1
+    end
+    out << prev
+  end
+
+  # Rows of 8 or 16-bit (+sw+ = 1 or 2 bytes per sample) gray or RGB
+  # without colour key: luminance. +prev+ / the returned last row hold the
+  # high bytes only (width * channels bytes).
+  def self.png_rows_luma(raw, pos, rows, width, channels, sw, prev, t)
+    clen = width * channels
+    rlen = clen * sw
+    png_check(raw, pos, rows, rlen)
+    prev = png_zeros(clen) if prev.bytesize < clen
+    zeros = png_zeros(rlen)
+    out = png_buf(rows * width + clen)
+    prev_lum = "" # luminance of prev, computed when first needed
+    y = 0
+    while y < rows
+      filter = raw.getbyte(pos)
+      ri = pos + 1
+      if filter == 2 && png_zero_row(raw, ri, rlen, zeros)
+        cur = prev
+        prev_lum = png_luma(prev, width, channels) if prev_lum.bytesize == 0
+        lum = prev_lum
+      elsif filter == 0
+        cur = sw == 1 ? (raw.byteslice(ri, clen) || "") : px_gray_row(raw, ri, clen, 0, 2)
+        lum = png_luma(cur, width, channels)
+      else
+        png_bad_filter(filter) if filter > 4
+        cur = png_fused_row(raw, ri, prev, width, channels, sw, filter, t)
+        lum = channels == 1 ? cur : (cur.byteslice(clen, width) || "")
+      end
+      out << lum
+      prev = cur
+      prev_lum = lum
+      pos = ri + rlen
+      y += 1
+    end
+    out << (prev.byteslice(0, clen) || "")
+  end
+
+  # Rows of 8 or 16-bit gray+alpha or RGBA: luminance over white. Rows
+  # that are entirely opaque (alpha 255, the common case) are tracked as
+  # such: while the row above is opaque, the next one is unfiltered by the
+  # opaque helpers, which skip the alpha lane (it stays 255 exactly when its
+  # filtered bytes are 0, the first pixel aside) and keep the colour
+  # samples only. A row that turns out not to be opaque is redone by the
+  # full helpers, which report whether their row was opaque. The returned
+  # last row has width * channels bytes, or width * (channels - 1) when
+  # opaque (that is how +prev+ tells).
+  def self.png_rows_alpha(raw, pos, rows, width, channels, sw, prev, t)
+    clen = width * channels
+    olen = clen - width
+    rlen = clen * sw
+    png_check(raw, pos, rows, rlen)
+    opaque = prev.bytesize == olen
+    prev = png_zeros(clen) if !opaque && prev.bytesize < clen
+    zeros = png_zeros(rlen)
+    out = png_buf(rows * width + clen)
+    prev_lum = "" # luminance of prev, computed when first needed
+    y = 0
+    while y < rows
+      filter = raw.getbyte(pos)
+      ri = pos + 1
+      if filter == 2 && png_zero_row(raw, ri, rlen, zeros)
+        cur = prev
+        prev_lum = png_alpha_luma(prev, width, channels, opaque) if prev_lum.bytesize == 0
+        lum = prev_lum
+      elsif filter == 0
+        cur = sw == 1 ? (raw.byteslice(ri, clen) || "") : px_gray_row(raw, ri, clen, 0, 2)
+        lum = png_luma(cur, width, channels)
+        opaque = false
+      else
+        png_bad_filter(filter) if filter > 4
+        cur = ""
+        if opaque
+          cur = png_opaque_row(raw, ri, prev, width, channels, sw, filter, t)
+          if cur.bytesize == 0
+            prev = png_unopaque(prev, width, channels)
+            opaque = false
+          end
+        end
+        if opaque
+          lum = channels == 2 ? cur : (cur.byteslice(olen, width) || "")
+        else
+          cur = png_fused_row(raw, ri, prev, width, channels, sw, filter, t)
+          lum = cur.byteslice(clen, width) || ""
+          if cur.getbyte(clen + width) == 255
+            opaque = true
+            cur = channels == 2 ? lum : png_rgb_lanes(cur, width)
+          end
+        end
+      end
+      out << lum
+      prev = cur
+      prev_lum = lum
+      pos = ri + rlen
+      y += 1
+    end
+    out << (prev.byteslice(0, opaque ? olen : clen) || "")
+  end
+
+  # Luminance of a previous row (opaque: colour samples only).
+  def self.png_alpha_luma(prev, width, channels, opaque)
+    if opaque
+      channels == 2 ? (prev.byteslice(0, width) || "") : px_rgb_row(prev, 0, width, 0, 1, 2, 3)
+    else
+      png_luma(prev, width, channels)
+    end
+  end
+
+  # An opaque row (colour samples only) with its alpha samples (255) back.
+  def self.png_unopaque(prev, width, channels)
+    row = png_buf(width * channels)
+    k = 0
+    if channels == 2
+      while k < width
+        row << prev.getbyte(k) << 255
+        k += 1
+      end
+    else
+      stop = 3 * width
+      while k < stop
+        row << prev.getbyte(k) << prev.getbyte(k + 1) << prev.getbyte(k + 2) << 255
+        k += 3
+      end
+    end
+    row
+  end
+
+  # The RGB samples of an RGBA row.
+  def self.png_rgb_lanes(cur, width)
+    row = png_buf(3 * width)
+    k = 0
+    stop = 4 * width
+    while k < stop
+      row << cur.getbyte(k) << cur.getbyte(k + 1) << cur.getbyte(k + 2)
+      k += 4
+    end
+    row
+  end
+
+  # Rows with a tRNS colour key (16-bit gray, 8/16-bit RGB): the key
+  # compares whole samples, so every byte is unfiltered.
+  def self.png_rows_keyed(raw, pos, rows, width, depth, channels, prev, key, t)
     len = (width * channels * depth + 7) >> 3
     bpp = (channels * depth + 7) >> 3
-    raise QrReader::ImageError, "truncated PNG image data" if pos + rows * (len + 1) > raw.bytesize
-
-    prev = "\0".b * len if prev.bytesize < len
-    out = String.new(capacity: rows * width + len, encoding: Encoding::BINARY)
-    fused = depth == 8 && channels > 1
+    png_check(raw, pos, rows, len)
+    prev = png_zeros(len) if prev.bytesize < len
+    out = png_buf(rows * width + len)
+    sw = depth >> 3
     y = 0
     while y < rows
       filter = raw.getbyte(pos)
       png_bad_filter(filter) if filter > 4
       ri = pos + 1
-      if fused && filter != 0
-        cur = png_fused_row(raw, ri, prev, len, channels, filter)
-        lum = cur.byteslice(len, width) || ""
-      else
-        cur = png_unfilter_row(raw, ri, prev, len, bpp, filter)
-        lum = png_convert_row(cur, width, depth, channels)
-      end
-      lum = png_key_row(cur, lum, width, key) unless key.empty?
-      out << lum
+      cur = png_unfilter_row(raw, ri, prev, len, bpp, filter, t)
+      lum = channels == 1 ? px_gray_row(cur, 0, width, 0, sw) : px_rgb_row(cur, 0, width, 0, sw, 2 * sw, 3 * sw)
+      out << png_key_row(cur, lum, width, key)
       prev = cur
       pos = ri + len
       y += 1
     end
-    out << prev.byteslice(0, len)
-    out
+    out << prev
+  end
+
+  # Luminance of a row of 8-bit samples (high bytes) of +channels+ each.
+  def self.png_luma(cur, width, channels)
+    case channels
+    when 1 then cur.byteslice(0, width) || ""
+    when 2 then px_gray_alpha_row(cur, 0, width, 0, 1, 2)
+    when 3 then px_rgb_row(cur, 0, width, 0, 1, 2, 3)
+    else px_rgba_row(cur, 0, width, 0, 1, 2, 3, 4)
+    end
   end
 
   # Decodes a whole Adam7-interlaced image: the seven passes stored one
   # after the other in +raw+ (as png_rows reads them), then scattered into
   # +width+ x +height+ output bytes (luminance or sample values, see
-  # png_rows).
+  # png_rows; samples below 8 bits come out one per byte).
   # spinel-sample: QrReaderKernels.png_adam7("\x00\x10".b, 1, 1, 8, 1, "".b)
   def self.png_adam7(raw, width, height, depth, channels, key)
-    passes = String.new(capacity: width * height, encoding: Encoding::BINARY)
+    passes = png_buf(width * height)
     starts = []
     widths = []
     pos = 0
@@ -146,133 +371,106 @@ module QrReaderKernels
       starts << passes.bytesize
       widths << pw
       if pw > 0
-        res = png_rows(raw, pos, ph, pw, depth, channels, "".b, key)
-        passes << res.byteslice(0, pw * ph)
-        pos += ph * (1 + ((pw * channels * depth + 7) >> 3))
+        res = png_rows(raw, pos, ph, pw, depth, channels, "", key)
+        len = (pw * channels * depth + 7) >> 3
+        if channels == 1 && depth < 8
+          passes << png_unpack_rows(res, ph, pw, len, depth)
+        else
+          passes << (res.byteslice(0, pw * ph) || "")
+        end
+        pos += ph * (1 + len)
       end
       p += 1
     end
-    out = String.new(capacity: width * height, encoding: Encoding::BINARY)
+    out = png_buf(width * height)
     y = 0
     while y < height
-      out << png_adam7_row(passes, starts, widths, y, width)
+      if (y & 1) == 1
+        # odd rows are pass 7 rows, complete
+        start = starts[6] + (y >> 1) * width
+        out << (passes.byteslice(start, width) || "")
+      else
+        out << png_adam7_row(passes, starts, widths, y, width, PNG_ADAM7)
+      end
       y += 1
     end
     out
   end
 
-  # Output row +y+ of an interlaced image from the decoded passes.
-  def self.png_adam7_row(passes, starts, widths, y, width)
-    row = "\0".b * width
+  # Samples of 1, 2 or 4 bits of +rows+ packed rows (+len+ bytes each)
+  # -> one byte per sample, +width+ per row.
+  # spinel-sample: QrReaderKernels.png_unpack_rows("\xE4\x1B".b, 2, 3, 1, 2)
+  def self.png_unpack_rows(packed, rows, width, len, depth)
+    table = depth == 1 ? PNG_UNPACK1 : (depth == 2 ? PNG_UNPACK2 : PNG_UNPACK4)
+    out = png_buf(rows * width)
+    y = 0
+    while y < rows
+      out << png_unpack_row(packed, y * len, width, depth, table)
+      y += 1
+    end
+    out
+  end
+
+  def self.png_unpack_row(packed, off, width, depth, table)
+    per = 8 / depth
+    full = width / per
+    row = png_buf(width + per)
+    i = off
+    stop = off + full
+    while i < stop
+      row << table[packed.getbyte(i)]
+      i += 1
+    end
+    rest = width - full * per
+    row << (table[packed.getbyte(stop)].byteslice(0, rest) || "") if rest > 0
+    row
+  end
+
+  # Even output row +y+ of an interlaced image from the decoded passes.
+  def self.png_adam7_row(passes, starts, widths, y, width, a7)
+    row = png_zeros(width)
     p = 0
-    while p < 7
+    while p < 6
       pw = widths[p]
-      y0 = PNG_ADAM7[4 * p + 1]
-      dy = PNG_ADAM7[4 * p + 3]
+      y0 = a7[4 * p + 1]
+      dy = a7[4 * p + 3]
       if pw > 0 && y >= y0 && (y - y0) % dy == 0
-        src = starts[p] + (y - y0) / dy * pw
-        x = PNG_ADAM7[4 * p]
-        dx = PNG_ADAM7[4 * p + 2]
-        stop = src + pw
-        while src < stop
-          row.setbyte(x, passes.getbyte(src))
-          x += dx
-          src += 1
-        end
+        png_scatter(row, passes, starts[p] + (y - y0) / dy * pw, pw, a7[4 * p], a7[4 * p + 2])
       end
       p += 1
     end
     row
   end
 
-  # Unfiltered row (+len+ bytes) followed by its luminance, for 8-bit
-  # gray+alpha, RGB and RGBA rows with filter type 1..4. (Dispatchers return
-  # a String on every branch, never nil: in the native build a nilable
-  # String would make every byte loop that reads it polymorphic.)
-  def self.png_fused_row(raw, ri, prev, len, channels, filter)
-    t = PNG_PAETH
-    case channels
-    when 2
-      case filter
-      when 1 then png_ga8_sub(raw, ri, len)
-      when 2 then png_ga8_up(raw, ri, prev, len)
-      when 3 then png_ga8_avg(raw, ri, prev, len)
-      else png_ga8_paeth(raw, ri, prev, len, t)
-      end
-    when 3
-      case filter
-      when 1 then png_rgb8_sub(raw, ri, len)
-      when 2 then png_rgb8_up(raw, ri, prev, len)
-      when 3 then png_rgb8_avg(raw, ri, prev, len)
-      else png_rgb8_paeth(raw, ri, prev, len, t)
-      end
-    else
-      case filter
-      when 1 then png_rgba8_sub(raw, ri, len)
-      when 2 then png_rgba8_up(raw, ri, prev, len)
-      when 3 then png_rgba8_avg(raw, ri, prev, len)
-      else png_rgba8_paeth(raw, ri, prev, len, t)
-      end
+  # Copies +n+ bytes from +src+ at +from+ to every +dx+-th byte of +row+
+  # starting at +x+ (+row+ is the caller's own String).
+  def self.png_scatter(row, src, from, n, x, dx)
+    stop = from + n
+    while from < stop
+      row.setbyte(x, src.getbyte(from))
+      x += dx
+      from += 1
     end
+    row
   end
+
+  # --- generic unfiltering (any pixel size, all bytes) -----------------------
 
   # The unfiltered row of +len+ bytes.
-  def self.png_unfilter_row(raw, ri, prev, len, bpp, filter)
+  def self.png_unfilter_row(raw, ri, prev, len, bpp, filter, t)
     case filter
     when 0 then raw.byteslice(ri, len) || ""
-    when 1 then bpp == 1 ? png_sub1(raw, ri, len) : png_sub(raw, ri, len, bpp)
-    when 2 then png_up(raw, ri, prev, len)
-    when 3 then bpp == 1 ? png_avg1(raw, ri, prev, len) : png_avg(raw, ri, prev, len, bpp)
-    else bpp == 1 ? png_paeth1(raw, ri, prev, len, PNG_PAETH) : png_paeth(raw, ri, prev, len, bpp, PNG_PAETH)
+    when 1 then png_sub(raw, ri, len, bpp)
+    when 2 then png_g_up(raw, ri, prev, len, 1)
+    when 3 then png_avg(raw, ri, prev, len, bpp)
+    else png_paeth(raw, ri, prev, len, bpp, t)
     end
-  end
-
-  def self.png_bad_filter(filter)
-    raise QrReader::ImageError, "invalid PNG filter type #{filter}"
-  end
-
-  # Output bytes of an unfiltered row (see png_rows).
-  def self.png_convert_row(cur, width, depth, channels)
-    if channels == 1
-      return cur if depth == 8
-      return px_gray_row(cur, 0, width, 0, 2) if depth == 16
-
-      png_unpack_row(cur, width, depth)
-    elsif depth == 8
-      case channels
-      when 2 then px_gray_alpha_row(cur, 0, width, 0, 1, 2)
-      when 3 then px_rgb_row(cur, 0, width, 0, 1, 2, 3)
-      else px_rgba_row(cur, 0, width, 0, 1, 2, 3, 4)
-      end
-    else # 16-bit samples: their high bytes
-      case channels
-      when 2 then px_gray_alpha_row(cur, 0, width, 0, 2, 4)
-      when 3 then px_rgb_row(cur, 0, width, 0, 2, 4, 6)
-      else px_rgba_row(cur, 0, width, 0, 2, 4, 6, 8)
-      end
-    end
-  end
-
-  # Samples of 1, 2 or 4 bits -> one byte per sample.
-  def self.png_unpack_row(cur, width, depth)
-    table = depth == 1 ? PNG_UNPACK1 : (depth == 2 ? PNG_UNPACK2 : PNG_UNPACK4)
-    per = 8 / depth
-    full = width / per
-    row = String.new(capacity: width + per, encoding: Encoding::BINARY)
-    i = 0
-    while i < full
-      row << table[cur.getbyte(i)]
-      i += 1
-    end
-    rest = width - full * per
-    row << table[cur.getbyte(full)].byteslice(0, rest) if rest > 0
-    row
   end
 
   # +lum+ with the pixels of +cur+ that equal the colour +key+ made white.
   def self.png_key_row(cur, lum, width, key)
     size = key.bytesize
-    row = String.new(capacity: width, encoding: Encoding::BINARY)
+    row = png_buf(width)
     i = 0
     o = 0
     while i < width
@@ -287,14 +485,12 @@ module QrReaderKernels
     row
   end
 
-  # --- the five filter types, reversed, for any pixel size ------------------
-
   def self.png_sub(raw, ri, len, bpp)
     # (A byteslice of +raw+ would be a UTF-8 String in the native build,
     # where << then appends characters, not bytes: build a binary one.)
-    cur = String.new(capacity: len, encoding: Encoding::BINARY)
+    cur = png_buf(len)
     k = 0
-    while k < bpp
+    while k < bpp && k < len
       cur << raw.getbyte(ri + k)
       k += 1
     end
@@ -305,30 +501,8 @@ module QrReaderKernels
     cur
   end
 
-  def self.png_sub1(raw, ri, len)
-    cur = String.new(capacity: len, encoding: Encoding::BINARY)
-    a = 0
-    stop = ri + len
-    while ri < stop
-      a = (raw.getbyte(ri) + a) & 0xff
-      cur << a
-      ri += 1
-    end
-    cur
-  end
-
-  def self.png_up(raw, ri, prev, len)
-    cur = String.new(capacity: len, encoding: Encoding::BINARY)
-    k = 0
-    while k < len
-      cur << ((raw.getbyte(ri + k) + prev.getbyte(k)) & 0xff)
-      k += 1
-    end
-    cur
-  end
-
   def self.png_avg(raw, ri, prev, len, bpp)
-    cur = String.new(capacity: len, encoding: Encoding::BINARY)
+    cur = png_buf(len)
     k = 0
     while k < bpp && k < len
       cur << ((raw.getbyte(ri + k) + (prev.getbyte(k) >> 1)) & 0xff)
@@ -341,20 +515,8 @@ module QrReaderKernels
     cur
   end
 
-  def self.png_avg1(raw, ri, prev, len)
-    cur = String.new(capacity: len, encoding: Encoding::BINARY)
-    a = 0
-    k = 0
-    while k < len
-      a = (raw.getbyte(ri + k) + ((a + prev.getbyte(k)) >> 1)) & 0xff
-      cur << a
-      k += 1
-    end
-    cur
-  end
-
   def self.png_paeth(raw, ri, prev, len, bpp, t)
-    cur = String.new(capacity: len, encoding: Encoding::BINARY)
+    cur = png_buf(len)
     k = 0
     while k < bpp && k < len
       cur << ((raw.getbyte(ri + k) + prev.getbyte(k)) & 0xff)
@@ -368,256 +530,609 @@ module QrReaderKernels
     cur
   end
 
-  def self.png_paeth1(raw, ri, prev, len, t)
-    cur = String.new(capacity: len, encoding: Encoding::BINARY)
-    a = c = 0
+  # --- fused: unfilter (+ luminance) per layout --------------------------------
+  # Arguments: the filtered row starts at byte +i+ of +raw+, +n+ pixels,
+  # +sw+ bytes per sample (only the first, high byte of each is read);
+  # +prev+ holds the previous row's (high) sample bytes. Gray helpers return
+  # the unfiltered row (which is its luminance); the others return the
+  # unfiltered row followed by the row's luminance, and those with alpha
+  # then one more byte: 255 if every alpha sample was 255. (Dispatchers return a
+  # String on every branch, never nil: in the native build a nilable String
+  # would make every byte loop that reads it polymorphic.)
+
+  def self.png_fused_row(raw, i, prev, n, channels, sw, filter, t)
+    case channels
+    when 1 then png_gray_row(raw, i, prev, n, sw, filter, t)
+    when 2
+      case filter
+      when 1 then png_ga_sub(raw, i, n, sw)
+      when 2 then png_ga_up(raw, i, prev, n, sw)
+      when 3 then png_ga_avg(raw, i, prev, n, sw)
+      else png_ga_paeth(raw, i, prev, n, sw, t)
+      end
+    when 3
+      case filter
+      when 1 then png_rgb_sub(raw, i, n, sw)
+      when 2 then png_rgb_up(raw, i, prev, n, sw)
+      when 3 then png_rgb_avg(raw, i, prev, n, sw)
+      else png_rgb_paeth(raw, i, prev, n, sw, t)
+      end
+    else
+      case filter
+      when 1 then png_rgba_sub(raw, i, n, sw)
+      when 2 then png_rgba_up(raw, i, prev, n, sw)
+      when 3 then png_rgba_avg(raw, i, prev, n, sw)
+      else png_rgba_paeth(raw, i, prev, n, sw, t)
+      end
+    end
+  end
+
+  # One gray sample per pixel (also packed low-depth and palette rows,
+  # byte by byte: +n+ bytes, +sw+ 1). Average and Paeth, the filters that
+  # noisy scans use most, do two bytes per iteration when +sw+ is 1 (10%
+  # faster with YJIT).
+  def self.png_gray_row(raw, i, prev, n, sw, filter, t)
+    case filter
+    when 1 then png_g_sub(raw, i, n, sw)
+    when 2 then png_g_up(raw, i, prev, n, sw)
+    when 3 then png_g_avg(raw, i, prev, n, sw)
+    else png_g_paeth(raw, i, prev, n, sw, t)
+    end
+  end
+
+  def self.png_g_sub(raw, i, n, sw)
+    cur = png_buf(n)
+    v = 0
+    stop = i + n * sw
+    while i < stop
+      v = (raw.getbyte(i) + v) & 0xff
+      cur << v
+      i += sw
+    end
+    cur
+  end
+
+  def self.png_g_up(raw, i, prev, n, sw)
+    cur = png_buf(n)
     k = 0
-    while k < len
-      u = prev.getbyte(k)
-      a = (raw.getbyte(ri + k) + c + t[(u - c) * 511 + a - c + 130_560]) & 0xff
-      cur << a
-      c = u
+    while k < n
+      cur << ((raw.getbyte(i) + prev.getbyte(k)) & 0xff)
+      i += sw
       k += 1
     end
     cur
   end
 
-  # --- fused: unfilter + luminance, 8-bit gray + alpha ----------------------
-  # Each returns the unfiltered row followed by the row's luminance.
+  def self.png_g_avg(raw, i, prev, n, sw)
+    cur = png_buf(n)
+    v = 0
+    k = 0
+    if sw == 1
+      stop = n - 1
+      while k < stop
+        v = (raw.getbyte(i) + ((v + prev.getbyte(k)) >> 1)) & 0xff
+        w = (raw.getbyte(i + 1) + ((v + prev.getbyte(k + 1)) >> 1)) & 0xff
+        cur << v << w
+        v = w
+        i += 2
+        k += 2
+      end
+    end
+    while k < n
+      v = (raw.getbyte(i) + ((v + prev.getbyte(k)) >> 1)) & 0xff
+      cur << v
+      i += sw
+      k += 1
+    end
+    cur
+  end
 
-  def self.png_ga8_sub(raw, ri, len)
-    cur = String.new(capacity: len + (len >> 1), encoding: Encoding::BINARY)
-    lum = String.new(capacity: len >> 1, encoding: Encoding::BINARY)
+  def self.png_g_paeth(raw, i, prev, n, sw, t)
+    cur = png_buf(n)
+    v = c = 0
+    k = 0
+    if sw == 1
+      stop = n - 1
+      while k < stop
+        u = prev.getbyte(k)
+        v = (raw.getbyte(i) + c + t[(u - c) * 511 + v - c + 130_560]) & 0xff
+        c = prev.getbyte(k + 1)
+        w = (raw.getbyte(i + 1) + u + t[(c - u) * 511 + v - u + 130_560]) & 0xff
+        cur << v << w
+        v = w
+        i += 2
+        k += 2
+      end
+    end
+    while k < n
+      u = prev.getbyte(k)
+      v = (raw.getbyte(i) + c + t[(u - c) * 511 + v - c + 130_560]) & 0xff
+      cur << v
+      c = u
+      i += sw
+      k += 1
+    end
+    cur
+  end
+
+  # --- opaque rows: colour lanes only ----------------------------------------
+  # The row above is opaque and given by its colour samples. Each helper
+  # returns "" as soon as an alpha byte shows that this row is not opaque
+  # (alpha 255 needs filtered alpha 0, except for the first pixel: 255 for
+  # Sub, whose left neighbour is 0, and 128 for Average, (0 + 255) >> 1 =
+  # 127), otherwise the gray samples (= the luminance) or the RGB samples
+  # followed by the luminance.
+
+  def self.png_opaque_row(raw, i, prev, n, channels, sw, filter, t)
+    if channels == 2
+      case filter
+      when 1 then png_gao_sub(raw, i, n, sw)
+      when 2 then png_gao_up(raw, i, prev, n, sw)
+      when 3 then png_gao_avg(raw, i, prev, n, sw)
+      else png_gao_paeth(raw, i, prev, n, sw, t)
+      end
+    else
+      case filter
+      when 1 then png_rgbo_sub(raw, i, n, sw)
+      when 2 then png_rgbo_up(raw, i, prev, n, sw)
+      when 3 then png_rgbo_avg(raw, i, prev, n, sw)
+      else png_rgbo_paeth(raw, i, prev, n, sw, t)
+      end
+    end
+  end
+
+  def self.png_gao_sub(raw, i, n, sw)
+    return "" if raw.getbyte(i + sw) != 255
+
+    cur = png_buf(n)
+    v = raw.getbyte(i)
+    cur << v
+    step = 2 * sw
+    i += step
+    stop = i + (n - 1) * step
+    while i < stop
+      return "" if raw.getbyte(i + sw) != 0
+
+      v = (raw.getbyte(i) + v) & 0xff
+      cur << v
+      i += step
+    end
+    cur
+  end
+
+  def self.png_gao_up(raw, i, prev, n, sw)
+    cur = png_buf(n)
+    step = 2 * sw
+    k = 0
+    while k < n
+      return "" if raw.getbyte(i + sw) != 0
+
+      cur << ((raw.getbyte(i) + prev.getbyte(k)) & 0xff)
+      i += step
+      k += 1
+    end
+    cur
+  end
+
+  def self.png_gao_avg(raw, i, prev, n, sw)
+    return "" if raw.getbyte(i + sw) != 128
+
+    cur = png_buf(n)
+    v = (raw.getbyte(i) + (prev.getbyte(0) >> 1)) & 0xff
+    cur << v
+    step = 2 * sw
+    i += step
+    k = 1
+    while k < n
+      return "" if raw.getbyte(i + sw) != 0
+
+      v = (raw.getbyte(i) + ((v + prev.getbyte(k)) >> 1)) & 0xff
+      cur << v
+      i += step
+      k += 1
+    end
+    cur
+  end
+
+  def self.png_gao_paeth(raw, i, prev, n, sw, t)
+    cur = png_buf(n)
+    v = c = 0
+    step = 2 * sw
+    k = 0
+    while k < n
+      return "" if raw.getbyte(i + sw) != 0
+
+      u = prev.getbyte(k)
+      v = (raw.getbyte(i) + c + t[(u - c) * 511 + v - c + 130_560]) & 0xff
+      cur << v
+      c = u
+      i += step
+      k += 1
+    end
+    cur
+  end
+
+  def self.png_rgbo_sub(raw, i, n, sw)
+    s2 = 2 * sw
+    s3 = 3 * sw
+    return "" if raw.getbyte(i + s3) != 255
+
+    cur = png_buf(4 * n)
+    lum = png_buf(n)
+    r = raw.getbyte(i)
+    g = raw.getbyte(i + sw)
+    b = raw.getbyte(i + s2)
+    cur << r << g << b
+    lum << ((306 * r + 601 * g + 117 * b + 0x200) >> 10)
+    step = 4 * sw
+    i += step
+    stop = i + (n - 1) * step
+    while i < stop
+      return "" if raw.getbyte(i + s3) != 0
+
+      r = (raw.getbyte(i) + r) & 0xff
+      g = (raw.getbyte(i + sw) + g) & 0xff
+      b = (raw.getbyte(i + s2) + b) & 0xff
+      cur << r << g << b
+      lum << ((306 * r + 601 * g + 117 * b + 0x200) >> 10)
+      i += step
+    end
+    cur << lum
+  end
+
+  def self.png_rgbo_up(raw, i, prev, n, sw)
+    cur = png_buf(4 * n)
+    lum = png_buf(n)
+    s2 = 2 * sw
+    s3 = 3 * sw
+    step = 4 * sw
+    k = 0
+    stop = 3 * n
+    while k < stop
+      return "" if raw.getbyte(i + s3) != 0
+
+      r = (raw.getbyte(i) + prev.getbyte(k)) & 0xff
+      g = (raw.getbyte(i + sw) + prev.getbyte(k + 1)) & 0xff
+      b = (raw.getbyte(i + s2) + prev.getbyte(k + 2)) & 0xff
+      cur << r << g << b
+      lum << ((306 * r + 601 * g + 117 * b + 0x200) >> 10)
+      i += step
+      k += 3
+    end
+    cur << lum
+  end
+
+  def self.png_rgbo_avg(raw, i, prev, n, sw)
+    s2 = 2 * sw
+    s3 = 3 * sw
+    return "" if raw.getbyte(i + s3) != 128
+
+    cur = png_buf(4 * n)
+    lum = png_buf(n)
+    r = (raw.getbyte(i) + (prev.getbyte(0) >> 1)) & 0xff
+    g = (raw.getbyte(i + sw) + (prev.getbyte(1) >> 1)) & 0xff
+    b = (raw.getbyte(i + s2) + (prev.getbyte(2) >> 1)) & 0xff
+    cur << r << g << b
+    lum << ((306 * r + 601 * g + 117 * b + 0x200) >> 10)
+    step = 4 * sw
+    i += step
+    k = 3
+    stop = 3 * n
+    while k < stop
+      return "" if raw.getbyte(i + s3) != 0
+
+      r = (raw.getbyte(i) + ((r + prev.getbyte(k)) >> 1)) & 0xff
+      g = (raw.getbyte(i + sw) + ((g + prev.getbyte(k + 1)) >> 1)) & 0xff
+      b = (raw.getbyte(i + s2) + ((b + prev.getbyte(k + 2)) >> 1)) & 0xff
+      cur << r << g << b
+      lum << ((306 * r + 601 * g + 117 * b + 0x200) >> 10)
+      i += step
+      k += 3
+    end
+    cur << lum
+  end
+
+  def self.png_rgbo_paeth(raw, i, prev, n, sw, t)
+    cur = png_buf(4 * n)
+    lum = png_buf(n)
+    r = g = b = cr = cg = cb = 0
+    s2 = 2 * sw
+    s3 = 3 * sw
+    step = 4 * sw
+    k = 0
+    stop = 3 * n
+    while k < stop
+      return "" if raw.getbyte(i + s3) != 0
+
+      u = prev.getbyte(k)
+      r = (raw.getbyte(i) + cr + t[(u - cr) * 511 + r - cr + 130_560]) & 0xff
+      cr = u
+      u = prev.getbyte(k + 1)
+      g = (raw.getbyte(i + sw) + cg + t[(u - cg) * 511 + g - cg + 130_560]) & 0xff
+      cg = u
+      u = prev.getbyte(k + 2)
+      b = (raw.getbyte(i + s2) + cb + t[(u - cb) * 511 + b - cb + 130_560]) & 0xff
+      cb = u
+      cur << r << g << b
+      lum << ((306 * r + 601 * g + 117 * b + 0x200) >> 10)
+      i += step
+      k += 3
+    end
+    cur << lum
+  end
+
+  # --- gray + alpha -------------------------------------------------------------
+
+  def self.png_ga_sub(raw, i, n, sw)
+    cur = png_buf(3 * n + 1)
+    lum = png_buf(n)
+    m = 255
     v = a = 0
-    i = ri
-    stop = ri + len
+    step = 2 * sw
+    stop = i + n * step
     while i < stop
       v = (raw.getbyte(i) + v) & 0xff
-      a = (raw.getbyte(i + 1) + a) & 0xff
+      a = (raw.getbyte(i + sw) + a) & 0xff
       cur << v << a
-      lum << (a == 255 ? v : ((v - 255) * a + 65_152) / 255)
-      i += 2
+      lum << ((((v - 255) * a + 65_152) * 0x8081) >> 23)
+      m &= a
+      i += step
     end
-    cur << lum
+    cur << lum << m
   end
 
-  def self.png_ga8_up(raw, ri, prev, len)
-    cur = String.new(capacity: len + (len >> 1), encoding: Encoding::BINARY)
-    lum = String.new(capacity: len >> 1, encoding: Encoding::BINARY)
+  def self.png_ga_up(raw, i, prev, n, sw)
+    cur = png_buf(3 * n + 1)
+    lum = png_buf(n)
+    m = 255
+    step = 2 * sw
     k = 0
-    i = ri
-    while k < len
+    stop = 2 * n
+    while k < stop
       v = (raw.getbyte(i) + prev.getbyte(k)) & 0xff
-      a = (raw.getbyte(i + 1) + prev.getbyte(k + 1)) & 0xff
+      a = (raw.getbyte(i + sw) + prev.getbyte(k + 1)) & 0xff
       cur << v << a
-      lum << (a == 255 ? v : ((v - 255) * a + 65_152) / 255)
+      lum << ((((v - 255) * a + 65_152) * 0x8081) >> 23)
+      m &= a
+      i += step
       k += 2
-      i += 2
     end
-    cur << lum
+    cur << lum << m
   end
 
-  def self.png_ga8_avg(raw, ri, prev, len)
-    cur = String.new(capacity: len + (len >> 1), encoding: Encoding::BINARY)
-    lum = String.new(capacity: len >> 1, encoding: Encoding::BINARY)
+  def self.png_ga_avg(raw, i, prev, n, sw)
+    cur = png_buf(3 * n + 1)
+    lum = png_buf(n)
+    m = 255
     v = a = 0
+    step = 2 * sw
     k = 0
-    i = ri
-    while k < len
+    stop = 2 * n
+    while k < stop
       v = (raw.getbyte(i) + ((v + prev.getbyte(k)) >> 1)) & 0xff
-      a = (raw.getbyte(i + 1) + ((a + prev.getbyte(k + 1)) >> 1)) & 0xff
+      a = (raw.getbyte(i + sw) + ((a + prev.getbyte(k + 1)) >> 1)) & 0xff
       cur << v << a
-      lum << (a == 255 ? v : ((v - 255) * a + 65_152) / 255)
+      lum << ((((v - 255) * a + 65_152) * 0x8081) >> 23)
+      m &= a
+      i += step
       k += 2
-      i += 2
     end
-    cur << lum
+    cur << lum << m
   end
 
-  def self.png_ga8_paeth(raw, ri, prev, len, t)
-    cur = String.new(capacity: len + (len >> 1), encoding: Encoding::BINARY)
-    lum = String.new(capacity: len >> 1, encoding: Encoding::BINARY)
+  def self.png_ga_paeth(raw, i, prev, n, sw, t)
+    cur = png_buf(3 * n + 1)
+    lum = png_buf(n)
+    m = 255
     v = a = cv = ca = 0
+    step = 2 * sw
     k = 0
-    i = ri
-    while k < len
+    stop = 2 * n
+    while k < stop
       u = prev.getbyte(k)
       v = (raw.getbyte(i) + cv + t[(u - cv) * 511 + v - cv + 130_560]) & 0xff
       cv = u
       u = prev.getbyte(k + 1)
-      a = (raw.getbyte(i + 1) + ca + t[(u - ca) * 511 + a - ca + 130_560]) & 0xff
+      a = (raw.getbyte(i + sw) + ca + t[(u - ca) * 511 + a - ca + 130_560]) & 0xff
       ca = u
       cur << v << a
-      lum << (a == 255 ? v : ((v - 255) * a + 65_152) / 255)
+      lum << ((((v - 255) * a + 65_152) * 0x8081) >> 23)
+      m &= a
+      i += step
       k += 2
-      i += 2
     end
-    cur << lum
+    cur << lum << m
   end
 
-  # --- fused: unfilter + luminance, 8-bit RGB -------------------------------
+  # --- RGB ------------------------------------------------------------------------
 
-  def self.png_rgb8_sub(raw, ri, len)
-    cur = String.new(capacity: len + len / 3, encoding: Encoding::BINARY)
-    lum = String.new(capacity: len / 3, encoding: Encoding::BINARY)
+  def self.png_rgb_sub(raw, i, n, sw)
+    cur = png_buf(4 * n)
+    lum = png_buf(n)
     r = g = b = 0
-    i = ri
-    stop = ri + len
+    s2 = 2 * sw
+    step = 3 * sw
+    stop = i + n * step
     while i < stop
       r = (raw.getbyte(i) + r) & 0xff
-      g = (raw.getbyte(i + 1) + g) & 0xff
-      b = (raw.getbyte(i + 2) + b) & 0xff
+      g = (raw.getbyte(i + sw) + g) & 0xff
+      b = (raw.getbyte(i + s2) + b) & 0xff
       cur << r << g << b
       lum << ((306 * r + 601 * g + 117 * b + 0x200) >> 10)
-      i += 3
+      i += step
     end
     cur << lum
   end
 
-  def self.png_rgb8_up(raw, ri, prev, len)
-    cur = String.new(capacity: len + len / 3, encoding: Encoding::BINARY)
-    lum = String.new(capacity: len / 3, encoding: Encoding::BINARY)
+  def self.png_rgb_up(raw, i, prev, n, sw)
+    cur = png_buf(4 * n)
+    lum = png_buf(n)
+    s2 = 2 * sw
+    step = 3 * sw
     k = 0
-    i = ri
-    while k < len
+    stop = 3 * n
+    while k < stop
       r = (raw.getbyte(i) + prev.getbyte(k)) & 0xff
-      g = (raw.getbyte(i + 1) + prev.getbyte(k + 1)) & 0xff
-      b = (raw.getbyte(i + 2) + prev.getbyte(k + 2)) & 0xff
+      g = (raw.getbyte(i + sw) + prev.getbyte(k + 1)) & 0xff
+      b = (raw.getbyte(i + s2) + prev.getbyte(k + 2)) & 0xff
       cur << r << g << b
       lum << ((306 * r + 601 * g + 117 * b + 0x200) >> 10)
+      i += step
       k += 3
-      i += 3
     end
     cur << lum
   end
 
-  def self.png_rgb8_avg(raw, ri, prev, len)
-    cur = String.new(capacity: len + len / 3, encoding: Encoding::BINARY)
-    lum = String.new(capacity: len / 3, encoding: Encoding::BINARY)
+  def self.png_rgb_avg(raw, i, prev, n, sw)
+    cur = png_buf(4 * n)
+    lum = png_buf(n)
     r = g = b = 0
+    s2 = 2 * sw
+    step = 3 * sw
     k = 0
-    i = ri
-    while k < len
+    stop = 3 * n
+    while k < stop
       r = (raw.getbyte(i) + ((r + prev.getbyte(k)) >> 1)) & 0xff
-      g = (raw.getbyte(i + 1) + ((g + prev.getbyte(k + 1)) >> 1)) & 0xff
-      b = (raw.getbyte(i + 2) + ((b + prev.getbyte(k + 2)) >> 1)) & 0xff
+      g = (raw.getbyte(i + sw) + ((g + prev.getbyte(k + 1)) >> 1)) & 0xff
+      b = (raw.getbyte(i + s2) + ((b + prev.getbyte(k + 2)) >> 1)) & 0xff
       cur << r << g << b
       lum << ((306 * r + 601 * g + 117 * b + 0x200) >> 10)
+      i += step
       k += 3
-      i += 3
     end
     cur << lum
   end
 
-  def self.png_rgb8_paeth(raw, ri, prev, len, t)
-    cur = String.new(capacity: len + len / 3, encoding: Encoding::BINARY)
-    lum = String.new(capacity: len / 3, encoding: Encoding::BINARY)
+  def self.png_rgb_paeth(raw, i, prev, n, sw, t)
+    cur = png_buf(4 * n)
+    lum = png_buf(n)
     r = g = b = cr = cg = cb = 0
+    s2 = 2 * sw
+    step = 3 * sw
     k = 0
-    i = ri
-    while k < len
+    stop = 3 * n
+    while k < stop
       u = prev.getbyte(k)
       r = (raw.getbyte(i) + cr + t[(u - cr) * 511 + r - cr + 130_560]) & 0xff
       cr = u
       u = prev.getbyte(k + 1)
-      g = (raw.getbyte(i + 1) + cg + t[(u - cg) * 511 + g - cg + 130_560]) & 0xff
+      g = (raw.getbyte(i + sw) + cg + t[(u - cg) * 511 + g - cg + 130_560]) & 0xff
       cg = u
       u = prev.getbyte(k + 2)
-      b = (raw.getbyte(i + 2) + cb + t[(u - cb) * 511 + b - cb + 130_560]) & 0xff
+      b = (raw.getbyte(i + s2) + cb + t[(u - cb) * 511 + b - cb + 130_560]) & 0xff
       cb = u
       cur << r << g << b
       lum << ((306 * r + 601 * g + 117 * b + 0x200) >> 10)
+      i += step
       k += 3
-      i += 3
     end
     cur << lum
   end
 
-  # --- fused: unfilter + luminance, 8-bit RGBA ------------------------------
+  # --- RGBA -----------------------------------------------------------------------
 
-  def self.png_rgba8_sub(raw, ri, len)
-    cur = String.new(capacity: len + (len >> 2), encoding: Encoding::BINARY)
-    lum = String.new(capacity: len >> 2, encoding: Encoding::BINARY)
+  def self.png_rgba_sub(raw, i, n, sw)
+    cur = png_buf(5 * n + 1)
+    lum = png_buf(n)
+    m = 255
     r = g = b = a = 0
-    i = ri
-    stop = ri + len
+    s2 = 2 * sw
+    s3 = 3 * sw
+    step = 4 * sw
+    stop = i + n * step
     while i < stop
       r = (raw.getbyte(i) + r) & 0xff
-      g = (raw.getbyte(i + 1) + g) & 0xff
-      b = (raw.getbyte(i + 2) + b) & 0xff
-      a = (raw.getbyte(i + 3) + a) & 0xff
+      g = (raw.getbyte(i + sw) + g) & 0xff
+      b = (raw.getbyte(i + s2) + b) & 0xff
+      a = (raw.getbyte(i + s3) + a) & 0xff
       cur << r << g << b << a
       v = (306 * r + 601 * g + 117 * b + 0x200) >> 10
-      lum << (a == 255 ? v : ((v - 255) * a + 65_152) / 255)
-      i += 4
+      lum << ((((v - 255) * a + 65_152) * 0x8081) >> 23)
+      m &= a
+      i += step
     end
-    cur << lum
+    cur << lum << m
   end
 
-  def self.png_rgba8_up(raw, ri, prev, len)
-    cur = String.new(capacity: len + (len >> 2), encoding: Encoding::BINARY)
-    lum = String.new(capacity: len >> 2, encoding: Encoding::BINARY)
+  def self.png_rgba_up(raw, i, prev, n, sw)
+    cur = png_buf(5 * n + 1)
+    lum = png_buf(n)
+    m = 255
+    s2 = 2 * sw
+    s3 = 3 * sw
+    step = 4 * sw
     k = 0
-    i = ri
-    while k < len
+    stop = 4 * n
+    while k < stop
       r = (raw.getbyte(i) + prev.getbyte(k)) & 0xff
-      g = (raw.getbyte(i + 1) + prev.getbyte(k + 1)) & 0xff
-      b = (raw.getbyte(i + 2) + prev.getbyte(k + 2)) & 0xff
-      a = (raw.getbyte(i + 3) + prev.getbyte(k + 3)) & 0xff
+      g = (raw.getbyte(i + sw) + prev.getbyte(k + 1)) & 0xff
+      b = (raw.getbyte(i + s2) + prev.getbyte(k + 2)) & 0xff
+      a = (raw.getbyte(i + s3) + prev.getbyte(k + 3)) & 0xff
       cur << r << g << b << a
       v = (306 * r + 601 * g + 117 * b + 0x200) >> 10
-      lum << (a == 255 ? v : ((v - 255) * a + 65_152) / 255)
+      lum << ((((v - 255) * a + 65_152) * 0x8081) >> 23)
+      m &= a
+      i += step
       k += 4
-      i += 4
     end
-    cur << lum
+    cur << lum << m
   end
 
-  def self.png_rgba8_avg(raw, ri, prev, len)
-    cur = String.new(capacity: len + (len >> 2), encoding: Encoding::BINARY)
-    lum = String.new(capacity: len >> 2, encoding: Encoding::BINARY)
+  def self.png_rgba_avg(raw, i, prev, n, sw)
+    cur = png_buf(5 * n + 1)
+    lum = png_buf(n)
+    m = 255
     r = g = b = a = 0
+    s2 = 2 * sw
+    s3 = 3 * sw
+    step = 4 * sw
     k = 0
-    i = ri
-    while k < len
+    stop = 4 * n
+    while k < stop
       r = (raw.getbyte(i) + ((r + prev.getbyte(k)) >> 1)) & 0xff
-      g = (raw.getbyte(i + 1) + ((g + prev.getbyte(k + 1)) >> 1)) & 0xff
-      b = (raw.getbyte(i + 2) + ((b + prev.getbyte(k + 2)) >> 1)) & 0xff
-      a = (raw.getbyte(i + 3) + ((a + prev.getbyte(k + 3)) >> 1)) & 0xff
+      g = (raw.getbyte(i + sw) + ((g + prev.getbyte(k + 1)) >> 1)) & 0xff
+      b = (raw.getbyte(i + s2) + ((b + prev.getbyte(k + 2)) >> 1)) & 0xff
+      a = (raw.getbyte(i + s3) + ((a + prev.getbyte(k + 3)) >> 1)) & 0xff
       cur << r << g << b << a
       v = (306 * r + 601 * g + 117 * b + 0x200) >> 10
-      lum << (a == 255 ? v : ((v - 255) * a + 65_152) / 255)
+      lum << ((((v - 255) * a + 65_152) * 0x8081) >> 23)
+      m &= a
+      i += step
       k += 4
-      i += 4
     end
-    cur << lum
+    cur << lum << m
   end
 
-  def self.png_rgba8_paeth(raw, ri, prev, len, t)
-    cur = String.new(capacity: len + (len >> 2), encoding: Encoding::BINARY)
-    lum = String.new(capacity: len >> 2, encoding: Encoding::BINARY)
+  def self.png_rgba_paeth(raw, i, prev, n, sw, t)
+    cur = png_buf(5 * n + 1)
+    lum = png_buf(n)
+    m = 255
     r = g = b = a = cr = cg = cb = ca = 0
+    s2 = 2 * sw
+    s3 = 3 * sw
+    step = 4 * sw
     k = 0
-    i = ri
-    while k < len
+    stop = 4 * n
+    while k < stop
       u = prev.getbyte(k)
       r = (raw.getbyte(i) + cr + t[(u - cr) * 511 + r - cr + 130_560]) & 0xff
       cr = u
       u = prev.getbyte(k + 1)
-      g = (raw.getbyte(i + 1) + cg + t[(u - cg) * 511 + g - cg + 130_560]) & 0xff
+      g = (raw.getbyte(i + sw) + cg + t[(u - cg) * 511 + g - cg + 130_560]) & 0xff
       cg = u
       u = prev.getbyte(k + 2)
-      b = (raw.getbyte(i + 2) + cb + t[(u - cb) * 511 + b - cb + 130_560]) & 0xff
+      b = (raw.getbyte(i + s2) + cb + t[(u - cb) * 511 + b - cb + 130_560]) & 0xff
       cb = u
       u = prev.getbyte(k + 3)
-      a = (raw.getbyte(i + 3) + ca + t[(u - ca) * 511 + a - ca + 130_560]) & 0xff
+      a = (raw.getbyte(i + s3) + ca + t[(u - ca) * 511 + a - ca + 130_560]) & 0xff
       ca = u
       cur << r << g << b << a
       v = (306 * r + 601 * g + 117 * b + 0x200) >> 10
-      lum << (a == 255 ? v : ((v - 255) * a + 65_152) / 255)
+      lum << ((((v - 255) * a + 65_152) * 0x8081) >> 23)
+      m &= a
+      i += step
       k += 4
-      i += 4
     end
-    cur << lum
+    cur << lum << m
   end
 end

@@ -22,24 +22,33 @@ require_relative "../errors"
 # * For YCbCr only Y is reconstructed (Y is the luminance). Chroma blocks
 #   are entropy-decoded and dropped; chroma-only progressive scans (and
 #   AC scans at scale 8) are skipped without decoding.
-# * Byte stuffing and restart markers are removed per scan at C speed and
-#   the scan is unpacked to 32-bit words, so the bit reader never checks
-#   for markers.
+# * Byte stuffing and restart markers are removed per scan at C speed, so
+#   the bit reader (32 bits per refill) never checks for markers.
 # * Huffman lookahead tables also carry the run length and sign-extended
 #   coefficient, so most coefficients cost a single table lookup.
-# * Each block remembers the zigzag index of its last nonzero coefficient,
-#   which selects a DC-only fill or an IDCT specialised for the inputs
-#   that can be nonzero (derived from libjpeg's formulas).
+# * Coefficients are decoded into one Array per block row (65 entries per
+#   block: 64 dequantised coefficients in natural order, then the zigzag
+#   index of the last nonzero one), which selects a DC-only fill or an IDCT
+#   specialised for the inputs that can be nonzero (derived from libjpeg's
+#   formulas). Rows are IDCT'd, packed and cleared once per MCU row.
 # * Hot loops live in methods called per MCU, block row or block, so YJIT
 #   (which compiles a method once it has been called 30 times) kicks in
 #   during the first decode.
 # * Samples are collected four to an Array element (32-bit words) per MCU
 #   row and packed to bytes at C speed.
 #
-# Two resolutions for the price of one entropy decoding: jpeg_luma_keep
-# also returns the decoded coefficients of the luminance components in a
-# compact store (see JpegDecoder#store), from which jpeg_render produces
-# any other scale with IDCTs only.
+# Memory stays proportional to the output: sequential scans keep one MCU
+# row of coefficients; progressive scans keep every coefficient of the
+# needed components as packed 16-bit Strings (one per block row, allocated
+# only where data arrives); nothing is allocated per pixel or coefficient
+# for a whole image.
+#
+# Two resolutions for about the price of one decode: jpeg_luma_keep also
+# returns a compact store of the luminance (see JpegDecoder#store), from
+# which jpeg_render produces any other scale. For sequential JPEGs it holds
+# the scan data and, per luminance block, where its AC coefficients start
+# and its DC (8 bytes per block), so rendering skips the chroma blocks and
+# all DC decoding; for progressive JPEGs the coefficients themselves.
 module QrReaderKernels
   # [width, height] from the frame header (the height from a DNL marker
   # when the header gives 0), without decoding.
@@ -55,8 +64,9 @@ module QrReaderKernels
     JpegDecoder.new(bytes, scale, false).decode
   end
 
-  # Like jpeg_luma, but also returns the luminance components' coefficients
-  # as a compact store for jpeg_render: [luma, store].
+  # Like jpeg_luma, but also returns a store of the luminance component
+  # for jpeg_render: [luma, store]. The store is empty when the luminance
+  # is not a single component (RGB, CMYK) or too large for scale 1.
   # spinel-sample: QrReaderKernels.jpeg_luma_keep("\xFF\xD8".b, 4)
   def self.jpeg_luma_keep(bytes, scale)
     decoder = JpegDecoder.new(bytes, scale, true)
@@ -64,11 +74,19 @@ module QrReaderKernels
     [luma, decoder.store]
   end
 
-  # Luminance at 1/+scale+ from a coefficient store made by jpeg_luma_keep:
-  # the same bytes as jpeg_luma at that scale, without entropy decoding.
+  # Luminance at 1/+scale+ from a store made by jpeg_luma_keep: the same
+  # bytes as jpeg_luma at that scale, without decoding chroma or DCs.
   # spinel-sample: QrReaderKernels.jpeg_render("\x00".b, 1)
   def self.jpeg_render(store, scale)
     JpegDecoder.new(store, scale, false).render_store
+  end
+
+  # Unsigned little-endian 32-bit Integer at data[off, 4], or -1 if the
+  # data ends before.
+  def self.jpeg_u32(data, off)
+    return -1 if off < 0 || off + 4 > data.bytesize
+
+    data.getbyte(off) | (data.getbyte(off + 1) << 8) | (data.getbyte(off + 2) << 16) | (data.getbyte(off + 3) << 24)
   end
 
   # --- Tables -------------------------------------------------------------
@@ -91,12 +109,12 @@ module QrReaderKernels
   ].freeze
 
   # JPEG_ZIGZAG extended for corrupt runs past 63 (clamped to 63 like
-  # libjpeg) and for the end-of-block pseudo run (scratch slot 64).
+  # libjpeg) and for the end-of-block pseudo run (slot 64 of the block,
+  # which is overwritten with the block's last nonzero index afterwards).
   JPEG_ZIGZAG_EXT = (JPEG_ZIGZAG + Array.new(16, 63) + Array.new(JPEG_EOB_RUN + 4 - 16, 64)).freeze
 
-  # Entries per block of stored progressive coefficients: 64 coefficients
-  # in natural order (not dequantised) and, at index 64, the zigzag index
-  # of the last nonzero one. (Without the store, scale 8 only keeps DCs.)
+  # Entries per block of a coefficient row: 64 coefficients in natural
+  # order and, at index 64, the zigzag index of the last nonzero one.
   JPEG_BLOCK_STRIDE = 65
 
   # Decoded samples are buffered as packed little-endian words (first
@@ -112,10 +130,10 @@ module QrReaderKernels
   # images need a larger scale. Guards against absurd header sizes.
   JPEG_MAX_PIXELS = 1 << 26
 
-  # Most coefficients (Array entries, 576 MiB) a progressive JPEG may
-  # store: enough for one needed component of a MAX_PIXELS image, but not
-  # for four (CMYK) of that size, which need a larger scale.
-  JPEG_MAX_COEFFICIENTS = 72 << 20
+  # Most bytes the coefficients of a progressive JPEG may take (2 per
+  # coefficient): enough for one needed component of a MAX_PIXELS image,
+  # and for all four of a CMYK image of a quarter of that size.
+  JPEG_MAX_COEFFICIENT_BYTES = 160 << 20
 
   # Block visits (blocks covered by decoded scans) per block of the needed
   # components after which the rest of a file is ignored: real progressive
@@ -175,6 +193,7 @@ module QrReaderKernels
     ]
   ].freeze
 
+
   # Post-IDCT range limiting of libjpeg-turbo's 8x8, 4x4 and 2x2 IDCTs,
   # whose SIMD versions (used on x86 and ARM) saturate: indexed by
   # (sample + 128) & 0xFFFF, clamps samples within +-32767 to 0..255.
@@ -213,10 +232,9 @@ module QrReaderKernels
     i = 0
     while i < 256
       x = i - 128
-      t[i] = case kind
-             when 0 then (91_881 * x + 32_768) >> 16
-             when 1 then (116_130 * x + 32_768) >> 16
-             when 2 then -46_802 * x
+      t[i] = if kind == 0 then (91_881 * x + 32_768) >> 16
+             elsif kind == 1 then (116_130 * x + 32_768) >> 16
+             elsif kind == 2 then -46_802 * x
              else -22_554 * x + 32_768
              end
       i += 1
@@ -231,31 +249,40 @@ module QrReaderKernels
   JPEG_CR_G = jpeg_color_table(2).freeze
   JPEG_CB_G = jpeg_color_table(3).freeze
 
-  # A shared empty Array: "not defined" tables, unallocated coefficient rows.
+  # A shared empty Integer Array: "not defined" tables, unused slots.
   JPEG_NONE = Array.new(0, 0).freeze
+  # Huffman code counts of an undefined table.
+  JPEG_NO_COUNTS = Array.new(16, 0).freeze
 
   JPEG_FF = "\xFF".b.freeze
   JPEG_DNL_MARKER = "\xFF\xDC\x00\x04".b.freeze
   # Zero bytes appended to a scan: more than one MCU can consume, so a
-  # truncated MCU never reads past the end of the word array.
+  # truncated MCU never reads past the end of the data.
   JPEG_TAIL_PADDING = ("\0" * 4096).b.freeze
 
-  # First Integer of a coefficient store.
-  JPEG_STORE_MAGIC = 0x314B_504A # "JPK1"
+  # First Integer of a store made by jpeg_luma_keep ("JPK3"), and its kinds.
+  JPEG_STORE_MAGIC = 0x334B_504A
+  JPEG_STORE_SEQUENTIAL = 1
+  JPEG_STORE_PROGRESSIVE = 2
+  # Integers in a store header (before the kind's own data).
+  JPEG_STORE_HEAD = 77
+  # Bytes per block of a raw progressive coefficient row, and the offset of
+  # the block's last nonzero zigzag index in it.
+  JPEG_RAW_BLOCK = JPEG_BLOCK_STRIDE * 2
+  JPEG_RAW_KM = 128
 
   # Name of an unsupported frame type (SOF marker code).
   def self.jpeg_sof_name(code)
-    case code
-    when 0xC3 then "lossless"
-    when 0xC5 then "hierarchical"
-    when 0xC6 then "hierarchical progressive"
-    when 0xC7 then "hierarchical lossless"
-    when 0xC9 then "arithmetic-coded"
-    when 0xCA then "arithmetic-coded progressive"
-    when 0xCB then "arithmetic-coded lossless"
-    when 0xCD then "arithmetic-coded hierarchical"
-    when 0xCE then "arithmetic-coded hierarchical progressive"
-    when 0xCF then "arithmetic-coded hierarchical lossless"
+    if code == 0xC3 then "lossless"
+    elsif code == 0xC5 then "hierarchical"
+    elsif code == 0xC6 then "hierarchical progressive"
+    elsif code == 0xC7 then "hierarchical lossless"
+    elsif code == 0xC9 then "arithmetic-coded"
+    elsif code == 0xCA then "arithmetic-coded progressive"
+    elsif code == 0xCB then "arithmetic-coded lossless"
+    elsif code == 0xCD then "arithmetic-coded hierarchical"
+    elsif code == 0xCE then "arithmetic-coded hierarchical progressive"
+    elsif code == 0xCF then "arithmetic-coded hierarchical lossless"
     else "JPEG-LS"
     end
   end
@@ -272,7 +299,7 @@ module QrReaderKernels
   # and extra bits do not fit in FAST_BITS. Zero-valued AC entries are the
   # end-of-block (run JPEG_EOB_RUN) and ZRL (run 15) symbols.
   class JpegHuffman
-    attr_reader :fast, :look
+    attr_reader :fast, :look, :counts, :symbols
 
     # +counts+: number of codes of each length 1..16; +symbols+ in code order.
     def initialize(counts, symbols, ac)
@@ -280,6 +307,7 @@ module QrReaderKernels
       @look = Array.new(1 << JPEG_FAST_BITS, 0)
       @maxcode = Array.new(18, 0)
       @valoff = Array.new(17, 0)
+      @counts = counts
       @symbols = symbols
       code = 0
       index = 0
@@ -324,12 +352,11 @@ module QrReaderKernels
       shift = JPEG_FAST_BITS - len
       base = code << shift
       @look.fill((len << 8) | sym, base, 1 << shift)
+      run = 0
+      size = sym
       if ac
         run = sym >> 4
         size = sym & 15
-      else
-        run = 0
-        size = sym
       end
       if size == 0
         # DC: difference 0. AC: ZRL, or end of block (libjpeg treats every
@@ -349,12 +376,16 @@ module QrReaderKernels
           v += 1
         end
       end
+      nil
     end
   end
 
+  # A placeholder table (no codes).
+  JPEG_EMPTY_HUFFMAN = JpegHuffman.new(JPEG_NO_COUNTS, JPEG_NONE, false)
+
   # Frame component state.
   class JpegComponent
-    attr_reader :index, :id, :h, :v, :tq
+    attr_reader :index, :id, :h, :v, :tq, :plane, :raw, :marks, :sdata
     # Sample size at full scale, blocks covered by a non-interleaved scan,
     # allocated block grid (padded to whole MCUs) and plane size in samples.
     attr_accessor :cw, :ch, :bw, :bh, :abw, :abh, :pw, :ph
@@ -363,14 +394,11 @@ module QrReaderKernels
     # Output size of its blocks (libjpeg's DCT_scaled_size: 8, 4, 2 or 1)
     # and the IDCT producing them.
     attr_accessor :bs, :idct
-    # Output plane (binary String, pw x ph, filled row by row), and for
-    # progressive JPEGs the coefficients: one Array per block row (JPEG_NONE
-    # until data arrives) with +stride+ entries per block.
-    attr_accessor :plane, :coefs, :stride
+    # Progressive JPEGs: Integers per block of the raw coefficient rows
+    # (JPEG_BLOCK_STRIDE, or 1 when only DCs are needed).
+    attr_accessor :stride
     # Latched dequantisation table, indexed by (extended) zigzag position.
     attr_accessor :qz
-    # Coefficient store: entry data and the byte offset of each block row.
-    attr_reader :sdata, :srows
 
     def initialize(index, id, h, v, tq)
       @index = index
@@ -378,39 +406,88 @@ module QrReaderKernels
       @h = h
       @v = v
       @tq = tq
+      @cw = 0
+      @ch = 0
+      @bw = 0
+      @bh = 0
+      @abw = 0
+      @abh = 0
+      @pw = 0
+      @ph = 0
       @needed = false
+      @bs = 8
+      @idct = JpegIDCT.new(8)
+      # Output plane (binary String, pw x ph, filled row by row).
       @plane = "".b
-      @coefs = []
+      # Progressive JPEGs: raw coefficients (not dequantised) as packed
+      # signed 16-bit Strings, one per block row ("" until data arrives).
+      @raw = []
       @stride = JPEG_BLOCK_STRIDE
       @qz = JPEG_NONE
+      # Store (see JpegDecoder#store) of a sequential decode: per block of
+      # the allocated grid, the bit position of its AC data in the scan and
+      # its DC, as (position << 16) | (DC & 0xFFFF), or -1 without data.
+      @marks = JPEG_NONE
+      # Store of a progressive decode: the raw coefficient rows.
       @sdata = "".b
-      @srows = []
     end
 
-    # Appends one block row of store entries (see JpegDecoder#store).
-    def store_row(entries)
-      return if @srows.size >= @abh
-
-      @srows << @sdata.bytesize
-      @sdata << entries.pack("s<*")
+    # Starts an empty output plane for pw x ph samples.
+    def start_plane
+      @plane = String.new(capacity: @pw * @ph, encoding: Encoding::BINARY)
+      nil
     end
 
-    # Pads the store with all-zero (mid-gray) block rows up to the full
-    # height.
-    def store_finish
-      return if @srows.size >= @abh
+    # Appends sample rows to the plane (nothing beyond its size).
+    def append_plane(rows)
+      @plane << rows if @plane.bytesize + rows.bytesize <= @pw * @ph
+      nil
+    end
 
-      row = []
-      i = 0
-      while i < @abw
-        row << 0 << 0
-        i += 1
+    # Pads the plane with mid-gray rows up to its full size.
+    def finish_plane
+      gray = @pw * @ph - @plane.bytesize
+      @plane << ("\x80".b * gray) if gray > 0
+      nil
+    end
+
+    # Starts the progressive coefficient rows (all empty).
+    def start_raw
+      @raw = Array.new(@abh, "".b)
+      nil
+    end
+
+    # Raw coefficient row +r+, allocated (all zero) on first use.
+    def raw_row(r)
+      row = @raw[r]
+      if row.empty?
+        row = "\0".b * (@abw * @stride * 2)
+        @raw[r] = row
       end
-      row = row.pack("s<*")
-      while @srows.size < @abh
-        @srows << @sdata.bytesize
-        @sdata << row
+      row
+    end
+
+    # Frees raw coefficient row +r+.
+    def release_raw(r)
+      @raw[r] = "".b
+      nil
+    end
+
+    # Starts the block marks of a sequential decode with a store.
+    def start_marks
+      @marks = Array.new(@abw * @abh, -1)
+      nil
+    end
+
+    # Appends raw coefficient row +raw+ ("" for an all-zero row) to the
+    # store of a progressive decode.
+    def store_raw(raw)
+      if raw.empty?
+        @sdata << ("\0".b * (@abw * JPEG_RAW_BLOCK))
+      else
+        @sdata << raw
       end
+      nil
     end
   end
 
@@ -459,6 +536,7 @@ module QrReaderKernels
       else
         idct2_8(c, base, out, off, stride)
       end
+      nil
     end
 
     # Sample of a DC-only block (the same for every IDCT size, except that
@@ -490,6 +568,29 @@ module QrReaderKernels
           r += 1
         end
       end
+      nil
+    end
+
+    # IDCTs the +n+ blocks of a coefficient row (JPEG_BLOCK_STRIDE entries
+    # per block: dequantised coefficients in natural order, then the zigzag
+    # index of the last nonzero one) into +out+ at word offset +off+.
+    def render_row(row, n, out, off, stride)
+      step = JPEG_WORDS[@bs]
+      dc_only = @bs == 1
+      base = 0
+      x = 0
+      while x < n
+        km = row[base + 64]
+        if km == 0 || dc_only
+          fill(out, off, stride, dc_sample(row[base]))
+        else
+          transform(row, base, km, out, off, stride)
+        end
+        base += JPEG_BLOCK_STRIDE
+        off += step
+        x += 1
+      end
+      nil
     end
 
     def idct8_2(c, base, out, off, stride)
@@ -540,6 +641,7 @@ module QrReaderKernels
         off += stride
         i += 8
       end
+      nil
     end
 
     def idct8_4(c, base, out, off, stride)
@@ -606,6 +708,7 @@ module QrReaderKernels
         off += stride
         i += 8
       end
+      nil
     end
 
     def idct8_6(c, base, out, off, stride)
@@ -631,13 +734,13 @@ module QrReaderKernels
           t13 = t0 - t3
           t11 = t1 + t2
           t12 = t1 - t2
-          z2 = d5 + d3
-          z4 = d5 + d1
-          z5 = (z4 + d3) * 9633
+          s2 = d5 + d3
+          s4 = d5 + d1
+          z5 = (s4 + d3) * 9633
           z1 = d1 * -7373
-          z2 *= -20_995
+          z2 = s2 * -20_995
           z3 = d3 * -16_069 + z5
-          z4 = z4 * -3196 + z5
+          z4 = s4 * -3196 + z5
           o0 = z1 + z3
           o1 = d5 * 16_819 + z2 + z4
           o2 = d3 * 25_172 + z2 + z3
@@ -675,13 +778,13 @@ module QrReaderKernels
           t13 = t0 - t3
           t11 = t1 + t2
           t12 = t1 - t2
-          z2 = d5 + d3
-          z4 = d5 + d1
-          z5 = (z4 + d3) * 9633
+          s2 = d5 + d3
+          s4 = d5 + d1
+          z5 = (s4 + d3) * 9633
           z1 = d1 * -7373
-          z2 *= -20_995
+          z2 = s2 * -20_995
           z3 = d3 * -16_069 + z5
-          z4 = z4 * -3196 + z5
+          z4 = s4 * -3196 + z5
           o0 = z1 + z3
           o1 = d5 * 16_819 + z2 + z4
           o2 = d3 * 25_172 + z2 + z3
@@ -692,6 +795,7 @@ module QrReaderKernels
         off += stride
         i += 8
       end
+      nil
     end
 
     def idct8_8(c, base, out, off, stride)
@@ -720,15 +824,15 @@ module QrReaderKernels
           t13 = t0 - t3
           t11 = t1 + t2
           t12 = t1 - t2
-          z1 = d7 + d1
-          z2 = d5 + d3
-          z3 = d7 + d3
-          z4 = d5 + d1
-          z5 = (z3 + z4) * 9633
-          z1 *= -7373
-          z2 *= -20_995
-          z3 = z3 * -16_069 + z5
-          z4 = z4 * -3196 + z5
+          s1 = d7 + d1
+          s2 = d5 + d3
+          s3 = d7 + d3
+          s4 = d5 + d1
+          z5 = (s3 + s4) * 9633
+          z1 = s1 * -7373
+          z2 = s2 * -20_995
+          z3 = s3 * -16_069 + z5
+          z4 = s4 * -3196 + z5
           o0 = d7 * 2446 + z1 + z3
           o1 = d5 * 16_819 + z2 + z4
           o2 = d3 * 25_172 + z2 + z3
@@ -769,15 +873,15 @@ module QrReaderKernels
           t13 = t0 - t3
           t11 = t1 + t2
           t12 = t1 - t2
-          z1 = d7 + d1
-          z2 = d5 + d3
-          z3 = d7 + d3
-          z4 = d5 + d1
-          z5 = (z3 + z4) * 9633
-          z1 *= -7373
-          z2 *= -20_995
-          z3 = z3 * -16_069 + z5
-          z4 = z4 * -3196 + z5
+          s1 = d7 + d1
+          s2 = d5 + d3
+          s3 = d7 + d3
+          s4 = d5 + d1
+          z5 = (s3 + s4) * 9633
+          z1 = s1 * -7373
+          z2 = s2 * -20_995
+          z3 = s3 * -16_069 + z5
+          z4 = s4 * -3196 + z5
           o0 = d7 * 2446 + z1 + z3
           o1 = d5 * 16_819 + z2 + z4
           o2 = d3 * 25_172 + z2 + z3
@@ -788,6 +892,7 @@ module QrReaderKernels
         off += stride
         i += 8
       end
+      nil
     end
 
     def idct4_2(c, base, out, off, stride)
@@ -834,6 +939,7 @@ module QrReaderKernels
         off += stride
         i += 8
       end
+      nil
     end
 
     def idct4_4(c, base, out, off, stride)
@@ -884,6 +990,7 @@ module QrReaderKernels
         off += stride
         i += 8
       end
+      nil
     end
 
     def idct4_8(c, base, out, off, stride)
@@ -940,6 +1047,7 @@ module QrReaderKernels
         off += stride
         i += 8
       end
+      nil
     end
 
     def idct2_2(c, base, out, off, stride)
@@ -976,6 +1084,7 @@ module QrReaderKernels
         off += stride
         i += 8
       end
+      nil
     end
 
     def idct2_8(c, base, out, off, stride)
@@ -1018,6 +1127,7 @@ module QrReaderKernels
         off += stride
         i += 8
       end
+      nil
     end
   end
 
@@ -1034,13 +1144,18 @@ module QrReaderKernels
       @keep = keep
       @qt = [JPEG_NONE, JPEG_NONE, JPEG_NONE, JPEG_NONE]
       # Huffman table definitions and built tables: DC 0..3, AC 4..7.
-      @hcounts = [JPEG_NONE, JPEG_NONE, JPEG_NONE, JPEG_NONE, JPEG_NONE, JPEG_NONE, JPEG_NONE, JPEG_NONE]
+      @hcounts = [JPEG_NO_COUNTS, JPEG_NO_COUNTS, JPEG_NO_COUNTS, JPEG_NO_COUNTS,
+                  JPEG_NO_COUNTS, JPEG_NO_COUNTS, JPEG_NO_COUNTS, JPEG_NO_COUNTS]
       @hsymbols = [JPEG_NONE, JPEG_NONE, JPEG_NONE, JPEG_NONE, JPEG_NONE, JPEG_NONE, JPEG_NONE, JPEG_NONE]
-      @htables = []
-      @hbuilt = [false, false, false, false, false, false, false, false]
+      @hdefined = [0, 0, 0, 0, 0, 0, 0, 0]
+      empty = JPEG_EMPTY_HUFFMAN
+      @htables = [empty, empty, empty, empty, empty, empty, empty, empty]
+      @hbuilt = [0, 0, 0, 0, 0, 0, 0, 0]
       @restart_interval = 0
       @jfif = false
       @adobe_transform = -1
+      # (Object lists are built from a literal with their first element,
+      # which lets Spinel compile them as typed object arrays.)
       @components = []
       @scans_decoded = 0
       @marker_end = 0
@@ -1056,12 +1171,17 @@ module QrReaderKernels
       @out_w = 0
       @out_h = 0
       @color = JPEG_GRAY
-      @scanned = []
+      @scanned = [0]
       @visits = 0
       @max_visits = 0
-      @seg_fill = false
-      @starts = []
-      @ends = []
+      # The current scan's entropy-coded data (see #entropy_data).
+      @scan = "".b
+      @starts = JPEG_NONE
+      @ends = JPEG_NONE
+      # Store of a sequential decode: the scan with the luminance blocks
+      # and their AC Huffman table.
+      @keep_scan = "".b
+      @keep_table = empty
     end
 
     def info
@@ -1099,155 +1219,185 @@ module QrReaderKernels
 
     def huffman_table(ac, id)
       slot = ac ? id + 4 : id
-      return @htables[slot] if @hbuilt[slot]
+      return @htables[slot] if @hbuilt[slot] == 1
 
       counts = @hcounts[slot]
       symbols = @hsymbols[slot]
-      if counts.empty?
+      if @hdefined[slot] == 0
         raise QrReader::ImageError, "corrupt JPEG: missing Huffman table" if id > 1
 
         counts = ac ? JPEG_STD_AC_COUNTS[id] : JPEG_STD_DC_COUNTS[id]
         symbols = ac ? JPEG_STD_AC_SYMBOLS[id] : JPEG_STD_DC_SYMBOLS
       end
       table = JpegHuffman.new(counts, symbols, ac)
-      @htables << table while @htables.size <= slot
       @htables[slot] = table
-      @hbuilt[slot] = true
+      @hbuilt[slot] = 1
       table
     end
 
     # Latches the component's quantisation table (as libjpeg does at the
     # component's first scan), indexed by extended zigzag position.
     def latch_quant(comp)
-      return unless comp.qz.empty?
+      return nil unless comp.qz.empty?
 
       q = @qt[comp.tq]
       raise QrReader::ImageError, "corrupt JPEG: missing quantisation table #{comp.tq}" if q.empty?
 
       comp.qz = q + Array.new(16, q[63]) + Array.new(JPEG_ZIGZAG_EXT.size - 80, 0)
+      nil
     end
 
-    # The coefficient store of a decode with +keep+ (a binary String).
+    # The store of a decode with +keep+ (a binary String; empty when nothing
+    # was kept), from which #render_store renders the luminance at any
+    # scale.
     #
-    # Layout: a header of little-endian 32-bit Integers - magic, header
-    # size (in Integers), width, height, colour space, hmax, vmax,
-    # component count, stored component count, then per stored component
-    # index, h, v, abw, abh, data offset, data size, offset of its row
-    # table in the header, and its 64 quantisation values (zigzag order),
-    # then the row tables (byte offset of each block row in the
-    # component's data) - followed by the components' entry data.
-    #
-    # Entries are signed 16-bit. Each block is a list of AC entries in
-    # increasing zigzag order, closed by a DC entry: an AC coefficient v at
-    # zigzag index k (1..63) with -512 <= v < 512 is (v << 6) | k, larger
-    # ones are k << 6 followed by v; the DC entry is 0 followed by the DC
-    # value. Values are raw (not dequantised). Blocks that were not decoded
-    # are all-zero (mid-gray), like in a direct decode.
+    # Layout: little-endian unsigned 32-bit Integers - magic, kind
+    # (JPEG_STORE_SEQUENTIAL or JPEG_STORE_PROGRESSIVE), width, height,
+    # colour space, hmax, vmax, component count, the stored (luminance)
+    # component's index, h, v, abw and abh, and its 64 quantisation values
+    # (zigzag order) - followed by the kind's data:
+    # * sequential: the luminance blocks' AC Huffman table (16 code counts,
+    #   the symbol count and the symbols, as Integers), the scan data size;
+    #   per block of the abw x abh grid two Integers, the bit position of its
+    #   AC coefficients in the scan data (0xFFFFFFFF: no data, mid-gray) and
+    #   its DC (raw, 16-bit); then the scan data (see #entropy_data).
+    # * progressive: abh raw coefficient rows (JpegComponent#raw_row).
     def store
       return "".b unless @keep
 
-      needed = []
+      c = @components[0]
       i = 0
       while i < @components.size
-        c = @components[i]
-        if c.needed
-          c.store_finish
-          needed << c
-        end
+        c = @components[i] if @components[i].needed
         i += 1
       end
-      head = [JPEG_STORE_MAGIC, 0, @width, @height, @color, @hmax, @vmax, @components.size, needed.size]
-      tables = head.size + needed.size * 72
-      data_off = 0
-      i = 0
-      while i < needed.size
-        c = needed[i]
-        head << c.index << c.h << c.v << c.abw << c.abh << data_off << c.sdata.bytesize << tables
-        tables += c.abh
-        data_off += c.sdata.bytesize
+      head = [JPEG_STORE_MAGIC, @progressive ? JPEG_STORE_PROGRESSIVE : JPEG_STORE_SEQUENTIAL, @width, @height,
+              @color, @hmax, @vmax, @components.size, c.index, c.h, c.v, c.abw, c.abh]
+      k = 0
+      while k < 64
+        head << (c.qz.empty? ? 0 : c.qz[k])
+        k += 1
+      end
+      unless @progressive
+        table = @keep_table
         k = 0
-        while k < 64
-          head << (c.qz.empty? ? 0 : c.qz[k])
+        while k < 16
+          head << table.counts[k]
           k += 1
         end
+        head << table.symbols.size
+        k = 0
+        while k < table.symbols.size
+          head << table.symbols[k]
+          k += 1
+        end
+        head << @keep_scan.bytesize
+      end
+      out = String.new(capacity: head.size * 4 + c.abw * c.abh * 8 + @keep_scan.bytesize + c.sdata.bytesize,
+                       encoding: Encoding::BINARY)
+      i = 0
+      while i < head.size
+        v = head[i]
+        out << (v & 255) << ((v >> 8) & 255) << ((v >> 16) & 255) << ((v >> 24) & 255)
         i += 1
       end
-      i = 0
-      while i < needed.size
-        rows = needed[i].srows
+      if @progressive
+        out << c.sdata
+      else
+        marks = c.marks
+        n = c.abw
         r = 0
-        while r < rows.size
-          head << rows[r]
+        while r < c.abh
+          out << mark_bytes(marks, r * n, n)
           r += 1
         end
-        i += 1
-      end
-      head[1] = head.size
-      out = head.pack("l<*")
-      i = 0
-      while i < needed.size
-        out << needed[i].sdata
-        i += 1
+        out << @keep_scan
       end
       out
     end
 
-    # Luminance at this decoder's scale from the coefficient store in @data.
+    # Luminance at this decoder's scale from the store in @data.
     def render_store
       data = @data
-      raise QrReader::ImageError, "not a JPEG coefficient store" if data.bytesize < 36
-
-      head = data.byteslice(0, 36).unpack("l<*")
-      count = head[1]
-      if head[0] != JPEG_STORE_MAGIC || count < 9 || count * 4 > data.bytesize
-        raise QrReader::ImageError, "not a JPEG coefficient store"
+      size = data.bytesize
+      kind = QrReaderKernels.jpeg_u32(data, 4)
+      if QrReaderKernels.jpeg_u32(data, 0) != JPEG_STORE_MAGIC || size < JPEG_STORE_HEAD * 4 ||
+         (kind != JPEG_STORE_SEQUENTIAL && kind != JPEG_STORE_PROGRESSIVE)
+        raise QrReader::ImageError, "not a JPEG store"
       end
 
-      head = data.byteslice(0, count * 4).unpack("l<*")
-      @width = head[2]
-      @height = head[3]
-      @color = head[4]
-      @hmax = head[5]
-      @vmax = head[6]
-      ncomp = head[7]
-      nstored = head[8]
-      if @width < 1 || @height < 1 || @hmax < 1 || @hmax > 4 || @vmax < 1 || @vmax > 4 || ncomp < 1 || ncomp > 10
-        raise QrReader::ImageError, "corrupt JPEG coefficient store"
+      @progressive = kind == JPEG_STORE_PROGRESSIVE
+      @width = QrReaderKernels.jpeg_u32(data, 8)
+      @height = QrReaderKernels.jpeg_u32(data, 12)
+      @color = QrReaderKernels.jpeg_u32(data, 16)
+      @hmax = QrReaderKernels.jpeg_u32(data, 20)
+      @vmax = QrReaderKernels.jpeg_u32(data, 24)
+      ncomp = QrReaderKernels.jpeg_u32(data, 28)
+      index = QrReaderKernels.jpeg_u32(data, 32)
+      c = JpegComponent.new(index, index, QrReaderKernels.jpeg_u32(data, 36), QrReaderKernels.jpeg_u32(data, 40), 0)
+      c.abw = QrReaderKernels.jpeg_u32(data, 44)
+      c.abh = QrReaderKernels.jpeg_u32(data, 48)
+      if @width < 1 || @width > 65_535 || @height < 1 || @height > 65_535 || @hmax < 1 || @hmax > 4 ||
+         @vmax < 1 || @vmax > 4 || ncomp < 1 || ncomp > 10 || index >= ncomp || @color > JPEG_OTHER ||
+         c.h < 1 || c.h > @hmax || c.v < 1 || c.v > @vmax
+        raise QrReader::ImageError, "corrupt JPEG store"
       end
-      i = 0
+
+      mcux = (@width + 8 * @hmax - 1) / (8 * @hmax)
+      mcuy = (@height + 8 * @vmax - 1) / (8 * @vmax)
+      raise QrReader::ImageError, "corrupt JPEG store" if c.abw < 1 || c.abw > mcux * c.h || c.abh < 1 || c.abh > mcuy * c.v
+
+      comps = [index == 0 ? c : JpegComponent.new(0, 0, 1, 1, 0)]
+      i = 1
       while i < ncomp
-        @components << JpegComponent.new(i, i, 1, 1, 0)
+        comps << (i == index ? c : JpegComponent.new(i, i, 1, 1, 0))
         i += 1
       end
+      @components = comps
       setup_output
-      p = 9
-      i = 0
-      while i < nstored
-        raise QrReader::ImageError, "corrupt JPEG coefficient store" if p + 72 > count
+      q = Array.new(64, 0)
+      k = 0
+      while k < 64
+        q[k] = QrReaderKernels.jpeg_u32(data, 52 + 4 * k)
+        k += 1
+      end
+      c.qz = q + Array.new(16, q[63]) + Array.new(JPEG_ZIGZAG_EXT.size - 80, 0)
+      c.needed = true
+      c.bs = scaled_block_size(c)
+      c.idct = JpegIDCT.new(c.bs)
+      c.pw = c.abw * c.bs
+      c.ph = c.abh * c.bs
+      p = JPEG_STORE_HEAD * 4
+      if @progressive
+        raise QrReader::ImageError, "corrupt JPEG store" if p + c.abh * c.abw * JPEG_RAW_BLOCK > size
 
-        c = JpegComponent.new(head[p], head[p], head[p + 1], head[p + 2], 0)
-        if c.index < 0 || c.index >= ncomp || c.h < 1 || c.h > @hmax || c.v < 1 || c.v > @vmax
-          raise QrReader::ImageError, "corrupt JPEG coefficient store"
+        render_stored_raw(c, p)
+      else
+        counts = Array.new(16, 0)
+        total = 0
+        k = 0
+        while k < 16
+          counts[k] = QrReaderKernels.jpeg_u32(data, p + 4 * k)
+          total += counts[k]
+          k += 1
         end
+        nsym = QrReaderKernels.jpeg_u32(data, p + 64)
+        raise QrReader::ImageError, "corrupt JPEG store" if nsym != total || nsym > 256
 
-        c.needed = true
-        c.abw = head[p + 3]
-        c.abh = head[p + 4]
-        mcux = (@width + 8 * @hmax - 1) / (8 * @hmax)
-        mcuy = (@height + 8 * @vmax - 1) / (8 * @vmax)
-        if c.abw < 1 || c.abw > mcux * c.h || c.abh < 1 || c.abh > mcuy * c.v
-          raise QrReader::ImageError, "corrupt JPEG coefficient store"
+        symbols = Array.new(nsym, 0)
+        k = 0
+        while k < nsym
+          symbols[k] = QrReaderKernels.jpeg_u32(data, p + 68 + 4 * k)
+          k += 1
         end
+        p += 68 + 4 * nsym
+        scan_size = QrReaderKernels.jpeg_u32(data, p)
+        marks = p + 4
+        scan = marks + c.abw * c.abh * 8
+        # (No scan data if the luminance scan could not be decoded.)
+        raise QrReader::ImageError, "corrupt JPEG store" if scan + scan_size != size
 
-        c.qz = head[p + 8, 64]
-        c.bs = scaled_block_size(c)
-        c.idct = JpegIDCT.new(c.bs)
-        c.pw = c.abw * c.bs
-        c.ph = c.abh * c.bs
-        @components[c.index] = c
-        render_store_component(c, count * 4 + head[p + 5], head[p + 6], head, head[p + 7])
-        p += 72
-        i += 1
+        render_marked(c, marks, scan, scan_size, JpegHuffman.new(counts, symbols, true))
       end
       output
     end
@@ -1266,13 +1416,13 @@ module QrReaderKernels
         pos = @marker_end
         if code >= 0xC0 && code <= 0xC2
           pos = read_frame(pos, code)
-          return if header_only
+          return nil if header_only
         elsif code == 0xC3 || (code >= 0xC5 && code <= 0xC7) || (code >= 0xC9 && code <= 0xCB) ||
               (code >= 0xCD && code <= 0xCF) || code == 0xF7
           raise QrReader::UnsupportedImageError, "#{QrReaderKernels.jpeg_sof_name(code)} JPEG is not supported" unless header_only
 
           read_frame(pos, code)
-          return
+          return nil
         elsif code == 0xC4
           pos = read_dht(pos)
         elsif code == 0xDB
@@ -1284,7 +1434,7 @@ module QrReaderKernels
 
           pos = read_scan(pos)
         elsif code == 0xD9
-          return
+          return nil
         elsif code == 0xE0
           pos = read_app0(pos)
         elsif code == 0xEE
@@ -1299,6 +1449,7 @@ module QrReaderKernels
           pos = segment_end(pos)
         end
       end
+      nil
     end
 
     # Finds the next marker at or after +pos+, skipping junk and fill bytes.
@@ -1306,34 +1457,34 @@ module QrReaderKernels
     # -1 at the end of the data.
     def next_marker(pos)
       data = @data
-      while true
-        pos = data.index(JPEG_FF, pos)
-        return -1 unless pos
+      size = data.bytesize
+      while pos < size
+        f = data.byteindex(JPEG_FF, pos)
+        return -1 unless f
 
-        pos += 1 while data.getbyte(pos) == 0xFF
+        pos = f + 1
+        pos += 1 while pos < size && data.getbyte(pos) == 0xFF
+        return -1 if pos >= size
+
         code = data.getbyte(pos)
-        return -1 unless code
-
         if code != 0
           @marker_end = pos + 1
           return code
         end
       end
+      -1
     end
 
     def u16(pos)
-      hi = @data.getbyte(pos)
-      lo = @data.getbyte(pos + 1)
-      raise JpegTruncated, "truncated JPEG" unless hi && lo
+      raise JpegTruncated, "truncated JPEG" if pos < 0 || pos + 2 > @data.bytesize
 
-      (hi << 8) | lo
+      (@data.getbyte(pos) << 8) | @data.getbyte(pos + 1)
     end
 
     def byte(pos)
-      b = @data.getbyte(pos)
-      raise JpegTruncated, "truncated JPEG" unless b
+      raise JpegTruncated, "truncated JPEG" if pos < 0 || pos >= @data.bytesize
 
-      b
+      @data.getbyte(pos)
     end
 
     # Position after the marker segment whose length field is at +pos+.
@@ -1358,23 +1509,28 @@ module QrReaderKernels
       raise QrReader::ImageError, "corrupt JPEG: bad frame header length" if stop - pos != 8 + 3 * count
 
       @progressive = code == 0xC2
-      comps = []
-      i = 0
+      comps = [frame_component(pos, 0)]
+      i = 1
       while i < count
-        p = pos + 8 + 3 * i
-        hv = byte(p + 1)
-        h = hv >> 4
-        v = hv & 15
-        tq = byte(p + 2)
-        raise QrReader::ImageError, "corrupt JPEG: bad sampling factors" if h < 1 || h > 4 || v < 1 || v > 4
-        raise QrReader::ImageError, "corrupt JPEG: bad quantisation table id" if tq > 3
-
-        comps << JpegComponent.new(i, byte(p), h, v, tq)
+        comps << frame_component(pos, i)
         i += 1
       end
       @components = comps
       @frame_end = stop
       stop
+    end
+
+    # Component +i+ of the frame header whose length field is at +pos+.
+    def frame_component(pos, i)
+      p = pos + 8 + 3 * i
+      hv = byte(p + 1)
+      h = hv >> 4
+      v = hv & 15
+      tq = byte(p + 2)
+      raise QrReader::ImageError, "corrupt JPEG: bad sampling factors" if h < 1 || h > 4 || v < 1 || v > 4
+      raise QrReader::ImageError, "corrupt JPEG: bad quantisation table id" if tq > 3
+
+      JpegComponent.new(i, byte(p), h, v, tq)
     end
 
     def read_dht(pos)
@@ -1386,22 +1542,28 @@ module QrReaderKernels
         id = info & 15
         raise QrReader::ImageError, "corrupt JPEG: bad Huffman table id" if klass > 1 || id > 3
 
-        counts = []
+        counts = Array.new(16, 0)
         total = 0
         i = 0
         while i < 16
           n = byte(p + 1 + i)
-          counts << n
+          counts[i] = n
           total += n
           i += 1
         end
         raise QrReader::ImageError, "corrupt JPEG: bad Huffman table" if total > 256 || p + 17 + total > stop
 
-        symbols = @data.byteslice(p + 17, total).unpack("C*")
+        symbols = Array.new(total, 0)
+        i = 0
+        while i < total
+          symbols[i] = @data.getbyte(p + 17 + i)
+          i += 1
+        end
         slot = klass == 0 ? id : id + 4
         @hcounts[slot] = counts
         @hsymbols[slot] = symbols
-        @hbuilt[slot] = false
+        @hdefined[slot] = 1
+        @hbuilt[slot] = 0
         p += 17 + total
       end
       stop
@@ -1417,7 +1579,13 @@ module QrReaderKernels
         size = precision == 0 ? 64 : 128
         raise QrReader::ImageError, "corrupt JPEG: bad quantisation table" if precision > 1 || id > 3 || p + 1 + size > stop
 
-        @qt[id] = @data.byteslice(p + 1, size).unpack(precision == 0 ? "C64" : "n64")
+        q = Array.new(64, 0)
+        i = 0
+        while i < 64
+          q[i] = precision == 0 ? @data.getbyte(p + 1 + i) : (@data.getbyte(p + 1 + 2 * i) << 8) | @data.getbyte(p + 2 + 2 * i)
+          i += 1
+        end
+        @qt[id] = q
         p += 1 + size
       end
       stop
@@ -1446,20 +1614,22 @@ module QrReaderKernels
     # Height 0 in the frame header means it is given by a DNL marker after
     # the first scan (0xFF 0xDC cannot occur inside scan data).
     def resolve_height
-      return if @height != 0
+      return nil if @height != 0
 
-      at = @data.index(JPEG_DNL_MARKER, @frame_end)
+      at = @data.byteindex(JPEG_DNL_MARKER, @frame_end)
       raise QrReader::ImageError, "corrupt JPEG: zero image height" unless at
 
       @height = u16(at + 4)
       raise QrReader::ImageError, "corrupt JPEG: zero image height" if @height == 0
+
+      nil
     end
 
     # ---------------------------------------------------------------
     # Frame setup (at the first scan, when all header markers are known)
 
     def setup_frame
-      return if @hmax > 0
+      return nil if @hmax > 0
 
       if @precision != 8
         if @precision == 12 || @precision == 16
@@ -1469,14 +1639,14 @@ module QrReaderKernels
         raise QrReader::ImageError, "corrupt JPEG: bad sample precision #{@precision}"
       end
       resolve_height
-      # A coefficient store only for images that can be rendered at full size.
-      @keep = false if @width * @height > JPEG_MAX_PIXELS
       comps = @components
       @color = color_space
-      nneeded = if @color == JPEG_RGB then 3
-                elsif @color == JPEG_CMYK || @color == JPEG_YCCK then 4
-                else 1
-                end
+      nneeded = 1
+      nneeded = 3 if @color == JPEG_RGB
+      nneeded = 4 if @color == JPEG_CMYK || @color == JPEG_YCCK
+      # A coefficient store only for single-component luminance that can be
+      # rendered at full size.
+      @keep = false if nneeded > 1 || @width * @height > JPEG_MAX_PIXELS
       hmax = 0
       vmax = 0
       i = 0
@@ -1491,27 +1661,24 @@ module QrReaderKernels
       setup_output
       @mcux = (@width + 8 * hmax - 1) / (8 * hmax)
       @mcuy = (@height + 8 * vmax - 1) / (8 * vmax)
-      idcts = [nil, nil, nil, nil, nil, nil, nil, nil, nil]
+      idcts = [JpegIDCT.new(1), JpegIDCT.new(1), JpegIDCT.new(2), JpegIDCT.new(1), JpegIDCT.new(4),
+               JpegIDCT.new(1), JpegIDCT.new(1), JpegIDCT.new(1), JpegIDCT.new(8)]
       single = comps.size == 1
       blocks = 0
       i = 0
       while i < comps.size
         c = comps[i]
         c.bs = scaled_block_size(c)
-        idct = idcts[c.bs]
-        unless idct
-          idct = JpegIDCT.new(c.bs)
-          idcts[c.bs] = idct
-        end
-        c.idct = idct
+        c.idct = idcts[c.bs]
         setup_component(c, i < nneeded, single)
         blocks += c.abw * c.abh if c.needed
         i += 1
       end
       check_coefficient_memory if @progressive
-      @scanned = Array.new(comps.size, false)
+      @scanned = Array.new(comps.size, 0)
       @visits = 0
       @max_visits = JPEG_MAX_VISITS * blocks + 65_536
+      nil
     end
 
     # Output size at this decoder's scale (checked against MAX_PIXELS).
@@ -1521,6 +1688,8 @@ module QrReaderKernels
       @out_w = (w + @scale - 1) / @scale
       @out_h = (h + @scale - 1) / @scale
       raise QrReader::UnsupportedImageError, "JPEG too large (#{w}x#{h})" if @out_w * @out_h > JPEG_MAX_PIXELS
+
+      nil
     end
 
     # libjpeg's per-component DCT scaling: at reduced scales a subsampled
@@ -1528,22 +1697,22 @@ module QrReaderKernels
     def scaled_block_size(c)
       size = @bs
       while size < 8 && ((@hmax * @bs) % (c.h * size * 2)) == 0 && ((@vmax * @bs) % (c.v * size * 2)) == 0
-        size *= 2
+        size += size
       end
       size
     end
 
-    # Progressive JPEGs keep all coefficients of the needed components (8
-    # bytes per Array entry): refuse sizes whose storage would explode.
+    # Progressive JPEGs keep all coefficients of the needed components (2
+    # bytes each): refuse sizes whose storage would be excessive.
     def check_coefficient_memory
-      entries = 0
+      bytes = 0
       i = 0
       while i < @components.size
         c = @components[i]
-        entries += c.abw * c.abh * c.stride if c.needed
+        bytes += c.abw * c.abh * c.stride * 2 if c.needed
         i += 1
       end
-      return if entries <= JPEG_MAX_COEFFICIENTS
+      return nil if bytes <= JPEG_MAX_COEFFICIENT_BYTES
 
       raise QrReader::UnsupportedImageError, "progressive JPEG too large to decode at scale #{@scale} " \
                                              "(#{@width}x#{@height}, #{@components.size} components)"
@@ -1559,15 +1728,17 @@ module QrReaderKernels
       c.pw = c.abw * c.bs
       c.ph = c.abh * c.bs
       c.needed = needed
-      return unless needed
+      return nil unless needed
 
       if @progressive
         # Only the DC is kept when it is all that is rendered.
         c.stride = c.bs == 1 && !@keep ? 1 : JPEG_BLOCK_STRIDE
-        c.coefs = Array.new(c.abh, JPEG_NONE)
+        c.start_raw
       else
-        c.plane = String.new(capacity: c.pw * c.ph, encoding: Encoding::BINARY)
+        c.start_plane
+        c.start_marks if @keep
       end
+      nil
     end
 
     # Colour space of the stored components, following libjpeg's rules.
@@ -1599,20 +1770,26 @@ module QrReaderKernels
       count = byte(pos + 2)
       raise QrReader::ImageError, "corrupt JPEG: bad scan header" if count < 1 || count > 4 || stop - pos != 6 + 2 * count
 
-      comps = []
+      taken = []
       dcs = []
       acs = []
       i = 0
       while i < count
         id = byte(pos + 3 + 2 * i)
         tables = byte(pos + 4 + 2 * i)
-        comp = scan_component(id, comps)
-        raise QrReader::ImageError, "corrupt JPEG: bad scan component" unless comp
+        comp = scan_component(id, taken)
+        raise QrReader::ImageError, "corrupt JPEG: bad scan component" if comp < 0
         raise QrReader::ImageError, "corrupt JPEG: bad Huffman table id" if (tables >> 4) > 3 || (tables & 15) > 3
 
-        comps << comp
+        taken << comp
         dcs << (tables >> 4)
         acs << (tables & 15)
+        i += 1
+      end
+      comps = [@components[taken[0]]]
+      i = 1
+      while i < count
+        comps << @components[taken[i]]
         i += 1
       end
       ss = byte(stop - 3)
@@ -1630,35 +1807,53 @@ module QrReaderKernels
         @visits += count == 1 ? comps[0].bw * comps[0].bh : @mcux * @mcuy * mcu_blocks(comps)
         raise QrReader::ImageError, "corrupt JPEG: too many scans" if @scans_decoded >= JPEG_MAX_SCANS || @visits > @max_visits
 
-        words = entropy_words(stop, seg_end)
+        entropy_data(stop, seg_end)
         @scans_decoded += 1
         if @progressive
-          JpegProgressive.new(self, comps, dcs, ss, se, ah, al, acs[0], words, @starts, @ends).run
+          JpegProgressive.new(self, comps, dcs, ss, se, ah, al, acs[0], @scan, @starts, @ends).run
         else
-          JpegSequential.new(self, comps, dcs, acs, words, @starts, @ends).run
+          JpegSequential.new(self, comps, dcs, acs, @scan, @starts, @ends).run
+          keep_scan(comps, acs) if @keep
         end
+        @scan = "".b
       end
       seg_end
     end
 
-    # The first component with this id not yet in the scan (some encoders
-    # write duplicate ids; libjpeg-turbo matches them so), or nil.
-    def scan_component(id, taken)
+    # Keeps the scan data and AC table of the needed component's (only)
+    # sequential scan for the store.
+    def keep_scan(comps, acs)
+      # (Bit positions in the store are 32-bit.)
+      @keep = false if @scan.bytesize >= (1 << 28)
       i = 0
-      while i < @components.size
-        c = @components[i]
-        if c.id == id
-          free = true
-          j = 0
-          while j < taken.size
-            free = false if taken[j].equal?(c)
-            j += 1
-          end
-          return c if free
+      while i < comps.size
+        if comps[i].needed
+          @keep_scan = @scan
+          @keep_table = huffman_table(true, acs[i])
         end
         i += 1
       end
       nil
+    end
+
+    # Index of the first component with this id not yet in the scan (whose
+    # indices are +taken+; some encoders write duplicate ids, libjpeg-turbo
+    # matches them so), or -1.
+    def scan_component(id, taken)
+      i = 0
+      while i < @components.size
+        if @components[i].id == id
+          free = true
+          j = 0
+          while j < taken.size
+            free = false if taken[j] == i
+            j += 1
+          end
+          return i if free
+        end
+        i += 1
+      end
+      -1
     end
 
     # Blocks per MCU of an interleaved scan.
@@ -1677,6 +1872,8 @@ module QrReaderKernels
       bad ||= ah != 0 && al != ah - 1
       bad ||= al > 13
       raise QrReader::ImageError, "corrupt JPEG: bad progressive scan parameters" if bad
+
+      nil
     end
 
     # Whether a scan contributes to the output: scans without needed
@@ -1691,8 +1888,8 @@ module QrReaderKernels
         i = 0
         while i < comps.size
           c = comps[i]
-          fresh = true if c.needed && !@scanned[c.index]
-          @scanned[c.index] = true
+          fresh = true if c.needed && @scanned[c.index] == 0
+          @scanned[c.index] = 1
           i += 1
         end
         return fresh
@@ -1701,6 +1898,7 @@ module QrReaderKernels
         i = 0
         while i < comps.size
           return true if comps[i].needed
+
           i += 1
         end
         return false
@@ -1718,15 +1916,19 @@ module QrReaderKernels
       data = @data
       size = data.bytesize
       resync = @restart_interval > 0
-      while (e = data.index(JPEG_FF, pos))
-        r = e + 1
-        c = data.getbyte(r)
-        return size unless c
+      while pos < size
+        e = data.byteindex(JPEG_FF, pos)
+        return size unless e
 
+        r = e + 1
+        return size if r >= size
+
+        c = data.getbyte(r)
         if c == 0xFF
-          r += 1 while data.getbyte(r) == 0xFF
+          r += 1 while r < size && data.getbyte(r) == 0xFF
+          return e if r >= size
+
           c = data.getbyte(r)
-          return e unless c
           return e unless c == 0 || (c >= 0xD0 && c <= 0xD7) || (resync && c < 0xC0)
         elsif c != 0 && (c < 0xD0 || c > 0xD7)
           return e if !resync || c >= 0xC0
@@ -1736,93 +1938,97 @@ module QrReaderKernels
       size
     end
 
-    # The entropy-coded segment [pos, stop) without byte stuffing, split at
-    # restart markers and unpacked to big-endian 32-bit words. Each restart
-    # interval starts on a word boundary; @starts[i] is its first word,
-    # @ends[i] the bit position just after its data.
-    def entropy_words(pos, stop)
+    # The entropy-coded segment [pos, stop) without byte stuffing, its
+    # restart intervals concatenated, as @scan (followed by zero padding).
+    # @starts[i] is the byte offset of interval i, @ends[i] the bit
+    # position just after its data.
+    def entropy_data(pos, stop)
       data = @data
       stop -= 1 if stop > pos && data.getbyte(stop - 1) == 0xFF # dangling half of a stuffed byte
       resync = @restart_interval > 0
-      pieces = []
+      buf = String.new(capacity: stop - pos + JPEG_TAIL_PADDING.bytesize, encoding: Encoding::BINARY)
+      piece_start = []
+      piece_end = []
       marks = []
-      cur = String.new(capacity: stop - pos + 4 + JPEG_TAIL_PADDING.bytesize, encoding: Encoding::BINARY)
+      cur = 0
       cut = false # the interval's data ended at a reserved marker (corrupt data)
       p = pos
       while p < stop
-        f = data.index(JPEG_FF, p)
+        f = data.byteindex(JPEG_FF, p)
         if f.nil? || f >= stop
-          cur << data.byteslice(p, stop - p) unless cut
+          buf << data.byteslice(p, stop - p) unless cut
           break
         end
-        cur << data.byteslice(p, f - p) if !cut && f > p
+        buf << data.byteslice(p, f - p) if !cut && f > p
         q = f + 1
         q += 1 while q < stop && data.getbyte(q) == 0xFF # fill bytes
         if q >= stop
-          cur << data.byteslice(f, stop - f) unless cut
+          buf << data.byteslice(f, stop - f) unless cut
           break
         end
         c = data.getbyte(q)
         if c == 0
-          cur << JPEG_FF unless cut
+          buf << JPEG_FF unless cut
         elsif c >= 0xD0 && c <= 0xD7
           break unless resync # a stray RST ends the data, like in libjpeg
 
-          pieces << cur
+          piece_start << cur
+          piece_end << buf.bytesize
           marks << c
-          cur = "".b
+          cur = buf.bytesize
           cut = false
         else
           # Reserved marker: fill bytes before it stay, the interval ends.
-          cur << data.byteslice(f, q - 1 - f) if !cut && q - 1 > f
+          buf << data.byteslice(f, q - 1 - f) if !cut && q - 1 > f
           cut = true
         end
         p = q + 1
       end
-      pieces << cur
-      pieces = restart_intervals(pieces, marks) unless marks.empty?
+      if marks.empty?
+        @starts = [0]
+        @ends = [buf.bytesize << 3]
+        buf << JPEG_TAIL_PADDING
+        @scan = buf
+        return nil
+      end
+
+      piece_start << cur
+      piece_end << buf.bytesize
+      # The intervals in order, each starting on a 4-byte boundary (an empty
+      # one where the next begins).
+      order = restart_intervals(marks)
+      out = String.new(capacity: buf.bytesize + 4 * order.size + JPEG_TAIL_PADDING.bytesize, encoding: Encoding::BINARY)
       starts = []
       ends = []
-      if pieces.size == 1
-        buf = pieces[0]
-        starts << 0
-        ends << (buf.bytesize << 3)
-        buf << "\0" * (-buf.bytesize & 3)
-      else
-        total = 0
-        i = 0
-        while i < pieces.size
-          total += pieces[i].bytesize + 3
-          i += 1
-        end
-        buf = String.new(capacity: total + JPEG_TAIL_PADDING.bytesize, encoding: Encoding::BINARY)
-        i = 0
-        while i < pieces.size
-          piece = pieces[i]
-          word = buf.bytesize >> 2
-          starts << word
-          ends << ((word << 5) + (piece.bytesize << 3))
-          buf << piece << "\0" * (-piece.bytesize & 3)
-          i += 1
-        end
+      i = 0
+      while i < order.size
+        j = order[i]
+        start = out.bytesize
+        len = j < 0 ? 0 : piece_end[j] - piece_start[j]
+        out << buf.byteslice(piece_start[j], len) << JPEG_TAIL_PADDING.byteslice(0, -len & 3) if len > 0
+        starts << start
+        ends << ((start + len) << 3)
+        i += 1
       end
-      buf << JPEG_TAIL_PADDING
+      out << JPEG_TAIL_PADDING
+      @scan = out
       @starts = starts
       @ends = ends
-      buf.unpack("N*")
+      nil
     end
 
-    # Assigns the data pieces of a scan split at restart markers (pieces[0]
-    # before the first marker, pieces[j + 1] after marks[j]) to restart
-    # intervals by the markers' numbers (modulo 8). A marker without the
+    # The data pieces of a scan split at restart markers (piece 0 before
+    # the first marker, piece j + 1 after marks[j]) in restart interval
+    # order, assigned by the markers' numbers (modulo 8), -1 for an empty
+    # interval. A marker without the
     # expected number is judged by the next one: if that one continues from
     # the expected number, this marker is corrupt and counts as expected; if
     # it continues from this marker, intervals were lost (up to five; they
     # stay empty, i.e. gray) or, for a marker one or two behind, the data is
     # stale and dropped. Otherwise libjpeg's resync rules apply: one or two
     # ahead means lost intervals, one or two behind stale data, else resume.
-    def restart_intervals(pieces, marks)
-      out = [pieces[0]]
+    def restart_intervals(marks)
+      order = [0]
       expected = 0
       n = marks.size
       j = 0
@@ -1840,15 +2046,15 @@ module QrReaderKernels
         if ahead < 6
           a = 0
           while a < ahead
-            out << "".b
+            order << -1 # a lost (empty) interval
             a += 1
           end
-          out << pieces[j + 1]
+          order << j + 1
           expected += ahead + 1
         end
         j += 1
       end
-      out
+      order
     end
 
     # ---------------------------------------------------------------
@@ -1861,15 +2067,9 @@ module QrReaderKernels
         c = comps[i]
         if c.needed
           if @progressive
-            if @keep
-              store_coefficients(c)
-              render_store_rows(c, c.sdata, 0, c.sdata.bytesize, c.srows)
-            else
-              render_coefficients(c)
-            end
+            render_raw(c)
           else
-            gray = c.pw * c.ph - c.plane.bytesize
-            c.plane << "\x80".b * gray if gray > 0
+            c.finish_plane
           end
         end
         i += 1
@@ -1891,238 +2091,224 @@ module QrReaderKernels
       end
     end
 
-    # IDCTs the stored progressive coefficients of +c+ into its plane.
-    def render_coefficients(c)
+    # IDCTs the raw progressive coefficients of +c+ into its plane, row by
+    # row (freeing them, or moving them to the store with +keep+).
+    def render_raw(c)
       latch_quant(c)
-      q = Array.new(64, 0)
-      k = 0
-      while k < 64
-        q[JPEG_ZIGZAG[k]] = c.qz[k]
-        k += 1
-      end
+      c.start_plane
       bs = c.bs
-      plane = String.new(capacity: c.pw * c.ph, encoding: Encoding::BINARY)
-      buf = Array.new(c.pw / JPEG_SAMPLES_PER_WORD[bs] * bs, 0)
-      blk = Array.new(64, 0)
+      stride = c.pw / JPEG_SAMPLES_PER_WORD[bs]
+      buf = Array.new(stride * bs, 0)
       pack = JPEG_PACK[bs]
-      rows = c.coefs
+      dc_only = c.stride == 1
+      row = dc_only ? JPEG_NONE : Array.new(c.abw * JPEG_BLOCK_STRIDE, 0)
       by = 0
       while by < c.abh
-        row = rows[by]
-        if row.empty?
-          buf.fill(128 * JPEG_SPREAD[bs]) # no data: all coefficients 0
-        elsif bs == 1
-          render_dc_row(c, row, q[0], buf)
+        raw = c.raw[by]
+        if raw.empty?
+          # No data: all coefficients 0.
+          buf.fill(128 * JPEG_SPREAD[bs])
+        elsif dc_only
+          render_dc_row(c, raw, c.qz[0], buf)
         else
-          render_coefficient_row(c, row, q, blk, buf)
+          raw_to_row(raw, 0, c.abw, c.qz, row)
+          c.idct.render_row(row, c.abw, buf, 0, stride)
+          row.fill(0)
         end
-        plane << buf.pack(pack)
-        rows[by] = JPEG_NONE
+        c.store_raw(raw) if @keep
+        c.release_raw(by)
+        c.append_plane(buf.pack(pack))
         by += 1
       end
-      c.plane = plane
+      nil
     end
 
-    # IDCTs block row +row+ (raw coefficients, natural order) of +c+ into
-    # +buf+ (packed words), dequantised with +q+ (natural order).
-    def render_coefficient_row(c, row, q, blk, buf)
-      idct = c.idct
+    # Dequantises the +n+ blocks of the raw coefficient row at raw[off, ...]
+    # into the (all zero) coefficient row +row+.
+    def raw_to_row(raw, off, n, qz, row)
       zz = JPEG_ZIGZAG
-      stride = c.pw / JPEG_SAMPLES_PER_WORD[c.bs]
-      step = JPEG_WORDS[c.bs]
+      q0 = qz[0]
       base = 0
-      off = 0
-      while off < stride
-        km = row[base + 64]
-        if km == 0
-          idct.fill(buf, off, stride, idct.dc_sample(row[base] * q[0]))
-        else
-          k = 0
-          while k <= km
-            n = zz[k]
-            blk[n] = row[base + n] * q[n]
-            k += 1
-          end
-          idct.transform(blk, 0, km, buf, off, stride)
-          k = 0
-          while k <= km
-            blk[zz[k]] = 0
-            k += 1
-          end
-        end
-        base += JPEG_BLOCK_STRIDE
-        off += step
-      end
-    end
-
-    # DC-only samples (block size 1) of block row +row+ of +c+.
-    def render_dc_row(c, row, q0, buf)
-      idct = c.idct
-      stride = c.stride
-      n = c.abw
-      base = 0
+      p = off
       x = 0
       while x < n
-        buf[x] = idct.dc_sample(row[base] * q0)
-        base += stride
-        x += 1
-      end
-    end
-
-    # Moves the stored progressive coefficients of +c+ into its coefficient
-    # store (see #store).
-    def store_coefficients(c)
-      latch_quant(c)
-      rows = c.coefs
-      entries = []
-      by = 0
-      while by < c.abh
-        row = rows[by]
-        if row.empty?
-          x = 0
-          while x < c.abw
-            entries << 0 << 0
-            x += 1
-          end
-        else
-          coefficient_entries(row, c.abw, entries)
-        end
-        c.store_row(entries)
-        entries.clear
-        rows[by] = JPEG_NONE
-        by += 1
-      end
-    end
-
-    # Appends the store entries of the +n+ blocks of a coefficient row.
-    def coefficient_entries(row, n, entries)
-      zz = JPEG_ZIGZAG
-      base = 0
-      x = 0
-      while x < n
-        km = row[base + 64]
+        v = raw.getbyte(p) | (raw.getbyte(p + 1) << 8)
+        row[base] = (v < 32_768 ? v : v - 65_536) * q0
+        km = raw.getbyte(p + JPEG_RAW_KM)
+        km = 63 if km > 63
         k = 1
         while k <= km
-          v = row[base + zz[k]]
-          if v != 0
-            if v >= -512 && v < 512
-              entries << ((v << 6) | k)
-            else
-              entries << (k << 6) << v
-            end
-          end
+          i = zz[k]
+          v = raw.getbyte(p + 2 * i) | (raw.getbyte(p + 2 * i + 1) << 8)
+          row[base + i] = (v < 32_768 ? v : v - 65_536) * qz[k] if v != 0
           k += 1
         end
-        entries << 0 << row[base]
+        row[base + 64] = km
         base += JPEG_BLOCK_STRIDE
+        p += JPEG_RAW_BLOCK
         x += 1
       end
+      nil
     end
 
-    # Renders component +c+ from the store data at byte offset +data_off+
-    # (+size+ bytes) whose row table starts at head[+table+].
-    def render_store_component(c, data_off, size, head, table)
-      if data_off < 0 || size < 0 || data_off + size > @data.bytesize || table + c.abh > head.size
-        raise QrReader::ImageError, "corrupt JPEG coefficient store"
-      end
-
-      render_store_rows(c, @data, data_off, size, head[table, c.abh])
-    end
-
-    # Renders the plane of +c+ from store data at data[base, size] whose
-    # block rows start at the offsets +rows+.
-    def render_store_rows(c, data, base, size, rows)
-      bs = c.bs
-      qz = c.qz
-      q0 = qz[0]
-      plane = String.new(capacity: c.pw * c.ph, encoding: Encoding::BINARY)
-      buf = Array.new(c.pw / JPEG_SAMPLES_PER_WORD[bs] * bs, 0)
-      blk = Array.new(64, 0)
-      pack = JPEG_PACK[bs]
-      by = 0
-      while by < c.abh
-        start = rows[by]
-        stop = by + 1 < rows.size ? rows[by + 1] : size
-        stop = start if stop < start || stop > size
-        entries = data.byteslice(base + start, stop - start).unpack("s<*")
-        entries << 0 << 0 # a corrupt row ends with zero blocks
-        if bs == 1
-          store_dc_row(c, entries, q0, buf)
-        else
-          render_entry_row(c, entries, qz, blk, buf)
-        end
-        plane << buf.pack(pack)
-        by += 1
-      end
-      c.plane = plane
-    end
-
-    # IDCTs a block row of store entries into +buf+ (packed words).
-    def render_entry_row(c, entries, qz, blk, buf)
-      idct = c.idct
-      zz = JPEG_ZIGZAG
-      stride = c.pw / JPEG_SAMPLES_PER_WORD[c.bs]
-      step = JPEG_WORDS[c.bs]
-      last = entries.size - 2
-      i = 0
-      off = 0
-      while off < stride
-        km = 0
-        dc = 0
-        while i < last
-          e = entries[i]
-          k = e & 63
-          if k != 0
-            v = e >> 6
-            i += 1
-          else
-            k = e >> 6
-            v = entries[i + 1]
-            i += 2
-            if k <= 0 || k > 63
-              dc = v
-              break
-            end
-          end
-          blk[zz[k]] = v * qz[k]
-          km = k
-        end
-        if km == 0
-          idct.fill(buf, off, stride, idct.dc_sample(dc * qz[0]))
-        else
-          blk[0] = dc * qz[0]
-          idct.transform(blk, 0, km, buf, off, stride)
-          blk.fill(0)
-        end
-        off += step
-      end
-    end
-
-    # DC-only samples (block size 1) of a block row of store entries.
-    def store_dc_row(c, entries, q0, buf)
+    # DC-only samples (block size 1) of a raw row of DCs of +c+.
+    def render_dc_row(c, raw, q0, buf)
       idct = c.idct
       n = c.abw
-      last = entries.size - 2
-      i = 0
       x = 0
       while x < n
-        dc = 0
-        while i < last
-          e = entries[i]
-          if (e & 63) != 0
-            i += 1
-          else
-            k = e >> 6
-            i += 2
-            if k <= 0 || k > 63
-              dc = entries[i - 1]
-              break
-            end
-          end
-        end
-        buf[x] = idct.dc_sample(dc * q0)
+        v = raw.getbyte(2 * x) | (raw.getbyte(2 * x + 1) << 8)
+        buf[x] = idct.dc_sample((v < 32_768 ? v : v - 65_536) * q0)
         x += 1
       end
+      nil
+    end
+
+    # Renders the plane of +c+ from the raw coefficient rows of a store
+    # starting at @data[pos].
+    def render_stored_raw(c, pos)
+      c.start_plane
+      bs = c.bs
+      stride = c.pw / JPEG_SAMPLES_PER_WORD[bs]
+      buf = Array.new(stride * bs, 0)
+      pack = JPEG_PACK[bs]
+      row = Array.new(c.abw * JPEG_BLOCK_STRIDE, 0)
+      by = 0
+      while by < c.abh
+        raw_to_row(@data, pos, c.abw, c.qz, row)
+        c.idct.render_row(row, c.abw, buf, 0, stride)
+        row.fill(0)
+        c.append_plane(buf.pack(pack))
+        pos += c.abw * JPEG_RAW_BLOCK
+        by += 1
+      end
+      nil
+    end
+
+    # The marks (see JpegComponent#marks) marks[start, n] as store bytes.
+    def mark_bytes(marks, start, n)
+      out = String.new(capacity: n * 8, encoding: Encoding::BINARY)
+      i = start
+      stop = start + n
+      while i < stop
+        m = marks[i]
+        if m < 0
+          out << 255 << 255 << 255 << 255 << 0 << 0 << 0 << 0
+        else
+          v = m >> 16
+          out << (v & 255) << ((v >> 8) & 255) << ((v >> 16) & 255) << ((v >> 24) & 255)
+          out << (m & 255) << ((m >> 8) & 255) << 0 << 0
+        end
+        i += 1
+      end
+      out
+    end
+
+    # Renders the plane of +c+ from a sequential store: block marks at
+    # @data[marks], scan data at @data[scan, size], AC Huffman +table+.
+    def render_marked(c, marks, scan, size, table)
+      c.start_plane
+      bs = c.bs
+      stride = c.pw / JPEG_SAMPLES_PER_WORD[bs]
+      buf = Array.new(stride * bs, 0)
+      pack = JPEG_PACK[bs]
+      row = Array.new(c.abw * JPEG_BLOCK_STRIDE, 0)
+      # Blocks start at least one MCU's worth of padding before the end.
+      limit = (size - JPEG_TAIL_PADDING.bytesize) << 3
+      by = 0
+      while by < c.abh
+        if bs == 1
+          marked_dc_row(row, marks + by * c.abw * 8, c.abw, limit, c.qz)
+        else
+          marked_row(row, marks + by * c.abw * 8, c.abw, scan, limit, table, c.qz)
+        end
+        c.idct.render_row(row, c.abw, buf, 0, stride)
+        row.fill(0)
+        c.append_plane(buf.pack(pack))
+        by += 1
+      end
+      nil
+    end
+
+    # The DCs of the +n+ blocks whose marks start at @data[mp] into +row+.
+    def marked_dc_row(row, mp, n, limit, qz)
+      data = @data
+      q0 = qz[0]
+      base = 0
+      x = 0
+      while x < n
+        bitpos = data.getbyte(mp) | (data.getbyte(mp + 1) << 8) | (data.getbyte(mp + 2) << 16) | (data.getbyte(mp + 3) << 24)
+        if bitpos < limit
+          v = data.getbyte(mp + 4) | (data.getbyte(mp + 5) << 8)
+          row[base] = (v < 32_768 ? v : v - 65_536) * q0
+        end
+        base += JPEG_BLOCK_STRIDE
+        mp += 8
+        x += 1
+      end
+      nil
+    end
+
+    # Decodes the +n+ blocks whose marks start at @data[mp] into +row+: DC
+    # from the mark, AC coefficients from the scan data at @data[scan] with
+    # +table+ (like JpegSequential#decode_mcu).
+    def marked_row(row, mp, n, scan, limit, table, qz)
+      data = @data
+      fast = table.fast
+      look = table.look
+      zz = JPEG_ZIGZAG_EXT
+      q0 = qz[0]
+      base = 0
+      x = 0
+      while x < n
+        bitpos = data.getbyte(mp) | (data.getbyte(mp + 1) << 8) | (data.getbyte(mp + 2) << 16) | (data.getbyte(mp + 3) << 24)
+        if bitpos < limit
+          v = data.getbyte(mp + 4) | (data.getbyte(mp + 5) << 8)
+          row[base] = (v < 32_768 ? v : v - 65_536) * q0
+          pos = scan + (bitpos >> 3)
+          acc = (data.getbyte(pos) << 24) | (data.getbyte(pos + 1) << 16) | (data.getbyte(pos + 2) << 8) | data.getbyte(pos + 3)
+          pos += 4
+          bits = 32 - (bitpos & 7)
+          k = 1
+          while k < 64
+            if bits < 31
+              acc = ((acc & ((1 << bits) - 1)) << 32) | (data.getbyte(pos) << 24) | (data.getbyte(pos + 1) << 16) |
+                    (data.getbyte(pos + 2) << 8) | data.getbyte(pos + 3)
+              pos += 4
+              bits += 32
+            end
+            e = fast[(acc >> (bits - JPEG_FAST_BITS)) & JPEG_FAST_MASK]
+            if e != 0
+              bits -= e & 255
+              k += (e >> 8) & 255
+              row[base + zz[k]] = (e >> 16) * qz[k]
+              k += 1
+            else
+              e = look[(acc >> (bits - JPEG_FAST_BITS)) & JPEG_FAST_MASK]
+              e = table.decode_long((acc >> (bits - 16)) & 0xFFFF) if e == 0
+              bits -= e >> 8
+              s = e & 15
+              if s != 0
+                k += (e >> 4) & 15
+                v = (acc >> (bits - s)) & ((1 << s) - 1)
+                bits -= s
+                v -= (1 << s) - 1 if v < (1 << (s - 1))
+                row[base + zz[k]] = v * qz[k]
+                k += 1
+              elsif (e & 0xF0) == 0xF0
+                k += 16
+              else
+                k += JPEG_EOB_RUN + 1
+              end
+            end
+          end
+          row[base + 64] = k > JPEG_EOB_RUN ? k - JPEG_EOB_RUN - 2 : 63
+        end
+        base += JPEG_BLOCK_STRIDE
+        mp += 8
+        x += 1
+      end
+      nil
     end
 
     # Samples of component +c+ at output size (cropped, or upsampled when
@@ -2160,18 +2346,20 @@ module QrReaderKernels
       out = String.new(capacity: w * @out_h, encoding: Encoding::BINARY)
       y = 0
       while y < @out_h
-        rgb_row(r, g, b, out, y * w, w)
+        out << rgb_row(r, g, b, y * w, w)
         y += 1
       end
       out
     end
 
-    def rgb_row(r, g, b, out, i, n)
+    def rgb_row(r, g, b, i, n)
+      row = String.new(capacity: n, encoding: Encoding::BINARY)
       stop = i + n
       while i < stop
-        out << ((306 * r.getbyte(i) + 601 * g.getbyte(i) + 117 * b.getbyte(i) + 0x200) >> 10)
+        row << ((306 * r.getbyte(i) + 601 * g.getbyte(i) + 117 * b.getbyte(i) + 0x200) >> 10)
         i += 1
       end
+      row
     end
 
     def convert_cmyk(c, m, y, k, ycck)
@@ -2179,11 +2367,7 @@ module QrReaderKernels
       out = String.new(capacity: w * @out_h, encoding: Encoding::BINARY)
       row = 0
       while row < @out_h
-        if ycck
-          ycck_row(c, m, y, k, out, row * w, w)
-        else
-          cmyk_row(c, m, y, k, out, row * w, w)
-        end
+        out << (ycck ? ycck_row(c, m, y, k, row * w, w) : cmyk_row(c, m, y, k, row * w, w))
         row += 1
       end
       out
@@ -2191,22 +2375,25 @@ module QrReaderKernels
 
     # Adobe CMYK JPEGs store inverted ink (255 = no ink), so the stored
     # values are 255 - ink: R = C' * K' / 255 (rounded) and so on.
-    def cmyk_row(c, m, y, k, out, i, n)
+    def cmyk_row(c, m, y, k, i, n)
+      row = String.new(capacity: n, encoding: Encoding::BINARY)
       stop = i + n
       while i < stop
         kk = k.getbyte(i)
         r = (c.getbyte(i) * kk + 127) / 255
         g = (m.getbyte(i) * kk + 127) / 255
         b = (y.getbyte(i) * kk + 127) / 255
-        out << ((306 * r + 601 * g + 117 * b + 0x200) >> 10)
+        row << ((306 * r + 601 * g + 117 * b + 0x200) >> 10)
         i += 1
       end
+      row
     end
 
     # YCCK stores YCbCr-encoded CMY plus K; libjpeg converts it to CMYK with
     # its fixed-point YCbCr->RGB tables (C = 255 - R, ...), which then goes
     # through #cmyk_row's formula.
-    def ycck_row(y, cb, cr, k, out, i, n)
+    def ycck_row(y, cb, cr, k, i, n)
+      row = String.new(capacity: n, encoding: Encoding::BINARY)
       cr_r = JPEG_CR_R
       cb_b = JPEG_CB_B
       cr_g = JPEG_CR_G
@@ -2226,26 +2413,34 @@ module QrReaderKernels
         r = (c * kk + 127) / 255
         g = (m * kk + 127) / 255
         b = (ye * kk + 127) / 255
-        out << ((306 * r + 601 * g + 117 * b + 0x200) >> 10)
+        row << ((306 * r + 601 * g + 117 * b + 0x200) >> 10)
         i += 1
       end
+      row
     end
   end
 
+
   # Decodes one sequential (baseline or extended) scan into the component
-  # planes, MCU row by MCU row. Blocks of components that do not contribute
-  # to the luminance are entropy-decoded and dropped. With a coefficient
-  # store, the raw coefficients of the needed blocks are also recorded.
+  # planes. The needed blocks of an MCU row are decoded into coefficient
+  # rows, which are IDCT'd into the planes (and kept in the coefficient
+  # store) when the row is complete; blocks of components that do not
+  # contribute to the luminance are entropy-decoded and dropped.
   class JpegSequential
-    def initialize(decoder, comps, dcs, acs, words, starts, ends)
+    # Per block: skip it, decode only its DC, or its DC and AC coefficients.
+    SKIP = 0
+    DC_ONLY = 1
+    FULL = 2
+
+    def initialize(decoder, comps, dcs, acs, data, starts, ends)
       @ri = decoder.restart_interval
       @keep = decoder.keep
-      @words = words
+      @data = data
       @starts = starts
       @ends = ends
       @acc = 0
       @bits = 0
-      @wi = 0
+      @pos = 0
       @endbit = 0
       interleaved = comps.size > 1
       if interleaved
@@ -2257,40 +2452,40 @@ module QrReaderKernels
       end
       @preds = Array.new(comps.size, 0)
       # Per block of the MCU.
+      # (Object lists start from a literal and grow by index, which lets
+      # Spinel compile them as typed object arrays.)
       @pred_idx = []
       @dc_fast = []
       @dc_look = []
-      @dc_table = []
+      @dc_table = [JPEG_EMPTY_HUFFMAN]
       @ac_fast = []
       @ac_look = []
-      @ac_table = []
-      @need = [] # whether the block is rendered
-      @ac = [] # whether its AC coefficients are decoded (else skipped)
+      @ac_table = [JPEG_EMPTY_HUFFMAN]
+      @mode = []
       @q = []
-      @out = []
-      @off = []
-      @step = []
+      @coef = [] # its coefficient row
+      @col = [] # its block column in the MCU
+      @cols = [] # block columns per MCU of its component
+      # With a store: its component's marks (JpegComponent#marks), its block
+      # row in the MCU, block rows per MCU and blocks per block row.
+      @marks = []
+      @row = []
+      @rowstep = []
+      @width = []
+      # Per needed component: its coefficient rows (one per block row of an
+      # MCU row, in @rows from @first), sample buffer and words per row.
+      @ncomp = 0
+      @comp = [comps[0]]
+      @rows = []
+      @first = []
+      @nrows = []
+      @buf = []
       @stride = []
-      @idct = []
-      @ent = [] # its store entry list (index into @ents), or -1
-      # Per needed component: row buffer (packed words), its rows, words per
-      # MCU and per row.
-      @row_comp = []
-      @row_buf = []
-      @row_n = []
-      @row_step = []
-      @row_stride = []
-      # Store entry lists (one per block row of an MCU row), their block
-      # counts, components and blocks per MCU.
-      @ents = []
-      @ent_count = []
-      @ent_comp = []
-      @ent_hn = []
-      @ent_mark = []
       setup_blocks(decoder, comps, dcs, acs, interleaved)
       @nb = @pred_idx.size
-      @blk = Array.new(@nb * 65, 0)
-      @kmax = Array.new(@nb, 0)
+      # Per block of the last MCU: bit position of its AC data, and its DC.
+      @ac_start = Array.new(@nb, 0)
+      @dc = Array.new(@nb, 0)
     end
 
     def run
@@ -2300,11 +2495,10 @@ module QrReaderKernels
       interval = 0
       mx = 0
       my = 0
-      keep = @keep
       while mcu < total
         if interval >= @starts.size
-          finish_row(mx, my) # no data left: the rest stays gray
-          return
+          flush if mx > 0 # no data left: the rest stays gray
+          return nil
         end
         n = total - mcu
         n = ri if ri > 0 && ri < n
@@ -2314,17 +2508,14 @@ module QrReaderKernels
         while n > 0
           n -= 1
           mcu += 1
-          if dead
-            gray_mcu(mx)
-          elsif !(keep ? decode_mcu_keep(mx) : decode_mcu(mx))
+          if !dead && !decode_mcu(mx, my)
             # Ran past the end of the data: drop this MCU and the rest of
-            # the interval (or of the image).
+            # the interval (or of the image); they stay gray.
             dead = true
             if ri == 0 || interval >= @starts.size
-              finish_row(mx, my)
-              return
+              flush
+              return nil
             end
-            gray_mcu(mx)
           end
           mx += 1
           next unless mx == @mcux
@@ -2334,12 +2525,12 @@ module QrReaderKernels
           my += 1
         end
       end
+      nil
     end
 
     private
 
     def setup_blocks(decoder, comps, dcs, acs, interleaved)
-      dummy = JpegIDCT.new(1)
       si = 0
       while si < comps.size
         c = comps[si]
@@ -2347,104 +2538,93 @@ module QrReaderKernels
         ac = decoder.huffman_table(true, acs[si])
         hn = interleaved ? c.h : 1
         vn = interleaved ? c.v : 1
-        row = -1
-        ent = -1
+        first = @rows.size
         if c.needed
           decoder.latch_quant(c)
-          bs = c.bs
-          stride = c.pw / JPEG_SAMPLES_PER_WORD[bs]
-          nrows = vn * bs
-          row = @row_buf.size
-          @row_comp << c
-          @row_buf << Array.new(stride * nrows, 0)
-          @row_n << nrows
-          @row_step << hn * JPEG_WORDS[bs]
-          @row_stride << stride
-          if @keep
-            ent = @ents.size
-            r = 0
-            while r < vn
-              @ents << []
-              @ent_count << 0
-              @ent_comp << c
-              @ent_hn << hn
-              @ent_mark << 0
-              r += 1
-            end
+          stride = c.pw / JPEG_SAMPLES_PER_WORD[c.bs]
+          @comp[@ncomp] = c
+          @ncomp += 1
+          @first << first
+          @nrows << vn
+          @buf << Array.new(stride * vn * c.bs, 0)
+          @stride << stride
+          r = 0
+          while r < vn
+            @rows << Array.new(c.abw * JPEG_BLOCK_STRIDE, 0)
+            r += 1
           end
         end
         by = 0
         while by < vn
           bx = 0
           while bx < hn
+            @dc_table[@pred_idx.size] = dc
+            @ac_table[@pred_idx.size] = ac
             @pred_idx << si
             @dc_fast << dc.fast
             @dc_look << dc.look
-            @dc_table << dc
             @ac_fast << ac.fast
             @ac_look << ac.look
-            @ac_table << ac
-            if row >= 0
-              bs = c.bs
-              @need << true
-              @ac << (bs > 1 || @keep)
+            if c.needed
+              @mode << (c.bs > 1 ? FULL : DC_ONLY)
               @q << c.qz
-              @out << @row_buf[row]
-              @off << (by * bs * @row_stride[row]) + (bx * JPEG_WORDS[bs])
-              @step << @row_step[row]
-              @stride << @row_stride[row]
-              @idct << c.idct
-              @ent << (ent >= 0 ? ent + by : -1)
+              @coef << @rows[first + by]
+              @col << bx
+              @cols << hn
+              @marks << c.marks
             else
-              @need << false
-              @ac << false
+              @mode << SKIP
               @q << JPEG_NONE
-              @out << JPEG_NONE
-              @off << 0
-              @step << 0
-              @stride << 0
-              @idct << dummy
-              @ent << -1
+              @coef << JPEG_NONE
+              @col << 0
+              @cols << 0
+              @marks << JPEG_NONE
             end
+            @row << by
+            @rowstep << vn
+            @width << c.abw
             bx += 1
           end
           by += 1
         end
         si += 1
       end
+      nil
     end
 
     def start_interval(index)
-      @wi = @starts[index]
+      @pos = @starts[index]
       @endbit = @ends[index]
       @acc = 0
       @bits = 0
       @preds.fill(0)
+      nil
     end
 
-    # Decodes the MCU at column +mx+ and writes its needed blocks to the
-    # row buffers. Returns false (writing nothing) if the MCU ran past the
-    # end of the interval's data.
-    def decode_mcu(mx)
-      words = @words
+    # Decodes the MCU at column +mx+ of MCU row +my+ into the coefficient
+    # rows (and marks its blocks for the store). Returns false (leaving its
+    # blocks zero) if the MCU ran past the end of the interval's data.
+    def decode_mcu(mx, my)
+      data = @data
+      starts = @ac_start
+      dcs = @dc
       acc = @acc
       bits = @bits
-      wi = @wi
+      pos = @pos
       preds = @preds
-      kmaxes = @kmax
-      blk = @blk
       zz = JPEG_ZIGZAG_EXT
       nb = @nb
       b = 0
-      base = 0
       while b < nb
         # DC coefficient (bits >= 31 after a refill covers any code + extra bits)
         if bits < 31
-          acc = ((acc & ((1 << bits) - 1)) << 32) | words[wi]
-          wi += 1
+          acc = ((acc & ((1 << bits) - 1)) << 32) | (data.getbyte(pos) << 24) | (data.getbyte(pos + 1) << 16) |
+                (data.getbyte(pos + 2) << 8) | data.getbyte(pos + 3)
+          pos += 4
           bits += 32
         end
         e = @dc_fast[b][(acc >> (bits - JPEG_FAST_BITS)) & JPEG_FAST_MASK]
+        diff = 0
         if e != 0
           bits -= e & 255
           diff = e >> 16
@@ -2453,9 +2633,7 @@ module QrReaderKernels
           e = @dc_table[b].decode_long((acc >> (bits - 16)) & 0xFFFF) if e == 0
           bits -= e >> 8
           s = e & 255
-          if s == 0
-            diff = 0
-          else
+          if s != 0
             diff = (acc >> (bits - s)) & ((1 << s) - 1)
             bits -= s
             diff -= (1 << s) - 1 if diff < (1 << (s - 1))
@@ -2467,21 +2645,28 @@ module QrReaderKernels
 
         # AC coefficients
         fast = @ac_fast[b]
+        mode = @mode[b]
+        starts[b] = pos * 8 - bits
+        dcs[b] = pred
         k = 1
-        if @ac[b]
+        if mode == FULL
           q = @q[b]
-          blk[base] = pred * q[0]
+          coef = @coef[b]
+          base = (mx * @cols[b] + @col[b]) * JPEG_BLOCK_STRIDE
+          coef[base] = pred * q[0]
           while k < 64
             if bits < 31
-              acc = ((acc & ((1 << bits) - 1)) << 32) | words[wi]
-              wi += 1
+              acc = ((acc & ((1 << bits) - 1)) << 32) | (data.getbyte(pos) << 24) | (data.getbyte(pos + 1) << 16) |
+                    (data.getbyte(pos + 2) << 8) | data.getbyte(pos + 3)
+              pos += 4
               bits += 32
             end
             e = fast[(acc >> (bits - JPEG_FAST_BITS)) & JPEG_FAST_MASK]
             if e != 0
+              # (end of block writes 0 to slot 64, which is set below)
               bits -= e & 255
               k += (e >> 8) & 255
-              blk[base + zz[k]] = (e >> 16) * q[k]
+              coef[base + zz[k]] = (e >> 16) * q[k]
               k += 1
             else
               e = @ac_look[b][(acc >> (bits - JPEG_FAST_BITS)) & JPEG_FAST_MASK]
@@ -2493,7 +2678,7 @@ module QrReaderKernels
                 v = (acc >> (bits - s)) & ((1 << s) - 1)
                 bits -= s
                 v -= (1 << s) - 1 if v < (1 << (s - 1))
-                blk[base + zz[k]] = v * q[k]
+                coef[base + zz[k]] = v * q[k]
                 k += 1
               elsif (e & 0xF0) == 0xF0
                 k += 16
@@ -2502,17 +2687,17 @@ module QrReaderKernels
               end
             end
           end
-          kmaxes[b] = k > JPEG_EOB_RUN ? k - JPEG_EOB_RUN - 2 : 63
+          coef[base + 64] = k > JPEG_EOB_RUN ? k - JPEG_EOB_RUN - 2 : 63
         else
-          if @need[b]
-            blk[base] = pred * @q[b][0]
-            kmaxes[b] = 0
+          if mode == DC_ONLY
+            @coef[b][(mx * @cols[b] + @col[b]) * JPEG_BLOCK_STRIDE] = pred * @q[b][0]
           end
           # Skip the AC coefficients.
           while k < 64
             if bits < 31
-              acc = ((acc & ((1 << bits) - 1)) << 32) | words[wi]
-              wi += 1
+              acc = ((acc & ((1 << bits) - 1)) << 32) | (data.getbyte(pos) << 24) | (data.getbyte(pos + 1) << 16) |
+                    (data.getbyte(pos + 2) << 8) | data.getbyte(pos + 3)
+              pos += 4
               bits += 32
             end
             e = fast[(acc >> (bits - JPEG_FAST_BITS)) & JPEG_FAST_MASK]
@@ -2528,291 +2713,94 @@ module QrReaderKernels
               elsif (e & 0xF0) == 0xF0
                 k += 16
               else
-                break
+                k = 64
               end
             end
           end
         end
         b += 1
-        base += 65
       end
 
-      if (wi << 5) - bits > @endbit
-        blk.fill(0)
+      if pos * 8 - bits > @endbit
+        clear_mcu(mx)
         return false
       end
 
       @acc = acc
       @bits = bits
-      @wi = wi
-      render_mcu(mx)
+      @pos = pos
+      mark_mcu(mx, my) if @keep
       true
     end
 
-    # Like #decode_mcu, and records the raw coefficients of the needed
-    # blocks as store entries (see JpegDecoder#store).
-    def decode_mcu_keep(mx)
-      words = @words
-      acc = @acc
-      bits = @bits
-      wi = @wi
-      preds = @preds
-      kmaxes = @kmax
-      blk = @blk
-      zz = JPEG_ZIGZAG_EXT
-      nb = @nb
-      j = 0
-      while j < @ents.size
-        @ent_mark[j] = @ents[j].size
-        j += 1
-      end
-      b = 0
-      base = 0
-      while b < nb
-        if bits < 31
-          acc = ((acc & ((1 << bits) - 1)) << 32) | words[wi]
-          wi += 1
-          bits += 32
-        end
-        e = @dc_fast[b][(acc >> (bits - JPEG_FAST_BITS)) & JPEG_FAST_MASK]
-        if e != 0
-          bits -= e & 255
-          diff = e >> 16
-        else
-          e = @dc_look[b][(acc >> (bits - JPEG_FAST_BITS)) & JPEG_FAST_MASK]
-          e = @dc_table[b].decode_long((acc >> (bits - 16)) & 0xFFFF) if e == 0
-          bits -= e >> 8
-          s = e & 255
-          if s == 0
-            diff = 0
-          else
-            diff = (acc >> (bits - s)) & ((1 << s) - 1)
-            bits -= s
-            diff -= (1 << s) - 1 if diff < (1 << (s - 1))
-          end
-        end
-        ci = @pred_idx[b]
-        pred = ((preds[ci] + diff + 32_768) & 0xFFFF) - 32_768
-        preds[ci] = pred
-
-        fast = @ac_fast[b]
-        k = 1
-        if @ac[b]
-          q = @q[b]
-          ents = @ents[@ent[b]]
-          blk[base] = pred * q[0]
-          while k < 64
-            if bits < 31
-              acc = ((acc & ((1 << bits) - 1)) << 32) | words[wi]
-              wi += 1
-              bits += 32
-            end
-            e = fast[(acc >> (bits - JPEG_FAST_BITS)) & JPEG_FAST_MASK]
-            if e != 0
-              bits -= e & 255
-              k += (e >> 8) & 255
-              if (v = e >> 16) != 0 # not EOB or ZRL; |v| < 512
-                blk[base + zz[k]] = v * q[k]
-                ents << ((v << 6) | (k < 64 ? k : 63))
-              end
-              k += 1
-            else
-              e = @ac_look[b][(acc >> (bits - JPEG_FAST_BITS)) & JPEG_FAST_MASK]
-              e = @ac_table[b].decode_long((acc >> (bits - 16)) & 0xFFFF) if e == 0
-              bits -= e >> 8
-              s = e & 15
-              if s != 0
-                k += (e >> 4) & 15
-                v = (acc >> (bits - s)) & ((1 << s) - 1)
-                bits -= s
-                v -= (1 << s) - 1 if v < (1 << (s - 1))
-                blk[base + zz[k]] = v * q[k]
-                kk = k < 64 ? k : 63
-                if v >= -512 && v < 512
-                  ents << ((v << 6) | kk)
-                else
-                  ents << (kk << 6) << v
-                end
-                k += 1
-              elsif (e & 0xF0) == 0xF0
-                k += 16
-              else
-                k += JPEG_EOB_RUN + 1
-              end
-            end
-          end
-          kmaxes[b] = k > JPEG_EOB_RUN ? k - JPEG_EOB_RUN - 2 : 63
-          ents << 0 << pred
-        else
-          while k < 64
-            if bits < 31
-              acc = ((acc & ((1 << bits) - 1)) << 32) | words[wi]
-              wi += 1
-              bits += 32
-            end
-            e = fast[(acc >> (bits - JPEG_FAST_BITS)) & JPEG_FAST_MASK]
-            if e != 0
-              bits -= e & 255
-              k += ((e >> 8) & 255) + 1
-            else
-              e = @ac_look[b][(acc >> (bits - JPEG_FAST_BITS)) & JPEG_FAST_MASK]
-              e = @ac_table[b].decode_long((acc >> (bits - 16)) & 0xFFFF) if e == 0
-              bits -= (e >> 8) + (e & 15)
-              if (e & 15) != 0
-                k += ((e >> 4) & 15) + 1
-              elsif (e & 0xF0) == 0xF0
-                k += 16
-              else
-                break
-              end
-            end
-          end
-        end
-        b += 1
-        base += 65
-      end
-
-      if (wi << 5) - bits > @endbit
-        blk.fill(0)
-        # Drop the MCU's entries.
-        j = 0
-        while j < @ents.size
-          ents = @ents[j]
-          ents.pop while ents.size > @ent_mark[j]
-          j += 1
-        end
-        return false
-      end
-
-      @acc = acc
-      @bits = bits
-      @wi = wi
-      j = 0
-      while j < @ents.size
-        @ent_count[j] += @ent_hn[j]
-        j += 1
-      end
-      render_mcu(mx)
-      true
-    end
-
-    # IDCTs the decoded blocks of the MCU at column +mx+ into the row
-    # buffers and clears them.
-    def render_mcu(mx)
-      blk = @blk
-      kmaxes = @kmax
-      nb = @nb
-      b = 0
-      base = 0
-      while b < nb
-        if @need[b]
-          idct = @idct[b]
-          off = @off[b] + mx * @step[b]
-          km = kmaxes[b]
-          if km == 0
-            idct.fill(@out[b], off, @stride[b], idct.dc_sample(blk[base]))
-            blk[base] = 0
-          elsif idct.bs == 1
-            idct.fill(@out[b], off, @stride[b], idct.dc_sample(blk[base]))
-            blk.fill(0, base, 65)
-          else
-            idct.transform(blk, base, km, @out[b], off, @stride[b])
-            blk.fill(0, base, 65)
-          end
-        end
-        b += 1
-        base += 65
-      end
-    end
-
-    # Fills the MCU at column +mx+ of the row buffers with mid-gray (and
-    # records all-zero blocks in the store).
-    def gray_mcu(mx)
+    # Marks the blocks of the MCU at column +mx+ of MCU row +my+ for the
+    # store: where their AC coefficients start, and their DCs.
+    def mark_mcu(mx, my)
       b = 0
       while b < @nb
-        @idct[b].fill(@out[b], @off[b] + mx * @step[b], @stride[b], 128) if @need[b]
+        if @mode[b] != SKIP
+          @marks[b][(my * @rowstep[b] + @row[b]) * @width[b] + mx * @cols[b] + @col[b]] =
+            (@ac_start[b] << 16) | (@dc[b] & 0xFFFF)
+        end
         b += 1
       end
-      return unless @keep
-
-      j = 0
-      while j < @ents.size
-        ents = @ents[j]
-        h = 0
-        while h < @ent_hn[j]
-          ents << 0 << 0
-          h += 1
-        end
-        @ent_count[j] += @ent_hn[j]
-        j += 1
-      end
+      nil
     end
 
-    # Appends the MCU row in the row buffers to the planes (and the store).
+    # Zeroes the blocks of the MCU at column +mx+ (mid-gray).
+    def clear_mcu(mx)
+      b = 0
+      while b < @nb
+        if @mode[b] != SKIP
+          @coef[b].fill(0, (mx * @cols[b] + @col[b]) * JPEG_BLOCK_STRIDE, JPEG_BLOCK_STRIDE)
+        end
+        b += 1
+      end
+      nil
+    end
+
+    # IDCTs the coefficient rows of the MCU row into the planes and clears
+    # them.
     def flush
       i = 0
-      while i < @row_buf.size
-        c = @row_comp[i]
-        len = c.pw * @row_n[i]
-        c.plane << @row_buf[i].pack(JPEG_PACK[c.bs]) if c.plane.bytesize + len <= c.pw * c.ph
+      while i < @ncomp
+        c = @comp[i]
+        buf = @buf[i]
+        stride = @stride[i]
+        idct = c.idct
+        first = @first[i]
+        r = 0
+        while r < @nrows[i]
+          row = @rows[first + r]
+          idct.render_row(row, c.abw, buf, r * c.bs * stride, stride)
+          row.fill(0)
+          r += 1
+        end
+        c.append_plane(buf.pack(JPEG_PACK[c.bs]))
         i += 1
       end
-      return unless @keep
-
-      j = 0
-      while j < @ents.size
-        c = @ent_comp[j]
-        ents = @ents[j]
-        n = @ent_count[j]
-        while n < c.abw
-          ents << 0 << 0
-          n += 1
-        end
-        c.store_row(ents)
-        ents.clear
-        @ent_count[j] = 0
-        j += 1
-      end
-    end
-
-    # Grays MCUs +mx+.. of the current row and flushes it; rows below stay
-    # gray.
-    def finish_row(mx, my)
-      return if my >= @mcuy
-
-      i = 0
-      while i < @row_buf.size
-        c = @row_comp[i]
-        buf = @row_buf[i]
-        from = mx * @row_step[i]
-        stride = @row_stride[i]
-        if from < stride
-          gray = 128 * JPEG_SPREAD[c.bs]
-          r = 0
-          while r < @row_n[i]
-            buf.fill(gray, r * stride + from, stride - from)
-            r += 1
-          end
-        end
-        i += 1
-      end
-      flush
+      nil
     end
   end
 
-  # Decodes one progressive scan into the stored coefficients: DC first or
-  # refinement (possibly interleaved), or AC first or refinement of one
-  # spectral band of one component. Stored coefficients are kept in 16-bit
-  # range like libjpeg's JCOEF.
+  # Decodes one progressive scan into the raw coefficient rows of its
+  # components (packed signed 16-bit Strings, JpegComponent#raw_row): DC
+  # first or refinement (possibly interleaved), or AC first or refinement
+  # of one spectral band of one component. Coefficients wrap to 16 bits
+  # like libjpeg's JCOEF.
   class JpegProgressive
     DC_FIRST = 0
     DC_REFINE = 1
     AC_FIRST = 2
     AC_REFINE = 3
+    # Bytes per block of a raw coefficient row, and the offset of the last
+    # nonzero zigzag index in a block.
+    BLOCK_BYTES = JPEG_BLOCK_STRIDE * 2
+    KM = 128
 
-    def initialize(decoder, comps, dcs, ss, se, ah, al, ac, words, starts, ends)
+    def initialize(decoder, comps, dcs, ss, se, ah, al, ac, data, starts, ends)
       @ri = decoder.restart_interval
-      @words = words
+      @data = data
       @starts = starts
       @ends = ends
       @ss = ss
@@ -2820,11 +2808,12 @@ module QrReaderKernels
       @al = al
       @acc = 0
       @bits = 0
-      @wi = 0
+      @pos = 0
       @endbit = 0
       @eobrun = 0
       @preds = Array.new(comps.size, 0)
       @newnz = Array.new(64, 0)
+      @kind = ss == 0 ? (ah == 0 ? DC_FIRST : DC_REFINE) : (ah == 0 ? AC_FIRST : AC_REFINE)
       if comps.size == 1
         @units_x = comps[0].bw
         @units_y = comps[0].bh
@@ -2832,16 +2821,28 @@ module QrReaderKernels
         @units_x = decoder.mcux
         @units_y = decoder.mcuy
       end
+      # AC scans: the component and its Huffman table.
+      @comp = comps[0]
+      @table = JPEG_EMPTY_HUFFMAN
+      @table = decoder.huffman_table(true, ac) if ss != 0
+      # DC scans, per block of the MCU: component, whether needed, block
+      # row in the MCU row, block column at MCU column 0 and per MCU
+      # column (in coefficients), block rows per MCU row, predictor, table.
+      @b_comp = [comps[0]]
+      @b_need = []
+      @b_row = []
+      @b_col = []
+      @b_colstep = []
+      @b_rowstep = []
+      @b_pred = []
+      @b_fast = []
+      @b_look = []
+      @b_table = [JPEG_EMPTY_HUFFMAN]
+      @nb = 0
       if ss == 0
-        @kind = ah == 0 ? DC_FIRST : DC_REFINE
         setup_dc(decoder, comps, dcs)
       else
-        @kind = ah == 0 ? AC_FIRST : AC_REFINE
-        c = comps[0]
-        decoder.latch_quant(c)
-        @table = decoder.huffman_table(true, ac)
-        @rows = c.coefs
-        @abw = c.abw
+        decoder.latch_quant(@comp)
       end
     end
 
@@ -2854,7 +2855,7 @@ module QrReaderKernels
       while u < total && interval < @starts.size
         n = total - u
         n = ri if ri > 0 && ri < n
-        @wi = @starts[interval]
+        @pos = @starts[interval]
         @endbit = @ends[interval]
         @acc = 0
         @bits = 0
@@ -2876,23 +2877,13 @@ module QrReaderKernels
           u = ok ? u + x1 - x0 : stop
         end
       end
+      nil
     end
 
     private
 
     def setup_dc(decoder, comps, dcs)
       interleaved = comps.size > 1
-      @b_rows = []
-      @b_need = []
-      @b_width = []
-      @b_row = []
-      @b_col = [] # entry index of the block in its row, at MCU column 0
-      @b_colstep = [] # entries per MCU column
-      @b_rowstep = []
-      @b_pred = []
-      @b_fast = []
-      @b_look = []
-      @b_table = []
       si = 0
       while si < comps.size
         c = comps[si]
@@ -2905,16 +2896,15 @@ module QrReaderKernels
         while by < vn
           bx = 0
           while bx < hn
-            @b_rows << c.coefs
-            @b_need << c.needed
-            @b_width << c.abw * stride
+            @b_comp[@b_need.size] = c
+            @b_table[@b_need.size] = t if t
+            @b_need << (c.needed ? 1 : 0)
             @b_row << by
             @b_col << bx * stride
             @b_colstep << hn * stride
             @b_rowstep << vn
             @b_pred << si
             if t
-              @b_table << t
               @b_fast << t.fast
               @b_look << t.look
             end
@@ -2924,25 +2914,16 @@ module QrReaderKernels
         end
         si += 1
       end
-      @nb = @b_rows.size
-    end
-
-    # Coefficient row +r+ of the block list +rows+ (allocated on first use).
-    def coef_row(rows, r, width)
-      row = rows[r]
-      if row.empty?
-        row = Array.new(width, 0)
-        rows[r] = row
-      end
-      row
+      @nb = @b_need.size
+      nil
     end
 
     # DC first / refinement scan, MCUs mx0...mx1 of MCU row my.
     def dc_row(my, mx0, mx1)
-      words = @words
+      data = @data
       acc = @acc
       bits = @bits
-      wi = @wi
+      pos = @pos
       preds = @preds
       refine = @kind == DC_REFINE
       al = @al
@@ -2953,23 +2934,28 @@ module QrReaderKernels
         b = 0
         while b < nb
           if bits < 31
-            acc = ((acc & ((1 << bits) - 1)) << 32) | words[wi]
-            wi += 1
+            acc = ((acc & ((1 << bits) - 1)) << 32) | (data.getbyte(pos) << 24) | (data.getbyte(pos + 1) << 16) |
+                  (data.getbyte(pos + 2) << 8) | data.getbyte(pos + 3)
+            pos += 4
             bits += 32
           end
-          need = @b_need[b]
+          need = @b_need[b] == 1
+          coefs = ""
+          p = 0
           if need
-            coefs = coef_row(@b_rows[b], @b_row[b] + my * @b_rowstep[b], @b_width[b])
-            idx = @b_col[b] + mx * @b_colstep[b]
-          else
-            coefs = JPEG_NONE
-            idx = 0
+            coefs = @b_comp[b].raw_row(@b_row[b] + my * @b_rowstep[b])
+            p = (@b_col[b] + mx * @b_colstep[b]) * 2
           end
           if refine
             bits -= 1
-            coefs[idx] |= bit if need && ((acc >> bits) & 1) == 1
+            if need && ((acc >> bits) & 1) == 1
+              u = coefs.getbyte(p) | (coefs.getbyte(p + 1) << 8) | bit
+              coefs.setbyte(p, u & 255)
+              coefs.setbyte(p + 1, (u >> 8) & 255)
+            end
           else
             e = @b_fast[b][(acc >> (bits - JPEG_FAST_BITS)) & JPEG_FAST_MASK]
+            diff = 0
             if e != 0
               bits -= e & 255
               diff = e >> 16
@@ -2978,9 +2964,7 @@ module QrReaderKernels
               e = @b_table[b].decode_long((acc >> (bits - 16)) & 0xFFFF) if e == 0
               bits -= e >> 8
               s = e & 255
-              if s == 0
-                diff = 0
-              else
+              if s != 0
                 diff = (acc >> (bits - s)) & ((1 << s) - 1)
                 bits -= s
                 diff -= (1 << s) - 1 if diff < (1 << (s - 1))
@@ -2989,11 +2973,15 @@ module QrReaderKernels
             ci = @b_pred[b]
             pred = ((preds[ci] + diff + 32_768) & 0xFFFF) - 32_768
             preds[ci] = pred
-            coefs[idx] = (((pred << al) + 32_768) & 0xFFFF) - 32_768 if need
+            if need
+              u = (pred << al) & 0xFFFF
+              coefs.setbyte(p, u & 255)
+              coefs.setbyte(p + 1, u >> 8)
+            end
           end
           b += 1
         end
-        if (wi << 5) - bits > @endbit
+        if pos * 8 - bits > @endbit
           # Out of data: undo this MCU of a first scan.
           undo_dc(my, mx) unless refine
           return false
@@ -3002,31 +2990,35 @@ module QrReaderKernels
       end
       @acc = acc
       @bits = bits
-      @wi = wi
+      @pos = pos
       true
     end
 
     def undo_dc(my, mx)
       b = 0
       while b < @nb
-        if @b_need[b]
-          coef_row(@b_rows[b], @b_row[b] + my * @b_rowstep[b], @b_width[b])[@b_col[b] + mx * @b_colstep[b]] = 0
+        if @b_need[b] == 1
+          coefs = @b_comp[b].raw_row(@b_row[b] + my * @b_rowstep[b])
+          p = (@b_col[b] + mx * @b_colstep[b]) * 2
+          coefs.setbyte(p, 0)
+          coefs.setbyte(p + 1, 0)
         end
         b += 1
       end
+      nil
     end
 
     # First scan of AC band ss..se, blocks bx0...bx1 of block row by.
     def ac_first_row(by, bx0, bx1)
-      words = @words
+      data = @data
       acc = @acc
       bits = @bits
-      wi = @wi
+      pos = @pos
       eobrun = @eobrun
       table = @table
       fast = table.fast
       look = table.look
-      coefs = coef_row(@rows, by, @abw * JPEG_BLOCK_STRIDE)
+      coefs = @comp.raw_row(by)
       ss = @ss
       se = @se
       al = @al
@@ -3041,21 +3033,26 @@ module QrReaderKernels
           bx += skip
           next
         end
-        base = bx * JPEG_BLOCK_STRIDE
+        base = bx * BLOCK_BYTES
         k = ss
         last = 0
         while k <= se
           if bits < 31
-            acc = ((acc & ((1 << bits) - 1)) << 32) | words[wi]
-            wi += 1
+            acc = ((acc & ((1 << bits) - 1)) << 32) | (data.getbyte(pos) << 24) | (data.getbyte(pos + 1) << 16) |
+                  (data.getbyte(pos + 2) << 8) | data.getbyte(pos + 3)
+            pos += 4
             bits += 32
           end
           peek = (acc >> (bits - JPEG_FAST_BITS)) & JPEG_FAST_MASK
           e = fast[peek]
-          if e != 0 && (v = e >> 16) != 0
+          v = e >> 16
+          if e != 0 && v != 0
             bits -= e & 255
             k += (e >> 8) & 255
-            coefs[base + zz[k]] = (((v << al) + 32_768) & 0xFFFF) - 32_768
+            u = (v << al) & 0xFFFF
+            p = base + 2 * zz[k]
+            coefs.setbyte(p, u & 255)
+            coefs.setbyte(p + 1, u >> 8)
             last = k
             k += 1
           else
@@ -3069,7 +3066,10 @@ module QrReaderKernels
               v = (acc >> (bits - s)) & ((1 << s) - 1)
               bits -= s
               v -= (1 << s) - 1 if v < (1 << (s - 1))
-              coefs[base + zz[k]] = (((v << al) + 32_768) & 0xFFFF) - 32_768
+              u = (v << al) & 0xFFFF
+              p = base + 2 * zz[k]
+              coefs.setbyte(p, u & 255)
+              coefs.setbyte(p + 1, u >> 8)
               last = k
               k += 1
             elsif r == 15
@@ -3085,22 +3085,24 @@ module QrReaderKernels
             end
           end
         end
-        if (wi << 5) - bits > @endbit
+        if pos * 8 - bits > @endbit
           # Out of data: undo this block (the band was empty before).
           k = ss
           while k <= se
-            coefs[base + zz[k]] = 0
+            p = base + 2 * zz[k]
+            coefs.setbyte(p, 0)
+            coefs.setbyte(p + 1, 0)
             k += 1
           end
           return false
         end
         last = 63 if last > 63
-        coefs[base + 64] = last if last > coefs[base + 64]
+        coefs.setbyte(base + KM, last) if last > coefs.getbyte(base + KM)
         bx += 1
       end
       @acc = acc
       @bits = bits
-      @wi = wi
+      @pos = pos
       @eobrun = eobrun
       true
     end
@@ -3108,14 +3110,14 @@ module QrReaderKernels
     # Successive approximation refinement of AC band ss..se (libjpeg's
     # decode_mcu_AC_refine), blocks bx0...bx1 of block row by.
     def ac_refine_row(by, bx0, bx1)
-      words = @words
+      data = @data
       acc = @acc
       bits = @bits
-      wi = @wi
+      pos = @pos
       eobrun = @eobrun
       table = @table
       look = table.look
-      coefs = coef_row(@rows, by, @abw * JPEG_BLOCK_STRIDE)
+      coefs = @comp.raw_row(by)
       ss = @ss
       se = @se
       p1 = 1 << @al
@@ -3124,15 +3126,15 @@ module QrReaderKernels
       newnz = @newnz
       bx = bx0
       while bx < bx1
-        base = bx * JPEG_BLOCK_STRIDE
-        last = coefs[base + 64]
+        base = bx * BLOCK_BYTES
+        last = coefs.getbyte(base + KM)
         nnz = 0
         if eobrun > 0 && last < ss
           # Inside an end-of-band run with nothing to refine in this band
           # (and likewise the following blocks).
           eobrun -= 1
           bx += 1
-          while eobrun > 0 && bx < bx1 && coefs[bx * JPEG_BLOCK_STRIDE + 64] < ss
+          while eobrun > 0 && bx < bx1 && coefs.getbyte(bx * BLOCK_BYTES + KM) < ss
             eobrun -= 1
             bx += 1
           end
@@ -3142,8 +3144,9 @@ module QrReaderKernels
         if eobrun == 0
           while k <= se
             if bits < 31
-              acc = ((acc & ((1 << bits) - 1)) << 32) | words[wi]
-              wi += 1
+              acc = ((acc & ((1 << bits) - 1)) << 32) | (data.getbyte(pos) << 24) | (data.getbyte(pos + 1) << 16) |
+                    (data.getbyte(pos + 2) << 8) | data.getbyte(pos + 3)
+              pos += 4
               bits += 32
             end
             e = look[(acc >> (bits - JPEG_FAST_BITS)) & JPEG_FAST_MASK]
@@ -3165,17 +3168,20 @@ module QrReaderKernels
             end
             # Skip r zero coefficients, refining the nonzero ones passed.
             while k <= se
-              pos = base + zz[k]
-              cv = coefs[pos]
-              if cv != 0
+              p = base + 2 * zz[k]
+              u = coefs.getbyte(p) | (coefs.getbyte(p + 1) << 8)
+              if u != 0
                 if bits < 31
-                  acc = ((acc & ((1 << bits) - 1)) << 32) | words[wi]
-                  wi += 1
+                  acc = ((acc & ((1 << bits) - 1)) << 32) | (data.getbyte(pos) << 24) | (data.getbyte(pos + 1) << 16) |
+                        (data.getbyte(pos + 2) << 8) | data.getbyte(pos + 3)
+                  pos += 4
                   bits += 32
                 end
                 bits -= 1
-                if ((acc >> bits) & 1) == 1 && (cv & p1) == 0
-                  coefs[pos] = (((cv >= 0 ? cv + p1 : cv + m1) + 32_768) & 0xFFFF) - 32_768
+                if ((acc >> bits) & 1) == 1 && (u & p1) == 0
+                  u = (u < 32_768 ? u + p1 : u + m1) & 0xFFFF
+                  coefs.setbyte(p, u & 255)
+                  coefs.setbyte(p + 1, u >> 8)
                 end
               else
                 r -= 1
@@ -3184,9 +3190,11 @@ module QrReaderKernels
               k += 1
             end
             if s != 0
-              pos = base + zz[k]
-              coefs[pos] = s
-              newnz[nnz] = pos
+              p = base + 2 * zz[k]
+              u = s & 0xFFFF
+              coefs.setbyte(p, u & 255)
+              coefs.setbyte(p + 1, u >> 8)
+              newnz[nnz] = p
               nnz += 1 if nnz < 63
               last = k if k > last
             end
@@ -3198,39 +3206,43 @@ module QrReaderKernels
           # the block's last nonzero position.
           limit = last < se ? last : se
           while k <= limit
-            pos = base + zz[k]
-            cv = coefs[pos]
-            if cv != 0
+            p = base + 2 * zz[k]
+            u = coefs.getbyte(p) | (coefs.getbyte(p + 1) << 8)
+            if u != 0
               if bits < 31
-                acc = ((acc & ((1 << bits) - 1)) << 32) | words[wi]
-                wi += 1
+                acc = ((acc & ((1 << bits) - 1)) << 32) | (data.getbyte(pos) << 24) | (data.getbyte(pos + 1) << 16) |
+                      (data.getbyte(pos + 2) << 8) | data.getbyte(pos + 3)
+                pos += 4
                 bits += 32
               end
               bits -= 1
-              if ((acc >> bits) & 1) == 1 && (cv & p1) == 0
-                coefs[pos] = (((cv >= 0 ? cv + p1 : cv + m1) + 32_768) & 0xFFFF) - 32_768
+              if ((acc >> bits) & 1) == 1 && (u & p1) == 0
+                u = (u < 32_768 ? u + p1 : u + m1) & 0xFFFF
+                coefs.setbyte(p, u & 255)
+                coefs.setbyte(p + 1, u >> 8)
               end
             end
             k += 1
           end
           eobrun -= 1
         end
-        if (wi << 5) - bits > @endbit
+        if pos * 8 - bits > @endbit
           # Out of data: re-zero the coefficients this block made nonzero
           # (like libjpeg), so that its last nonzero index stays valid.
           while nnz > 0
             nnz -= 1
-            coefs[newnz[nnz]] = 0
+            coefs.setbyte(newnz[nnz], 0)
+            coefs.setbyte(newnz[nnz] + 1, 0)
           end
           return false
         end
 
-        coefs[base + 64] = last > 63 ? 63 : last
+        coefs.setbyte(base + KM, last > 63 ? 63 : last)
         bx += 1
       end
       @acc = acc
       @bits = bits
-      @wi = wi
+      @pos = pos
       @eobrun = eobrun
       true
     end
@@ -3241,8 +3253,7 @@ module QrReaderKernels
   # ratios use the "fancy" triangle filters (h2v1 and h2v2 only for
   # components wider than 2 samples, h1v2 always), other integer ratios
   # replicate samples. Fractional ratios, which libjpeg rejects, use the
-  # nearest sample. Output rows are appended byte by byte (much faster than
-  # packing an Array).
+  # nearest sample.
   class JpegUpsampler
     REPLICATE = 0
     H2V1 = 1
@@ -3260,10 +3271,6 @@ module QrReaderKernels
       @vmax = vmax
       @h = h
       @v = v
-      @row_y_a = -1
-      @row_y_b = -1
-      @row_a = JPEG_NONE
-      @row_b = JPEG_NONE
       @rh = (hmax % h) == 0 ? hmax / h : 0
       rv = (vmax % v) == 0 ? vmax / v : 0
       @mode = if fancy && @rh == 2 && rv == 1 && cw > 2 then H2V1
@@ -3277,27 +3284,30 @@ module QrReaderKernels
       out = String.new(capacity: ow * oh, encoding: Encoding::BINARY)
       mode = @mode
       last_src = -1
+      last = ""
       y = 0
       while y < oh
-        start = out.bytesize
+        row = ""
         if mode == H2V1
-          h2v1(row(y), out, ow)
+          row = h2v1(row_offset(y), ow)
         elsif mode == H1V2
-          h1v2(y, out)
+          row = h1v2(y)
         elsif mode == H2V2
-          h2v2(y, out, ow)
+          row = h2v2(y, ow)
         else
-          # Replicated rows: copy the previous output row.
+          # Replicated rows: repeat the previous output row.
           src = y * @v / @vmax
           if src == last_src
-            out << out.byteslice(start - ow, ow)
+            row = last
           else
-            replicate_row(row(src), out, ow)
+            row = replicate_row(row_offset(src), ow)
+            last = row
             last_src = src
           end
         end
-        raise QrReader::ImageError, "corrupt JPEG: upsampling mismatch" unless out.bytesize == start + ow
+        raise QrReader::ImageError, "corrupt JPEG: upsampling mismatch" unless row.bytesize == ow
 
+        out << row
         y += 1
       end
       out
@@ -3305,31 +3315,26 @@ module QrReaderKernels
 
     private
 
-    # Samples of component row +y+ (clamped to the valid rows, as libjpeg
-    # repeats the first and last row for context), including the padding
-    # columns after the valid width.
-    def row(y)
+    # Offset of component row +y+ in the plane (clamped to the valid rows,
+    # as libjpeg repeats the first and last row for context).
+    def row_offset(y)
       y = 0 if y < 0
       y = @ch - 1 if y >= @ch
-      return @row_b if y == @row_y_b # the fancy filters read each row up to four times
-      return @row_a if y == @row_y_a
-
-      @row_y_b = @row_y_a
-      @row_b = @row_a
-      @row_y_a = y
-      @row_a = @plane.byteslice(y * @stride, @stride).unpack("C*")
+      y * @stride
     end
 
-    # Appends sample x * h / hmax of +src+ for x < ow: replication for
+    # Samples x * h / hmax of the row at +off+ for x < ow: replication for
     # integer ratios, the nearest sample for fractional ones.
-    def replicate_row(src, out, ow)
+    def replicate_row(off, ow)
+      plane = @plane
+      out = String.new(capacity: ow, encoding: Encoding::BINARY)
       last = @cw - 1
       rh = @rh
       x = 0
       if rh > 0
-        sx = 0
+        sx = off
         while x < ow
-          v = src[sx]
+          v = plane.getbyte(sx)
           r = rh
           while r > 0 && x < ow
             out << v
@@ -3343,61 +3348,74 @@ module QrReaderKernels
         hmax = @hmax
         while x < ow
           sx = x * h / hmax
-          out << src[sx > last ? last : sx]
+          out << plane.getbyte(off + (sx > last ? last : sx))
           x += 1
         end
       end
+      out
     end
 
     # libjpeg h1v2_fancy_upsample: 3/4 nearer + 1/4 further row.
-    def h1v2(y, out)
+    def h1v2(y)
+      plane = @plane
       lower = (y & 1) == 1
-      near = row(y >> 1)
-      far = row(lower ? (y >> 1) + 1 : (y >> 1) - 1)
+      near = row_offset(y >> 1)
+      far = row_offset(lower ? (y >> 1) + 1 : (y >> 1) - 1)
       bias = lower ? 2 : 1
       n = @cw
+      out = String.new(capacity: n, encoding: Encoding::BINARY)
       x = 0
       while x < n
-        out << ((near[x] * 3 + far[x] + bias) >> 2)
+        out << ((plane.getbyte(near + x) * 3 + plane.getbyte(far + x) + bias) >> 2)
         x += 1
       end
+      out
     end
 
     # libjpeg h2v1_fancy_upsample: 3/4 nearer + 1/4 further sample. The last
     # output exists only if the output is that wide.
-    def h2v1(s, out, ow)
+    def h2v1(off, ow)
+      s = @plane
       n = @cw
-      out << s[0] << ((s[0] * 3 + s[1] + 2) >> 2)
-      x = 1
-      while x < n - 1
-        t = s[x] * 3
-        out << ((t + s[x - 1] + 1) >> 2) << ((t + s[x + 1] + 2) >> 2)
+      out = String.new(capacity: ow, encoding: Encoding::BINARY)
+      first = s.getbyte(off)
+      out << first << ((first * 3 + s.getbyte(off + 1) + 2) >> 2)
+      x = off + 1
+      e = off + n - 1
+      while x < e
+        t = s.getbyte(x) * 3
+        out << ((t + s.getbyte(x - 1) + 1) >> 2) << ((t + s.getbyte(x + 1) + 2) >> 2)
         x += 1
       end
-      out << ((s[n - 1] * 3 + s[n - 2] + 1) >> 2)
-      out << s[n - 1] if 2 * n <= ow
+      tail = s.getbyte(e)
+      out << ((tail * 3 + s.getbyte(e - 1) + 1) >> 2)
+      out << tail if 2 * n <= ow
+      out
     end
 
     # libjpeg h2v2_fancy_upsample on column sums 3 * nearer + further row.
-    def h2v2(y, out, ow)
+    def h2v2(y, ow)
+      s = @plane
       lower = (y & 1) == 1
-      near = row(y >> 1)
-      far = row(lower ? (y >> 1) + 1 : (y >> 1) - 1)
+      near = row_offset(y >> 1)
+      far = row_offset(lower ? (y >> 1) + 1 : (y >> 1) - 1)
       n = @cw
-      this = near[0] * 3 + far[0]
-      nxt = near[1] * 3 + far[1]
+      out = String.new(capacity: ow, encoding: Encoding::BINARY)
+      this = s.getbyte(near) * 3 + s.getbyte(far)
+      nxt = s.getbyte(near + 1) * 3 + s.getbyte(far + 1)
       out << ((this * 4 + 8) >> 4) << ((this * 3 + nxt + 7) >> 4)
       x = 1
       while x < n - 1
         last = this
         this = nxt
-        nxt = near[x + 1] * 3 + far[x + 1]
+        nxt = s.getbyte(near + x + 1) * 3 + s.getbyte(far + x + 1)
         t = this * 3
         out << ((t + last + 8) >> 4) << ((t + nxt + 7) >> 4)
         x += 1
       end
       out << ((nxt * 3 + this + 8) >> 4)
       out << ((nxt * 4 + 7) >> 4) if 2 * n <= ow
+      out
     end
   end
 end

@@ -21,6 +21,16 @@ module QrReader
       # (version 20) filling 3/4 of the image height is still hit 3 times.
       MAX_MODULES_FAST = 97
       MIN_SKIP = 3
+      # ... and then, where the image is not textured, every FINE_SKIP-th
+      # row, so that finder patterns down to about 2 px modules are still
+      # crossed by several rows on large page scans (whose coarser pyramid
+      # levels are too small for such symbols).
+      FINE_SKIP = 3
+      # A row neighbourhood whose sparse rows have more 1:1:3:1:1 ratio hits
+      # than this per 1000 px is texture (noise, halftone screens): those
+      # are expensive to scan densely and only scanned with try_harder.
+      # Documents and symbols have below 4.
+      TEXTURE_HITS = 8.0
       # More patterns than this (noise, textures) are pruned by quality.
       MAX_PATTERNS = 48
       SQRT2 = Math.sqrt(2)
@@ -35,15 +45,31 @@ module QrReader
         # Patterns found so far, flat (see QrReaderKernels.finder_scan).
         @state = []
         @scanned = "\0".b * @height
+        # Ratio hits per scanned row.
+        @hits = Array.new(@height, 0)
       end
 
       # Finder patterns found so far after scanning every few rows (or every
       # row with try_harder), at most +limit+ (the most consistent ones).
       # Rows already scanned by an earlier call are not scanned again.
       def find(try_harder: false, limit: MAX_PATTERNS)
-        skip = (3 * @height) / (4 * MAX_MODULES_FAST)
-        skip = MIN_SKIP if skip < MIN_SKIP
-        skip = 1 if try_harder
+        if try_harder
+          scan(rows_every(1))
+        else
+          skip = (3 * @height) / (4 * MAX_MODULES_FAST)
+          skip = MIN_SKIP if skip < MIN_SKIP
+          scan(rows_every(skip))
+          scan(quiet_rows(FINE_SKIP, 2 * skip)) if skip > FINE_SKIP
+        end
+        prune(merge_duplicates(patterns), limit)
+      end
+
+      private
+
+      # Rows y = skip - 1, 2 * skip - 1, ... (all for skip 1) not scanned
+      # yet, as a String with 1 at their index (nil if none); marks them
+      # as scanned.
+      def rows_every(skip)
         rows = nil
         y = skip == 1 ? 0 : skip - 1
         while y < @height
@@ -53,11 +79,54 @@ module QrReader
           end
           y += skip
         end
-        @state = QrReaderKernels.finder_scan(@bits, @width, @height, rows, @state) if rows
-        prune(merge_duplicates(patterns), limit)
+        rows
       end
 
-      private
+      # Like rows_every(skip), but only rows whose neighbourhood (+reach+
+      # rows up and down) had at most TEXTURE_HITS ratio hits per 1000 px
+      # in the rows scanned so far.
+      def quiet_rows(skip, reach)
+        # Prefix sums of hits and scanned rows.
+        hits = Array.new(@height + 1, 0)
+        count = Array.new(@height + 1, 0)
+        y = 0
+        while y < @height
+          scanned = @scanned.getbyte(y)
+          hits[y + 1] = hits[y] + (scanned == 1 ? @hits[y] : 0)
+          count[y + 1] = count[y] + scanned
+          y += 1
+        end
+        limit = TEXTURE_HITS * @width / 1000.0
+        rows = nil
+        y = skip - 1
+        while y < @height
+          if @scanned.getbyte(y).zero?
+            y0 = y > reach ? y - reach : 0
+            y1 = y + reach + 1 < @height ? y + reach + 1 : @height
+            n = count[y1] - count[y0]
+            if n.zero? || hits[y1] - hits[y0] <= limit * n
+              @scanned.setbyte(y, 1)
+              (rows ||= "\0".b * @height).setbyte(y, 1)
+            end
+          end
+          y += skip
+        end
+        rows
+      end
+
+      # Scans +rows+ (see rows_every; nil: nothing to do).
+      def scan(rows)
+        return unless rows
+
+        result = QrReaderKernels.finder_scan(@bits, @width, @height, rows, @state)
+        values = result.size - @height
+        @state = result.first(values)
+        y = 0
+        while y < @height
+          @hits[y] = result[values + y].to_i if rows.getbyte(y) == 1
+          y += 1
+        end
+      end
 
       # FinderPatterns of the flat scan state, in the order found.
       def patterns

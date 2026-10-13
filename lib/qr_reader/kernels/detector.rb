@@ -12,19 +12,31 @@ module QrReaderKernels
   # Scans the rows y with rows.getbyte(y) == 1 of a width x height bit
   # matrix (one byte per pixel, 1 = dark) for QR finder patterns.
   # +known+ holds the patterns of earlier scans of the same matrix as flat
-  # [x, y, module_size, quality, count, ...] (FINDER_FIELDS per pattern);
-  # returns them (counts updated with the new row hits) followed by the
-  # patterns found in these rows, in the order found. See
+  # [x, y, module_size, quality, count, ...] (FINDER_FIELDS per pattern).
+  # Returns them (counts updated with the new row hits) followed by the
+  # patterns found in these rows, in the order found, followed by +height+
+  # values: the number of 1:1:3:1:1 run sequences (hits) in each row (0
+  # for rows not scanned), a texture measure. See
   # QrReader::Detector::FinderPatternFinder for the method.
   # spinel-sample: QrReaderKernels.finder_scan("\x00".b * 64, 8, 8, "\x01".b * 8, [1.5, 1.5, 1.0, 1.0, 1.0])
   def self.finder_scan(bits, width, height, rows, known)
     scanner = FinderScanner.new(bits, width, height, known)
     y = 0
+    out = []
+    hits = []
     while y < height
-      scanner.scan_row(y) if rows.getbyte(y) == 1
+      n = 0
+      n = scanner.scan_row(y) if rows.getbyte(y) == 1
+      hits << n.to_f
       y += 1
     end
-    scanner.result
+    scanner.append_patterns(out)
+    i = 0
+    while i < height
+      out << hits[i]
+      i += 1
+    end
+    out
   end
 
   # State of one finder_scan call: the patterns found so far, indexed in a
@@ -71,44 +83,44 @@ module QrReaderKernels
       end
     end
 
-    # All patterns as flat [x, y, module_size, quality, count, ...].
-    def result
-      out = []
+    # Appends all patterns to +out+ as flat [x, y, module_size, quality,
+    # count, ...].
+    def append_patterns(out)
       i = 0
       n = @xs.size
       while i < n
         out << @xs[i] << @ys[i] << @sizes[i] << @qualities[i] << @counts[i].to_f
         i += 1
       end
-      out
     end
 
-    # Finds 1:1:3:1:1 run sequences in row y. p0..p5 are the boundaries of
-    # the current window of five runs (dark, light, dark, light, dark).
-    # Runs of one or two pixels (textures) are read directly, longer ones
-    # are searched for at C speed.
+    # Finds 1:1:3:1:1 run sequences in row y and returns their number. p0..p5
+    # are the boundaries of the current window of five runs (dark, light,
+    # dark, light, dark). Runs of one or two pixels (textures) are read
+    # directly, longer ones are searched for at C speed.
     def scan_row(y)
       bits = @bits
       w = @width
       off = y * w
       row = bits.byteslice(off, w)
       p0 = row.index(DARK)
-      return if p0.nil?
+      return 0 if p0.nil?
 
       p1 = row.index(LIGHT, p0)
-      return if p1.nil?
+      return 0 if p1.nil?
 
       p2 = row.index(DARK, p1)
-      return if p2.nil?
+      return 0 if p2.nil?
 
       p3 = row.index(LIGHT, p2)
-      return if p3.nil?
+      return 0 if p3.nil?
 
       p4 = row.index(DARK, p3)
-      return if p4.nil?
+      return 0 if p4.nil?
 
       p5 = row.index(LIGHT, p4)
       p5 = w if p5.nil?
+      hits = 0
       while true
         total = p5 - p0
         # Ratio test in units of 1/14 module: each run must be within
@@ -122,6 +134,7 @@ module QrReaderKernels
            (14 * (p4 - p3) - 2 * total).abs <= tol &&
            (14 * (p5 - p4) - 2 * total).abs <= tol
           hit((p2 + p3) >> 1, y, total)
+          hits += 1
         end
         break if p5 >= w
 
@@ -148,6 +161,7 @@ module QrReaderKernels
           end
         end
       end
+      hits
     end
 
     # A row hit at dark pixel (x, y) spanning +total+ pixels: counts it for
@@ -388,8 +402,20 @@ module QrReaderKernels
     # axis directions sets @centre (centre of the middle run along the
     # line's main axis, continuous coordinates) and @spread (the pattern's
     # extent in pixels); for diagonals @diagonal (the extent, scaled to
-    # pixels along the axes). False if no 1:1:3:1:1 pattern.
+    # pixels along the axes). False if no 1:1:3:1:1 pattern. With +noise+
+    # (single pixels of the other colour inside runs ignored), axis
+    # directions also take the runs as they are if that fails: a light ring
+    # blurred or inked down to one pixel is no noise. (Not the diagonals:
+    # there one pixel steps across module corners are structure, and
+    # without bridging, look-alikes in the data area pass.)
     def cross_check(x, y, dx, dy, range, noise, relaxed)
+      return true if cross_check_runs(x, y, dx, dy, range, noise, relaxed)
+
+      noise && (dx == 0 || dy == 0) && cross_check_runs(x, y, dx, dy, range, false, relaxed)
+    end
+
+    # cross_check with or without noise bridging.
+    def cross_check_runs(x, y, dx, dy, range, noise, relaxed)
       return false unless walk(x, y, dx, dy, range, noise)
 
       f0 = @run0
@@ -419,11 +445,30 @@ module QrReaderKernels
 
       # In units of 1/28 module.
       tol = (relaxed ? 3 * total : 2 * total) + 14
-      (28 * a - 4 * total).abs <= tol &&
-        (28 * b - 4 * total).abs <= tol &&
-        (28 * c - 12 * total).abs <= tol + total &&
-        (28 * d - 4 * total).abs <= tol &&
-        (28 * e - 4 * total).abs <= tol
+      return true if (28 * a - 4 * total).abs <= tol &&
+                     (28 * b - 4 * total).abs <= tol &&
+                     (28 * c - 12 * total).abs <= tol + total &&
+                     (28 * d - 4 * total).abs <= tol &&
+                     (28 * e - 4 * total).abs <= tol
+
+      gain_ratio?(a, b, c, d, e)
+    end
+
+    # 1:1:3:1:1 test under dot gain (ink spread, thresholded faxes) or
+    # loss, which widen every dark run and narrow every light run by about
+    # the same amount: dark runs are compared with the dark module size
+    # (each within 0.75 of it + 0.5 px), light runs with the light one
+    # (within a third + 0.5 px), and the two module sizes may differ by up
+    # to 4x - zxing-cpp's edge-to-edge pattern test.
+    def gain_ratio?(a, b, c, d, e)
+      dark = a + c + e
+      light = b + d
+      return false if dark < 10 || light == 0 || dark > 10 * light || 5 * light > 8 * dark
+
+      # Dark module dark / 5, light module light / 2.
+      tol = 2 * dark + 10
+      (20 * a - 4 * dark).abs <= tol && (20 * c - 12 * dark).abs <= tol && (20 * e - 4 * dark).abs <= tol &&
+        (6 * b - 3 * light).abs <= light + 3 && (6 * d - 3 * light).abs <= light + 3
     end
 
     # Lengths of the first three runs (dark, light, dark) met walking from

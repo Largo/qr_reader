@@ -52,18 +52,33 @@ module QrReader
       end
 
       # 1:1:3:1:1 test: each run within 0.5 module (0.75 if relaxed) plus
-      # half a pixel of its nominal width, the centre run 0.25 module more.
+      # half a pixel of its nominal width, the centre run 0.25 module more;
+      # or the dot gain tolerant test (dark and light runs measured against
+      # their own module sizes, see QrReaderKernels::FinderScanner#gain_ratio?).
       def finder_ratio?(a, b, c, d, e, relaxed: false)
         total = a + b + c + d + e
         return false if total < 7
 
         # In units of 1/28 module.
         tol = (relaxed ? 3 * total : 2 * total) + 14
-        (28 * a - 4 * total).abs <= tol &&
-          (28 * b - 4 * total).abs <= tol &&
-          (28 * c - 12 * total).abs <= tol + total &&
-          (28 * d - 4 * total).abs <= tol &&
-          (28 * e - 4 * total).abs <= tol
+        return true if (28 * a - 4 * total).abs <= tol &&
+                       (28 * b - 4 * total).abs <= tol &&
+                       (28 * c - 12 * total).abs <= tol + total &&
+                       (28 * d - 4 * total).abs <= tol &&
+                       (28 * e - 4 * total).abs <= tol
+
+        gain_ratio?(a, b, c, d, e)
+      end
+
+      # 1:1:3:1:1 under dot gain or loss (see finder_ratio?).
+      def gain_ratio?(a, b, c, d, e)
+        dark = a + c + e
+        light = b + d
+        return false if dark < 10 || light.zero? || dark > 10 * light || 5 * light > 8 * dark
+
+        tol = 2 * dark + 10
+        (20 * a - 4 * dark).abs <= tol && (20 * c - 12 * dark).abs <= tol && (20 * e - 4 * dark).abs <= tol &&
+          (6 * b - 3 * light).abs <= light + 3 && (6 * d - 3 * light).abs <= light + 3
       end
 
       # Least-squares line through +points+ as [x, y, vx, vy] (centroid and

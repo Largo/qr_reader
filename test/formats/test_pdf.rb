@@ -68,7 +68,7 @@ class TestPdf < Minitest::Test
     pairs = PDF.each_image(fixture("gs_bands.pdf")).to_a
     assert_equal 1, pairs.size
     assert_pixels source("src_gray.png"), pairs.first[0]
-    assert_equal({ page: 0, name: "R7", width: 150, height: 140 }, pairs.first[1])
+    assert_equal({ page: 0, name: "R7", width: 150, height: 140, pixel_aspect: 1.0, dpi: [48.0, 48.0] }, pairs.first[1])
   end
 
   def test_jpeg_data_is_decoded_unchanged
@@ -94,7 +94,7 @@ class TestPdf < Minitest::Test
     assert_kind_of Enumerator, enum
     image, info = enum.first
     assert_kind_of QrReader::Image, image
-    assert_equal({ page: 0, name: "Im0", width: 150, height: 140 }, info)
+    assert_equal({ page: 0, name: "Im0", width: 150, height: 140, pixel_aspect: 1.0, dpi: [72.0, 72.0] }, info)
     seen = []
     assert_nil(PDF.each_image(fixture("magick_multipage.pdf")) { |_img, i| seen << i[:name] })
     assert_equal %w[Im0 Im1 Im2], seen

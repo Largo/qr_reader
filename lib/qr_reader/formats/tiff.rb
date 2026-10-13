@@ -1,6 +1,7 @@
 # frozen_string_literal: true
 
 require "zlib"
+require_relative "../kernels/lzw"
 
 module QrReader
   module Formats
@@ -57,12 +58,34 @@ module QrReader
       JPEG_INTERCHANGE_FORMAT = 513
       JPEG_INTERCHANGE_FORMAT_LENGTH = 514
       YCBCR_SUBSAMPLING = 530
+      X_RESOLUTION = 282
+      Y_RESOLUTION = 283
+      RESOLUTION_UNIT = 296
+      # Tags read by the decoder (a directory keeps no others).
+      KNOWN_TAGS = [
+        NEW_SUBFILE_TYPE, SUBFILE_TYPE, IMAGE_WIDTH, IMAGE_LENGTH, BITS_PER_SAMPLE, COMPRESSION, PHOTOMETRIC,
+        FILL_ORDER, STRIP_OFFSETS, SAMPLES_PER_PIXEL, ROWS_PER_STRIP, STRIP_BYTE_COUNTS, PLANAR_CONFIGURATION,
+        T4_OPTIONS, PREDICTOR, COLOR_MAP, TILE_WIDTH, TILE_LENGTH, TILE_OFFSETS, TILE_BYTE_COUNTS, INK_SET,
+        EXTRA_SAMPLES, SAMPLE_FORMAT, JPEG_TABLES, JPEG_INTERCHANGE_FORMAT, JPEG_INTERCHANGE_FORMAT_LENGTH,
+        YCBCR_SUBSAMPLING, X_RESOLUTION, Y_RESOLUTION, RESOLUTION_UNIT
+      ].to_h { |tag| [tag, true] }.freeze
+      # Directories (pages) followed in one file, and directory entries
+      # read in all: crafted files can chain overlapping directories.
+      MAX_DIRECTORIES = 65_536
+      MAX_ENTRIES = 4_000_000
+      # Pixel aspect ratios beyond this (or its inverse) come from broken
+      # resolution values and are reported as 1.0.
+      MAX_ASPECT = 8.0
 
       # Field type -> byte size.
       TYPE_SIZES = {
         1 => 1, 2 => 1, 3 => 2, 4 => 4, 5 => 8, 6 => 1, 7 => 1, 8 => 2, 9 => 4, 10 => 8,
         11 => 4, 12 => 8, 13 => 4, 16 => 8, 17 => 8, 18 => 8
       }.freeze
+      # Rational / floating point field type -> unpack directive, little
+      # and big endian (rationals: numerator and denominator).
+      NUMBER_DIRECTIVES_LE = { 5 => "V2", 10 => "l<2", 11 => "e", 12 => "E" }.freeze
+      NUMBER_DIRECTIVES_BE = { 5 => "N2", 10 => "l>2", 11 => "g", 12 => "G" }.freeze
       # Integer field type -> unpack directive, little and big endian.
       INT_DIRECTIVES_LE = {
         1 => "C*", 3 => "v*", 4 => "V*", 6 => "c*", 7 => "C*", 8 => "s<*", 9 => "l<*", 13 => "V*",
@@ -94,6 +117,10 @@ module QrReader
       TWO_BIT = Array.new(256) { |b| [b >> 6, (b >> 4) & 3, (b >> 2) & 3, b & 3].pack("C4").freeze }.freeze
       # Input slice size for Zlib, so that a decompression bomb stops early.
       INFLATE_SLICE = 16_384
+      # Largest decompressed strip or tile, and largest buffer of unpacked
+      # samples of one, whatever sizes a (malicious) header declares: a
+      # chunk is held in memory while it is converted to luminance.
+      CHUNK_LIMIT = 1 << 28
       # Unpack directives (little, big endian) of wide samples for predictor 2.
       WORDS = { 16 => %w[v* n*], 32 => %w[V* N*], 64 => %w[Q<* Q>*] }.freeze
       # Unpack directives of floating point samples by [bits, big endian].
@@ -133,6 +160,61 @@ module QrReader
         # [width, height] of a page, read from its directory only.
         def dimensions(bytes, page: 0)
           Container.new(bytes).page(page).dimensions
+        end
+
+        # What a page's directory says about it, without decoding it:
+        # {page:, width:, height:, pixel_aspect:, dpi:}. +pixel_aspect+ is
+        # the width of a pixel divided by its height (YResolution /
+        # XResolution: 0.48 for a 204 x 98 dpi fax; 1.0 when unknown);
+        # +dpi+ is [x, y] (nil without a resolution in inches or cm).
+        def info(bytes, page: 0)
+          container = Container.new(bytes)
+          index = page.is_a?(Integer) && page.negative? ? container.pages.size + page : page
+          container.page(page).info(index)
+        end
+
+        # Yields each decodable page as an Image with its info (see #info),
+        # decoding one page at a time. Pages that cannot be decoded are
+        # skipped (+info[:page]+ tells which page an image is); only a file
+        # without any decodable page raises (UnsupportedImageError if a page
+        # was unsupported, else ImageError). Returns an Enumerator without a
+        # block.
+        def each_image(bytes)
+          return enum_for(:each_image, bytes) unless block_given?
+
+          container = Container.new(bytes)
+          failure = nil
+          decoded = 0
+          container.pages.each_index do |i|
+            page = begin
+              container.page(i)
+            rescue Error => e
+              failure = pick_failure(failure, e)
+              next
+            end
+            image = begin
+              page.decode
+            rescue Error => e
+              failure = pick_failure(failure, e)
+              next
+            end
+            decoded += 1
+            yield image, page.info(i)
+          end
+          raise failure if decoded.zero? && failure
+
+          nil
+        end
+
+        private
+
+        # The error to raise when no page decodes: the first one, or the
+        # first UnsupportedImageError.
+        def pick_failure(failure, error)
+          return error if failure.nil?
+          return error if error.is_a?(UnsupportedImageError) && !failure.is_a?(UnsupportedImageError)
+
+          failure
         end
       end
 
@@ -207,13 +289,28 @@ module QrReader
         end
 
         # Integer values of a field (nil for non-integer types or values
-        # outside the file).
-        def ints(type, count, pos)
+        # outside the file), at most +limit+ of them.
+        def ints(type, count, pos, limit = nil)
           directive = @directives[type] or return nil
           size = count * TYPE_SIZES[type]
           return nil if pos + size > @bytes.bytesize
 
+          size = limit * TYPE_SIZES[type] if limit && count > limit
           @bytes.byteslice(pos, size).unpack(directive)
+        end
+
+        # First value of a numeric field (rationals and floating point
+        # included) as a Float, or nil.
+        def number(type, count, pos)
+          return nil unless count.positive?
+
+          directive = (@le ? NUMBER_DIRECTIVES_LE : NUMBER_DIRECTIVES_BE)[type]
+          return ints(type, 1, pos)&.first&.to_f unless directive
+          return nil if pos + TYPE_SIZES[type] > @bytes.bytesize
+
+          num, den = @bytes.unpack(directive, offset: pos)
+          value = den ? (den.zero? ? nil : num.fdiv(den)) : num
+          value&.finite? ? value : nil
         end
 
         # Raw bytes of a field.
@@ -226,12 +323,14 @@ module QrReader
 
         private
 
-        # Follows the IFD chain (stops at loops and offsets outside the file).
+        # Follows the IFD chain (stops at loops, offsets outside the file
+        # and after MAX_DIRECTORIES directories or MAX_ENTRIES entries).
         def directories
           dirs = []
           seen = {}
           offset = @first
-          while offset.positive? && !seen[offset]
+          @entries_left = MAX_ENTRIES
+          while offset.positive? && !seen[offset] && dirs.size < MAX_DIRECTORIES
             seen[offset] = true
             dir = read_directory(offset) or break
             dirs << dir
@@ -247,12 +346,14 @@ module QrReader
 
           count = uint(offset, count_size)
           start = offset + count_size
-          return nil if count.zero? || start + count * entry_size > size
+          return nil if count.zero? || start + count * entry_size > size || (@entries_left -= count).negative?
 
           entries = {}
           count.times do |i|
             pos = start + i * entry_size
             tag = uint(pos, 2)
+            next unless KNOWN_TAGS[tag]
+
             type = uint(pos + 2, 2)
             n = uint(pos + 4, value_size)
             type_size = TYPE_SIZES[type]
@@ -282,15 +383,21 @@ module QrReader
           @entries.key?(tag)
         end
 
-        # Integer values of +tag+, or nil.
-        def ints(tag)
+        # Integer values of +tag+ (at most +limit+), or nil.
+        def ints(tag, limit = nil)
           entry = @entries[tag] or return nil
-          @container.ints(*entry)
+          @container.ints(*entry, limit)
         end
 
         # First integer value of +tag+, or +default+.
         def int(tag, default = nil)
-          ints(tag)&.first || default
+          ints(tag, 1)&.first || default
+        end
+
+        # First value of +tag+ as a Float (rationals too), or nil.
+        def number(tag)
+          entry = @entries[tag] or return nil
+          @container.number(*entry)
         end
 
         # Raw bytes of +tag+ (JPEGTables), or nil.
@@ -330,6 +437,24 @@ module QrReader
           [@width, @height]
         end
 
+        # {page:, width:, height:, pixel_aspect:, dpi:} (see TIFF.info).
+        def info(index)
+          x = @dir.number(X_RESOLUTION)
+          y = @dir.number(Y_RESOLUTION)
+          x = nil unless x&.positive?
+          y = nil unless y&.positive?
+          x ||= y
+          y ||= x
+          aspect = x ? y / x : 1.0
+          aspect = 1.0 unless aspect.between?(1 / MAX_ASPECT, MAX_ASPECT)
+          scale = case @dir.int(RESOLUTION_UNIT, 2)
+                  when 2 then 1.0
+                  when 3 then 2.54
+                  end
+          dpi = [(x * scale).round(2), (y * scale).round(2)] if x && scale
+          { page: index, width: @width, height: @height, pixel_aspect: aspect.round(6), dpi: dpi }
+        end
+
         def decode
           setup
           @decoded = 0
@@ -351,7 +476,7 @@ module QrReader
           @spp = d.int(SAMPLES_PER_PIXEL, 1)
           raise ImageError, "invalid TIFF samples per pixel #{@spp}" unless @spp.between?(1, 64)
 
-          depths = d.ints(BITS_PER_SAMPLE) || [1]
+          depths = d.ints(BITS_PER_SAMPLE, 64) || [1]
           @bps = depths.first
           raise ImageError, "invalid TIFF bits per sample #{@bps}" unless @bps&.between?(1, 64)
           unless depths.first(@spp).uniq.size == 1
@@ -365,7 +490,22 @@ module QrReader
           @sample_format = d.int(SAMPLE_FORMAT, 1)
           setup_layout
           setup_codec
-          setup_color unless %i[ojpeg fax].include?(@codec)
+          return if %i[ojpeg fax].include?(@codec)
+
+          setup_color
+          check_chunk_size unless @codec == :jpeg
+        end
+
+        # Decompressed chunks and unpacked low-depth samples are held in
+        # memory whole (an uncompressed chunk is a slice of the file).
+        def check_chunk_size
+          nsamp = planar? ? 1 : @spp
+          raw = @codec == :none ? 0 : chunk_size(@chunk_w, @chunk_h, nsamp)
+          samples = @bps < 8 ? @chunk_w * @chunk_h * nsamp : 0
+          return if raw <= CHUNK_LIMIT && samples <= CHUNK_LIMIT
+
+          raise UnsupportedImageError,
+                "TIFF strips or tiles too large (#{@chunk_w}x#{@chunk_h}, #{nsamp} samples of #{@bps} bits per pixel)"
         end
 
         def default_photometric
@@ -448,7 +588,7 @@ module QrReader
         def setup_color
           ph = @photometric
           spp = @spp
-          extra = @dir.ints(EXTRA_SAMPLES) || []
+          extra = @dir.ints(EXTRA_SAMPLES, 64) || []
           @invert = false
           lut = nil
           color = case ph
@@ -554,11 +694,13 @@ module QrReader
         # 8-bit values (all below 256) are accepted like libtiff does.
         def palette
           n = 1 << [@bps, 8].min
-          cmap = @dir.ints(COLOR_MAP)
+          cmap = @dir.ints(COLOR_MAP, 3 * 256)
           raise ImageError, "TIFF palette image without a valid colour map" unless cmap && cmap.size >= 3 * n
 
           shift = cmap.first(3 * n).max < 256 ? 0 : 8
-          Array.new(n) { |i| Image.luma(cmap[i] >> shift, cmap[n + i] >> shift, cmap[2 * n + i] >> shift) }
+          # (Values of the wrong type - signed, 32-bit - are clamped.)
+          v = ->(i) { (cmap[i] >> shift).clamp(0, 255) }
+          Array.new(n) { |i| Image.luma(v.call(i), v.call(n + i), v.call(2 * n + i)) }
         end
 
         # --- chunk layout -------------------------------------------------
@@ -612,9 +754,10 @@ module QrReader
           return nil unless off&.positive? && off < size
 
           count = @counts&.[](index)
-          count ||= size - off
-          return nil unless count.positive?
+          return nil if count&.<= 0
 
+          # (64-bit counts may exceed what byteslice accepts.)
+          count = size - off if count.nil? || count > size - off
           @bytes.byteslice(off, count)
         end
 
@@ -704,10 +847,25 @@ module QrReader
           data = data.tr(REVERSE_FROM, REVERSE_TO) if @fill_order == 2
           case @codec
           when :none then data
-          when :lzw then LZW.new(data, expected).decode
+          when :lzw then lzw(data, expected)
           when :deflate then inflate(data, expected)
           when :packbits then packbits(data, expected)
           end
+        end
+
+        # TIFF LZW: MSB-first codes with "early change"; data starting with
+        # 0x00 and an odd byte is the old LSB-first variant without early
+        # change (detected like libtiff does). The kernel is shared with PDF.
+        def lzw(data, expected)
+          compat = data.getbyte(0) == 0 && data.bytesize > 1 && data.getbyte(1).odd?
+          QrReaderKernels.lzw_decode(data, expected, compat ? 0 : 1, compat)
+        end
+
+        # Room to reserve for decompressed data: never what a header claims
+        # (String.new(capacity:) commits the memory), the buffer grows.
+        def initial_capacity(data, expected)
+          guess = 4 * data.bytesize + 4096
+          guess < expected ? guess : expected
         end
 
         def fax_chunk(data, cw, rows)
@@ -723,7 +881,7 @@ module QrReader
         # Inflates zlib (or raw deflate) data; stops after +expected+ bytes
         # and keeps what was decoded before an error.
         def inflate(data, expected)
-          out = Bytes.buffer(expected)
+          out = Bytes.buffer(initial_capacity(data, expected))
           [Zlib::MAX_WBITS, -Zlib::MAX_WBITS].each do |window_bits|
             zstream = Zlib::Inflate.new(window_bits)
             pos = 0
@@ -742,7 +900,7 @@ module QrReader
         end
 
         def packbits(data, expected)
-          out = Bytes.buffer(expected)
+          out = Bytes.buffer(initial_capacity(data, expected))
           i = 0
           n = data.bytesize
           while i < n && out.bytesize < expected
@@ -805,7 +963,7 @@ module QrReader
           end
 
           length = @dir.int(JPEG_INTERCHANGE_FORMAT_LENGTH)
-          length = @bytes.bytesize - off unless length&.positive?
+          length = @bytes.bytesize - off unless length&.positive? && length < @bytes.bytesize - off
           image = JPEG.decode(@bytes.byteslice(off, length))
           @decoded = 1
           w = @width
@@ -1068,7 +1226,7 @@ module QrReader
 
         def subsampling
           @subsampling ||= begin
-            sh, sv = @dir.ints(YCBCR_SUBSAMPLING) || [2, 2]
+            sh, sv = @dir.ints(YCBCR_SUBSAMPLING, 2) || [2, 2]
             sv ||= 2
             unless [1, 2, 4].include?(sh) && [1, 2, 4].include?(sv)
               raise ImageError, "invalid TIFF YCbCr subsampling #{sh}x#{sv}"
@@ -1178,106 +1336,6 @@ module QrReader
             i += stride
           end
           out
-        end
-      end
-
-      # TIFF LZW: MSB-first codes of 9 to 12 bits with "early change". Data
-      # starting with 0x00 followed by an odd byte is the old LSB-first
-      # variant without early change (detected like libtiff does).
-      class LZW
-        CLEAR = 256
-        EOI = 257
-        ROOTS = Array.new(256) { |b| b.chr.b.freeze }.freeze
-        # Codes decoded per call of #step (YJIT compiles methods, not loops).
-        BATCH = 1024
-
-        def initialize(data, expected)
-          @data = data + "\0\0\0\0".b
-          @nbits = data.bytesize * 8
-          @compat = data.start_with?("\0") && data.bytesize > 1 && data.getbyte(1).odd?
-          @early = @compat ? 0 : 1
-          @expected = expected
-          @out = Bytes.buffer(expected)
-          @table = ROOTS + [nil, nil]
-          @next = 258
-          @width = 9
-          @pos = 0
-          @prev = nil
-          @done = false
-        end
-
-        def decode
-          step until @done
-          @out.bytesize > @expected ? @out.byteslice(0, @expected) : @out
-        end
-
-        private
-
-        def step
-          data = @data
-          table = @table
-          out = @out
-          pos = @pos
-          width = @width
-          nxt = @next
-          prev = @prev
-          compat = @compat
-          early = @early
-          nbits = @nbits
-          expected = @expected
-          done = false
-          n = BATCH
-          while n.positive?
-            if pos + width > nbits || out.bytesize >= expected
-              done = true
-              break
-            end
-            i = pos >> 3
-            code = if compat
-                     ((data.getbyte(i) | (data.getbyte(i + 1) << 8) | (data.getbyte(i + 2) << 16)) >> (pos & 7)) &
-                       ((1 << width) - 1)
-                   else
-                     (((data.getbyte(i) << 16) | (data.getbyte(i + 1) << 8) | data.getbyte(i + 2)) >>
-                       (24 - width - (pos & 7))) & ((1 << width) - 1)
-                   end
-            pos += width
-            if code == CLEAR
-              nxt = 258
-              width = 9
-              prev = nil
-            elsif code == EOI
-              done = true
-              break
-            elsif prev.nil?
-              if code > 255
-                done = true
-                break
-              end
-              prev = table[code]
-              out << prev
-            else
-              if code < nxt
-                entry = table[code]
-                table[nxt] = prev + ROOTS[entry.getbyte(0)] if nxt < 4096
-              elsif code == nxt
-                entry = prev + ROOTS[prev.getbyte(0)]
-                table[nxt] = entry
-              else
-                done = true
-                break
-              end
-              out << entry
-              prev = entry
-              nxt += 1 if nxt < 4096
-              width += 1 if width < 12 && nxt + early >= (1 << width)
-            end
-            n -= 1
-          end
-          @pos = pos
-          @width = width
-          @next = nxt
-          @prev = prev
-          @done = done
         end
       end
 

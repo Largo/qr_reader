@@ -171,32 +171,48 @@ module QrReader
           out
         end
 
-        # Lambda mapping module (mx, my) to pixels through an affine frame at
-        # finder +p+ (module centre (cx, cy)); +h_line+ / +v_line+ are stroke
-        # lines running along the local x / y axes. nil without both strokes.
+        # Affine frame at finder +p+ (module centre (cx, cy)) mapping module
+        # (mx, my) to pixels (see read_version_block); +h_line+ / +v_line+
+        # are stroke lines running along the local x / y axes. nil without
+        # both strokes.
         def local_frame(p, cx, cy, h_line, v_line, ms_x, ms_y)
           return unless h_line && v_line
 
           right, down = @axes
-          ex = [h_line[2], h_line[3]]
-          ex = ex.map(&:-@) if ex[0] * right[0] + ex[1] * right[1] < 0
-          ey = [v_line[2], v_line[3]]
-          ey = ey.map(&:-@) if ey[0] * down[0] + ey[1] * down[1] < 0
-          lambda do |mx, my|
-            u = (mx - cx) * ms_x
-            v = (my - cy) * ms_y
-            [p.x + u * ex[0] + v * ey[0], p.y + u * ex[1] + v * ey[1]]
+          ex0 = h_line[2]
+          ex1 = h_line[3]
+          if ex0 * right[0] + ex1 * right[1] < 0
+            ex0 = -ex0
+            ex1 = -ex1
           end
+          ey0 = v_line[2]
+          ey1 = v_line[3]
+          if ey0 * down[0] + ey1 * down[1] < 0
+            ey0 = -ey0
+            ey1 = -ey1
+          end
+          [p.x, p.y, cx, cy, ms_x, ms_y, ex0, ex1, ey0, ey1]
         end
 
-        # One version block (:tr or :bl) read through a frame lambda.
+        # One version block (:tr or :bl) read through a local frame.
         def read_version_block(frame, d, which)
+          px, py, cx, cy, ms_x, ms_y, ex0, ex1, ey0, ey1 = frame
           bits = 0
-          17.downto(0) do |k|
-            a = d - 11 + k % 3
-            b = k / 3
-            x, y = which == :tr ? frame.call(a + 0.5, b + 0.5) : frame.call(b + 0.5, a + 0.5)
-            bits = (bits << 1) | pixel(x, y)
+          k = 17
+          while k >= 0
+            a = d - 11 + k % 3 + 0.5
+            b = k / 3 + 0.5
+            if which == :tr
+              mx = a
+              my = b
+            else
+              mx = b
+              my = a
+            end
+            u = (mx - cx) * ms_x
+            v = (my - cy) * ms_y
+            bits = (bits << 1) | pixel(px + u * ex0 + v * ey0, py + u * ex1 + v * ey1)
+            k -= 1
           end
           SymbolVersion.decode_version_info(bits)
         end
@@ -205,11 +221,13 @@ module QrReader
         def read_version(t, d)
           bits1 = 0
           bits2 = 0
-          17.downto(0) do |k|
+          k = 17
+          while k >= 0
             a = d - 11 + k % 3
             b = k / 3
             bits1 = (bits1 << 1) | module_at(t, a, b)
             bits2 = (bits2 << 1) | module_at(t, b, a)
+            k -= 1
           end
           [SymbolVersion.decode_version_info(bits1), SymbolVersion.decode_version_info(bits2)]
         end

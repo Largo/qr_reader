@@ -2,6 +2,7 @@
 
 require "strscan"
 require "zlib"
+require_relative "../kernels/lzw"
 
 module QrReader
   module Formats
@@ -9,8 +10,10 @@ module QrReader
     # pages, faxes and photos placed in PDFs. Vector graphics (including
     # vector-drawn QR codes) are not rendered.
     #
-    #   PDF.each_image(bytes) { |image, info| ... }  # info: {page: 0, name: "Im0", width: 2480, height: 3508}
+    #   PDF.each_image(bytes) { |image, info| ... }  # info: {page: 0, name: "Im0", width: 2480, height: 3508,
+    #                                                #        pixel_aspect: 1.0, dpi: [300.0, 300.0]}
     #   PDF.each_image(bytes)                        # => Enumerator
+    #   PDF.each_image(bytes, raw_jpeg: true) { |image_or_jpeg, info| ... }
     #   PDF.images(bytes)                            # => [#<QrReader::Image 2480x3508>, ...]
     #
     # Structure: the header may sit anywhere in the first KB; classic
@@ -27,7 +30,19 @@ module QrReader
     # directly above each other with the same width and scale, as printer
     # drivers write them - are joined into one image. +info[:name]+ is the
     # (first) XObject's resource name (nil for inline images),
-    # +info[:page]+ the 0-based page index.
+    # +info[:page]+ the 0-based page index. +info[:pixel_aspect]+ is the
+    # width of an image pixel divided by its height as the page draws it
+    # (from the transformation matrix: 0.48 for a 204 x 98 dpi fax drawn
+    # at its true size; 1.0 when unknown), +info[:dpi]+ its resolution on
+    # the page ([x, y], nil when unknown).
+    #
+    # With +raw_jpeg: true+, DCT images whose luminance is exactly what
+    # JPEG.decode makes of their data (1 or 3 components with the default
+    # /Decode, or Adobe CMYK with an inverting one) are not decoded: the
+    # block gets the JPEG data (a binary String) in place of the Image,
+    # with +info[:format]+ :jpeg and the size of the JPEG frame, so that a
+    # caller can decode it at reduced size first (JPEG.decode(data,
+    # scale:)). JPEG.decode of such data may still raise ImageError.
     #
     # Images: 1/2/4/8/16 bits per component; DeviceGray/RGB/CMYK, CalGray,
     # CalRGB, ICCBased (by /N), Indexed, Separation and DeviceN (tint =
@@ -64,6 +79,9 @@ module QrReader
       # image (+data+), with the resources that apply to it and the
       # current transformation matrix it was drawn with.
       ImageSource = Struct.new(:dict, :stream, :data, :resources, :name, :ctm)
+      # A DCT image handed over undecoded (each_image with raw_jpeg: true):
+      # the JPEG data and its frame size.
+      RawJpeg = Struct.new(:data, :width, :height)
 
       # Largest decoded stream we produce for anything but image samples.
       STREAM_LIMIT = 1 << 26
@@ -78,8 +96,8 @@ module QrReader
         # Yields each raster image of the document with an info Hash
         # ({page:, name:, width:, height:}), page by page in drawing order.
         # Returns an Enumerator without a block.
-        def each_image(bytes)
-          return enum_for(:each_image, bytes) unless block_given?
+        def each_image(bytes, raw_jpeg: false)
+          return enum_for(:each_image, bytes, raw_jpeg: raw_jpeg) unless block_given?
 
           document = guard { Document.new(binary(bytes)) }
           pages = guard { document.pages }
@@ -88,19 +106,19 @@ module QrReader
           pages.each_with_index do |page, index|
             band = nil # the latest image, held back in case the next one continues it
             sources(document, page, failures).each do |source|
-              image = decode(document, source, failures) or next
-              next if band&.join(image, source.ctm)
+              part = decode(document, source, failures, raw_jpeg) or next
+              next if band&.join(part, source.ctm)
 
-              if band
+              if band && (image = band.image)
                 count += 1
-                yield band.image, band.info(index)
+                yield image, band.info(index, image)
               end
-              band = Band.new([image], source.ctm, source.name)
+              band = Band.new([part], source.ctm, source.name)
             end
-            next unless band
+            next unless band && (image = band.image)
 
             count += 1
-            yield band.image, band.info(index)
+            yield image, band.info(index, image)
           end
           raise no_images(failures) if count.zero?
 
@@ -133,8 +151,8 @@ module QrReader
           []
         end
 
-        def decode(document, source, failures)
-          ImageDecoder.new(document, source).decode
+        def decode(document, source, failures, raw_jpeg)
+          ImageDecoder.new(document, source, raw_jpeg).decode
         rescue Error, *INTERNAL_ERRORS => e
           failures << e
           nil
@@ -155,18 +173,48 @@ module QrReader
       # Images drawn directly above or below each other with the same width
       # and scale are bands of one picture (scanner drivers that print
       # through PostScript cut page images into strips), joined so that a
-      # code across a band boundary stays readable. +parts+ are top to
-      # bottom; +ctm+ maps the unit square onto the joined picture.
+      # code across a band boundary stays readable. +parts+ (Images or
+      # RawJpegs) are top to bottom; +ctm+ maps the unit square onto the
+      # joined picture.
       Band = Struct.new(:parts, :ctm, :name) do
+        # The picture: an Image, the JPEG data of a lone RawJpeg, or nil
+        # when a joined RawJpeg cannot be decoded.
         def image
-          return parts.first if parts.size == 1
+          part = parts.first
+          return part.is_a?(RawJpeg) ? part.data : part if parts.size == 1
 
-          height = parts.sum(&:height)
-          Image.new(parts.first.width, height, parts.map(&:data).join)
+          images = parts.map { |p| p.is_a?(RawJpeg) ? JPEG.decode(p.data) : p }
+          Image.new(images.first.width, images.sum(&:height), images.map(&:data).join)
+        rescue Error
+          nil
         end
 
-        def info(page)
-          { page: page, name: name, width: parts.first.width, height: parts.sum(&:height) }
+        # The info Hash for +image+ (see PDF.each_image).
+        def info(page, image)
+          info = { page: page, name: name }
+          if image.is_a?(String)
+            info[:width] = parts.first.width
+            info[:height] = parts.first.height
+            info[:format] = :jpeg
+          else
+            info[:width] = image.width
+            info[:height] = image.height
+          end
+          info.merge!(Band.geometry(ctm, info[:width], info[:height]))
+        end
+
+        # {pixel_aspect:, dpi:} of a +width+ x +height+ image drawn with
+        # +ctm+ (which maps the unit square onto the drawn image).
+        def self.geometry(ctm, width, height)
+          a, b, c, d = ctm
+          drawn_w = ctm && Math.hypot(a, b) # in points (1/72 inch)
+          drawn_h = ctm && Math.hypot(c, d)
+          return { pixel_aspect: 1.0, dpi: nil } unless drawn_w&.finite? && drawn_h&.finite? &&
+                                                        drawn_w > 1e-6 && drawn_h > 1e-6
+
+          aspect = (drawn_w / width) / (drawn_h / height)
+          aspect = 1.0 unless aspect.between?(0.125, 8.0)
+          { pixel_aspect: aspect.round(6), dpi: [(width * 72 / drawn_w).round(2), (height * 72 / drawn_h).round(2)] }
         end
 
         # Appends +image+ (drawn with +matrix+) if it continues this band;
@@ -239,16 +287,35 @@ module QrReader
       end
 
       # Tokenizer and object parser (ISO 32000-1, 7.2 and 7.3).
+      #
+      # Regexps never match unbounded runs: Onigmo keeps a backtracking
+      # stack entry (about 50 bytes) per character a quantifier matches,
+      # gigabytes for the long runs of white space or token characters in
+      # a hostile file or stream. White space and tokens are scanned in
+      # bounded steps (the rest of an overlong token is skipped), comments
+      # with String#index.
       class Parser
         MAX_DEPTH = 100
-        SPACE_COMMENTS = /(?:[\x00\t\n\f\r ]+|%[^\r\n]*)+/
-        REGULAR = %r{[^\x00\t\n\f\r ()<>\[\]{}/%]+}
-        NAME = %r{/[^\x00\t\n\f\r ()<>\[\]{}/%]*}
+        # Array elements and dictionary entries one document may parse
+        # (about 100 bytes of memory and 2 us each at worst, e.g. empty
+        # strings; a scanned page needs about 30).
+        MAX_ELEMENTS = 2_000_000
+        NOT_SPACE = /[^\x00\t\n\f\r ]/n
+        LINE_END = /[\r\n]/n
+        SPACE_RUN = /[\x00\t\n\f\r ]{1,1024}/n
+        TOKEN_RUN = %r{[^\x00\t\n\f\r ()<>\[\]{}/%]{1,1024}}n
+        NAME_RUN = %r{/[^\x00\t\n\f\r ()<>\[\]{}/%]{0,1024}}n
+        # Ends a regular token (white space or a delimiter).
+        DELIMITER = %r{[\x00\t\n\f\r ()<>\[\]{}/%]}n
+        DELIMITERS = "\x00\t\n\f\r ()<>[]{}/%".b.bytes.freeze
+        # Byte -> true for white space / for white space and delimiters.
+        SPACE_BYTE = Array.new(256) { |b| "\x00\t\n\f\r ".b.bytes.include?(b) }.freeze
+        DELIMITER_BYTE = Array.new(256) { |b| DELIMITERS.include?(b) }.freeze
         INTEGER = /\A[+-]?\d+\z/
-        REF_TAIL = %r{[\x00\t\n\f\r ]+(\d{1,10})[\x00\t\n\f\r ]+R(?![^\x00\t\n\f\r ()<>\[\]{}/%])}
-        OBJ_HEADER = %r{(\d{1,10})[\x00\t\n\f\r ]+(\d{1,5})[\x00\t\n\f\r ]*obj(?![^\x00\t\n\f\r ()<>\[\]{}/%])}
+        REF_TAIL = %r{[\x00\t\n\f\r ]{1,64}(\d{1,10})[\x00\t\n\f\r ]{1,64}R(?![^\x00\t\n\f\r ()<>\[\]{}/%])}n
+        OBJ_HEADER = %r{(\d{1,10})[\x00\t\n\f\r ]{1,64}(\d{1,5})[\x00\t\n\f\r ]{0,64}obj(?![^\x00\t\n\f\r ()<>\[\]{}/%])}n
         STREAM = /stream(?:\r\n|\n|\r)?/
-        LITERAL_RUN = /[^()\\\r]+/
+        LITERAL_SPECIAL = /[()\\\r]/n
         ESCAPES = { 0x6E => 0x0A, 0x72 => 0x0D, 0x74 => 0x09, 0x62 => 0x08, 0x66 => 0x0C }.freeze
         HEX_PAIR = /#(\h\h)/
 
@@ -259,9 +326,38 @@ module QrReader
           raw.to_sym
         end
 
-        def initialize(data)
+        # Moves scanner +s+ (over +data+) past white space and comments;
+        # returns the next byte (nil at the end).
+        def self.skip_space(s, data)
+          while true
+            s.skip(SPACE_RUN)
+            b = data.getbyte(s.pos)
+            if b == 0x25
+              s.pos = data.index(LINE_END, s.pos) || data.bytesize
+            elsif b.nil? || !SPACE_BYTE[b]
+              return b
+            end
+          end
+        end
+
+        # The token +pattern+ (TOKEN_RUN or NAME_RUN) matches at the
+        # scanner position, or nil; the rest of an overlong token is skipped.
+        def self.scan_token(s, data, pattern)
+          token = s.scan(pattern) or return nil
+          b = data.getbyte(s.pos)
+          s.pos = data.index(DELIMITER, s.pos) || data.bytesize if b && !DELIMITER_BYTE[b]
+          token
+        end
+
+        # A shared count of the elements left to parse (see MAX_ELEMENTS).
+        def self.budget
+          [MAX_ELEMENTS]
+        end
+
+        def initialize(data, budget = Parser.budget)
           @data = data
           @s = StringScanner.new(data)
+          @budget = budget
         end
 
         def pos
@@ -273,22 +369,22 @@ module QrReader
         end
 
         def skip_space
-          @s.skip(SPACE_COMMENTS)
+          Parser.skip_space(@s, @data)
         end
 
         # The next object: Integer, Float, true, false, nil, Symbol (name),
         # String, Array, Hash (Symbol keys), Ref, or a Keyword.
         def parse(depth = 0)
           s = @s
-          s.skip(SPACE_COMMENTS)
-          case @data.getbyte(s.pos)
+          data = @data
+          case Parser.skip_space(s, data)
           when nil then raise ParseError, "unexpected end of PDF data"
-          when 0x2F then Parser.name_symbol(s.scan(NAME))
+          when 0x2F then Parser.name_symbol(Parser.scan_token(s, data, NAME_RUN))
           when 0x28 then literal_string
-          when 0x3C then @data.getbyte(s.pos + 1) == 0x3C ? dictionary(depth) : hex_string
+          when 0x3C then data.getbyte(s.pos + 1) == 0x3C ? dictionary(depth) : hex_string
           when 0x5B then array(depth)
           else
-            token = s.scan(REGULAR)
+            token = Parser.scan_token(s, data, TOKEN_RUN)
             unless token
               s.pos += 1
               raise ParseError, "unexpected delimiter in PDF object"
@@ -304,7 +400,7 @@ module QrReader
 
           s = @s
           s.pos = offset
-          s.skip(SPACE_COMMENTS)
+          skip_space
           return nil unless s.scan(OBJ_HEADER)
 
           num = s[1].to_i
@@ -313,7 +409,7 @@ module QrReader
           value = nil if value.is_a?(Keyword) # "endobj" of an empty object
           start = nil
           if value.is_a?(Hash)
-            s.skip(SPACE_COMMENTS)
+            skip_space
             start = s.pos if s.scan(STREAM)
           end
           [num, gen, value, start]
@@ -324,6 +420,7 @@ module QrReader
         def atom(token)
           b = token.getbyte(0)
           if b <= 0x39 && (b >= 0x30 || b == 0x2B || b == 0x2D || b == 0x2E)
+            return 0 if token.bytesize > 32
             return token.to_f.then { |f| f.finite? ? f : 0.0 } unless INTEGER.match?(token)
             return 0 if token.bytesize > 20
 
@@ -343,13 +440,16 @@ module QrReader
         def literal_string
           s = @s
           data = @data
+          size = data.bytesize
           s.pos += 1
           out = String.new(encoding: Encoding::BINARY)
           depth = 1
           loop do
-            run = s.scan(LITERAL_RUN)
-            out << run if run
-            b = data.getbyte(s.pos) or break
+            pos = s.pos
+            stop = data.index(LITERAL_SPECIAL, pos) || size
+            out << data.byteslice(pos, stop - pos) if stop > pos
+            s.pos = stop
+            b = data.getbyte(stop) or break
             s.pos += 1
             case b
             when 0x28
@@ -396,23 +496,31 @@ module QrReader
 
         def hex_string
           s = @s
-          s.pos += 1
-          body = s.scan(/[^>]*/)
-          s.pos += 1 unless s.eos?
-          hex = body.delete("^0-9A-Fa-f")
+          data = @data
+          start = s.pos + 1
+          stop = data.index(">", start) || data.bytesize
+          s.pos = stop < data.bytesize ? stop + 1 : stop
+          hex = data.byteslice(start, stop - start).delete("^0-9A-Fa-f")
           hex << "0" if hex.bytesize.odd?
           [hex].pack("H*")
+        end
+
+        # Counts one array element or dictionary entry against the budget.
+        def count_element
+          return if (@budget[0] -= 1) >= 0
+
+          raise ParseError, "PDF has too many objects (more than #{MAX_ELEMENTS} array elements and dictionary entries)"
         end
 
         def array(depth)
           raise ParseError, "PDF objects nested too deeply" if depth > MAX_DEPTH
 
           s = @s
+          data = @data
           s.pos += 1
           list = []
           loop do
-            s.skip(SPACE_COMMENTS)
-            b = @data.getbyte(s.pos)
+            b = Parser.skip_space(s, data)
             raise ParseError, "unterminated array" unless b
 
             if b == 0x5D
@@ -422,6 +530,7 @@ module QrReader
             value = parse(depth + 1)
             raise ParseError, "unexpected #{value.word} in array" if value.is_a?(Keyword)
 
+            count_element
             list << value
           end
         end
@@ -434,8 +543,7 @@ module QrReader
           s.pos += 2
           dict = {}
           loop do
-            s.skip(SPACE_COMMENTS)
-            b = data.getbyte(s.pos)
+            b = Parser.skip_space(s, data)
             raise ParseError, "unterminated dictionary" unless b
 
             if b == 0x3E
@@ -444,10 +552,11 @@ module QrReader
             end
             raise ParseError, "dictionary key is not a name" unless b == 0x2F
 
-            key = Parser.name_symbol(s.scan(NAME))
+            key = Parser.name_symbol(Parser.scan_token(s, data, NAME_RUN))
             value = parse(depth + 1)
             raise ParseError, "unexpected #{value.word} in dictionary" if value.is_a?(Keyword)
 
+            count_element
             dict[key] = value
           end
         end
@@ -460,19 +569,37 @@ module QrReader
 
         MAX_REF_DEPTH = 32
         MISSING = Object.new.freeze
-        SPACE = /[\x00\t\n\f\r ]*/
-        OBJ_SCAN = %r{(?<!\d)(\d{1,10})[\x00\t\n\f\r ]+(\d{1,5})[\x00\t\n\f\r ]+obj(?![^\x00\t\n\f\r ()<>\[\]{}/%])}
-        SUBSECTION = /[\x00\t\n\f\r ]*(\d{1,10})[\x00\t\n\f\r ]+(\d{1,10})/
-        XREF_ENTRY = /[\x00\t\n\f\r ]*(\d{1,10})[\x00\t\n\f\r ]+(\d{1,5})[\x00\t\n\f\r ]+([nf])/
+        # (Regexps match bounded lengths only, see Parser.)
+        OBJ_SCAN = %r{(?<!\d)(\d{1,10})[\x00\t\n\f\r ]{1,64}(\d{1,5})[\x00\t\n\f\r ]{1,64}obj(?![^\x00\t\n\f\r ()<>\[\]{}/%])}n
+        SUBSECTION = /[\x00\t\n\f\r ]{0,64}(\d{1,10})[\x00\t\n\f\r ]{1,64}(\d{1,10})/n
+        XREF_ENTRY = /[\x00\t\n\f\r ]{0,64}(\d{1,10})[\x00\t\n\f\r ]{1,64}(\d{1,5})[\x00\t\n\f\r ]{1,64}([nf])/n
+        TRAILER_AHEAD = /[\x00\t\n\f\r ]{0,64}trailer/n
+        TRAILER_DICT = /trailer[\x00\t\n\f\r ]{0,64}<</n
         ENDSTREAM = /\A[\x00\t\n\f\r ]*endstream/
+        NUMBER = /\d{1,20}/n
         TRAILER_KEYS = %i[Root Encrypt ID Info].freeze
+        # Distinct objects a document may register (about 80 bytes each).
+        MAX_OBJECTS = 2_000_000
+        # Cross-reference entries read in all (tables and streams, possibly
+        # the same entries again through crafted /Prev chains).
+        MAX_XREF_ENTRIES = 4 * MAX_OBJECTS
+        # Decoded bytes of all content streams (pages, forms) and of all
+        # object streams, at least (and twice the file size for large
+        # files): a stream may be a decompression bomb, and many pages may
+        # draw the same one. Pages beyond the content budget list their
+        # image resources instead.
+        MIN_STREAM_BUDGET = 1 << 26
 
         attr_reader :data, :trailer
 
         def initialize(data)
           @data = data
           @header = data.byteslice(0, 1024).index("%PDF-") or raise ImageError, "not a PDF document (no %PDF- header)"
-          @parser = Parser.new(data)
+          @budget = Parser.budget
+          @parser = Parser.new(data, @budget)
+          @content_left = @object_stream_left = [MIN_STREAM_BUDGET, 2 * data.bytesize].max
+          @xref_left = MAX_XREF_ENTRIES
+          @object_pairs_left = MAX_OBJECTS
           @offsets = {}
           @cache = {}
           @loading = {}
@@ -552,9 +679,14 @@ module QrReader
           Filters.decode(stream_bytes(stream), filters, params, limit)
         end
 
-        # Decoded content stream, or nil when it cannot be decoded.
+        # Decoded content stream, or nil when it cannot be decoded (or the
+        # document's CONTENT_BUDGET is spent).
         def content(stream)
-          decode_stream(stream)
+          return nil if @content_left <= 0
+
+          data = decode_stream(stream, @content_left < STREAM_LIMIT ? @content_left : STREAM_LIMIT)
+          @content_left -= data.bytesize + 1
+          data
         rescue Error, *INTERNAL_ERRORS
           nil
         end
@@ -712,15 +844,23 @@ module QrReader
           return nil unless stream.is_a?(Stream)
 
           first = int(resolve(stream.dict[:First])) or return nil
-          data = decode_stream(stream)
+          return nil if @object_stream_left <= 0
+
+          data = decode_stream(stream, @object_stream_left < STREAM_LIMIT ? @object_stream_left : STREAM_LIMIT)
+          @object_stream_left -= data.bytesize + 1
           return nil if first.negative? || first > data.bytesize
 
-          numbers = data.byteslice(0, first).scan(/\d+/).map(&:to_i)
-          count = [int(resolve(stream.dict[:N])) || 0, numbers.size / 2].min
+          # At most N pairs, and MAX_OBJECTS pairs in all object streams.
+          count = (int(resolve(stream.dict[:N])) || 0).clamp(0, @object_pairs_left)
+          numbers = []
+          header = StringScanner.new(data.byteslice(0, first))
+          numbers << header.matched.to_i while numbers.size < 2 * count && header.skip_until(NUMBER)
+          count = numbers.size / 2
+          @object_pairs_left -= count
           pairs = Array.new(count) { |i| [numbers[2 * i], numbers[2 * i + 1]] }
           by_num = {}
           pairs.each { |n, offset| by_num[n] ||= offset }
-          @object_streams[num] = [by_num, pairs, Parser.new(data), first]
+          @object_streams[num] = [by_num, pairs, Parser.new(data, @budget), first]
         rescue Error, *INTERNAL_ERRORS
           nil
         end
@@ -791,7 +931,7 @@ module QrReader
 
             scanner = StringScanner.new(@data)
             scanner.pos = pos
-            scanner.skip(SPACE)
+            Parser.skip_space(scanner, @data)
             trailer = begin
               if scanner.scan(/xref/)
                 read_table(scanner)
@@ -807,16 +947,16 @@ module QrReader
         end
 
         def read_table(s)
-          until s.match?(/[\x00\t\n\f\r ]*trailer/)
+          until s.match?(TRAILER_AHEAD)
             break unless s.scan(SUBSECTION)
 
             start = s[1].to_i
             count = s[2].to_i
             i = 0
-            while i < count && s.scan(XREF_ENTRY)
+            while i < count && (@xref_left -= 1) >= 0 && s.scan(XREF_ENTRY)
               offset = s[1].to_i
               if s[3] == "n"
-                @offsets[start + i] ||= offset if offset.positive?
+                register(start + i, offset) if offset.positive?
               elsif i.zero? && start == 1 && s[2] == "65535"
                 start = 0 # a common off-by-one: the table really starts at object 0
               end
@@ -841,10 +981,16 @@ module QrReader
           row = w0 + w1 + w2
           return dict if row.zero?
 
+          index = dict[:Index].is_a?(Array) ? dict[:Index] : [0, int(dict[:Size]) || 0]
+          rows = 0
+          index.each_slice(2) { |_, count| rows += count if count.is_a?(Integer) && count.positive? }
+          rows = @xref_left if rows > @xref_left
+          return dict if rows <= 0
+
           stream = build_stream(dict, start, num, gen, resolve_length: false)
           filters, params = filter_chain(dict)
-          data = Filters.decode(stream.raw, filters, params, STREAM_LIMIT)
-          index = dict[:Index].is_a?(Array) ? dict[:Index] : [0, int(dict[:Size]) || 0]
+          data = Filters.decode(stream.raw, filters, params, rows * row)
+          @xref_left -= data.bytesize / row
           pos = 0
           index.each_slice(2) do |first, count|
             break unless first.is_a?(Integer) && count.is_a?(Integer) && first >= 0
@@ -863,14 +1009,20 @@ module QrReader
             type = w0.zero? ? 1 : be_int(data, pos, w0)
             field = be_int(data, pos + w0, w1)
             if type == 1
-              @offsets[first + i] ||= field if field.positive?
+              register(first + i, field) if field.positive?
             elsif type == 2
-              @offsets[first + i] ||= [field, be_int(data, pos + w0 + w1, w2)]
+              register(first + i, [field, be_int(data, pos + w0 + w1, w2)])
             end
             pos += row
             i += 1
           end
           pos
+        end
+
+        # Records where object +num+ is (the first entry found wins), up to
+        # MAX_OBJECTS objects.
+        def register(num, entry)
+          @offsets[num] ||= entry if @offsets.size < MAX_OBJECTS || @offsets.key?(num)
         end
 
         # Rebuilds the cross-reference data by scanning the whole file.
@@ -880,7 +1032,7 @@ module QrReader
 
           @rebuilt = true
           offsets = {}
-          scan_objects { |num, offset| offsets[num] = offset }
+          scan_objects { |num, offset| offsets[num] = offset if offsets.size < MAX_OBJECTS || offsets.key?(num) }
           @offsets = offsets
           @object_streams.clear
           @cache.clear
@@ -923,7 +1075,9 @@ module QrReader
 
             container = object_stream(num) or next
             container[1].each_with_index do |(inner, _offset), index|
-              @offsets[inner] = [num, index] unless @offsets[inner].is_a?(Integer)
+              next if @offsets[inner].is_a?(Integer) || (@offsets.size >= MAX_OBJECTS && !@offsets.key?(inner))
+
+              @offsets[inner] = [num, index]
             end
           end
         end
@@ -946,7 +1100,7 @@ module QrReader
         # stream dictionaries anywhere in the file (later ones win).
         def scanned_trailer
           trailer = {}
-          @data.scan(/trailer[\x00\t\n\f\r ]*<</) do
+          @data.scan(TRAILER_DICT) do
             @parser.pos = ::Regexp.last_match.end(0) - 2
             dict = begin
               @parser.parse
@@ -1266,8 +1420,8 @@ module QrReader
             case filter
             when :FlateDecode then unpredict(inflate(data, predicted_limit(params, limit)), params, limit)
             when :LZWDecode
-              early = int(params[:EarlyChange]) != 0
-              unpredict(LZW.new(data, early).decode(predicted_limit(params, limit)), params, limit)
+              early = int(params[:EarlyChange]) == 0 ? 0 : 1
+              unpredict(QrReaderKernels.lzw_decode(data, predicted_limit(params, limit), early, false), params, limit)
             when :RunLengthDecode then run_length(data, limit)
             when :ASCIIHexDecode then ascii_hex(data)
             when :ASCII85Decode then ascii85(data)
@@ -1317,8 +1471,12 @@ module QrReader
             bpc = int(params[:BitsPerComponent]) || 8
             raise ImageError, "invalid predictor BitsPerComponent #{bpc}" unless [1, 2, 4, 8, 16].include?(bpc)
 
-            columns = (int(params[:Columns]) || 1).clamp(1, limit * 8 + 8)
+            columns = int(params[:Columns]) || 1
+            columns = 1 if columns < 1
             row = (columns * colors * bpc + 7) / 8
+            # (Rows are allocated whole: one longer than the output limit
+            # would be a crafted allocation, never an image.)
+            raise ImageError, "invalid predictor Columns #{columns}" if row > limit + 1
             if predictor == 2
               tiff_unpredict(data, row, colors, bpc)
             else
@@ -1542,116 +1700,6 @@ module QrReader
               words << (v & 0xFFFFFFFF)
               group += 1
             end
-          end
-        end
-
-        # LZWDecode (variable code width 9-12, clear 256, end 257). Table
-        # entries are Strings, built on first use from the previous entry
-        # (+prefix+) and a byte (+last+); +first+ caches first bytes.
-        class LZW
-          CHUNK = 4096
-          BYTES = Array.new(256) { |i| i.chr.b.freeze }.freeze
-
-          def initialize(data, early_change)
-            @data = data
-            @early = early_change ? 1 : 0
-            @pos = 0
-            @bits = 0
-            @nbits = 0
-            @table = BYTES + Array.new(4096 - 256)
-            @prefix = Array.new(4096)
-            @last = Array.new(4096, 0)
-            @first = Array.new(4096) { |i| i & 255 }
-            @next = 258
-            @width = 9
-            @prev = nil
-            @prev_code = 0
-          end
-
-          def decode(limit)
-            out = String.new(encoding: Encoding::BINARY)
-            nil while out.bytesize < limit && step(out)
-            out.bytesize > limit ? out.byteslice(0, limit) : out
-          end
-
-          private
-
-          # Decodes up to CHUNK codes; false at the end of the data.
-          def step(out)
-            data = @data
-            table = @table
-            prefix = @prefix
-            last = @last
-            first = @first
-            pos = @pos
-            bits = @bits
-            nbits = @nbits
-            width = @width
-            nxt = @next
-            prev = @prev
-            prev_code = @prev_code
-            more = true
-            count = 0
-            while count < CHUNK
-              while nbits < width
-                b = data.getbyte(pos)
-                unless b
-                  more = false
-                  break
-                end
-                bits = ((bits << 8) | b) & 0xFFFFFF
-                nbits += 8
-                pos += 1
-              end
-              break unless more
-
-              nbits -= width
-              code = (bits >> nbits) & ((1 << width) - 1)
-              count += 1
-              if code < 256
-                out << code
-                entry = BYTES[code]
-              elsif code == 256
-                nxt = 258
-                width = 9
-                prev = nil
-                next
-              elsif code == 257
-                more = false
-                break
-              elsif code < nxt
-                entry = table[code] || (table[code] = prefix[code] + BYTES[last[code]])
-                out << entry
-              elsif code == nxt && prev
-                entry = prev + BYTES[first[prev_code]]
-                out << entry
-              else
-                more = false
-                break
-              end
-              if prev && nxt < 4096
-                if code == nxt
-                  table[nxt] = entry
-                else
-                  table[nxt] = nil
-                  prefix[nxt] = prev
-                  last[nxt] = first[code]
-                end
-                first[nxt] = first[prev_code]
-                nxt += 1
-              end
-              prev = entry
-              prev_code = code
-              width += 1 if width < 12 && nxt + @early >= (1 << width)
-            end
-            @pos = pos
-            @bits = bits
-            @nbits = nbits
-            @width = width
-            @next = nxt
-            @prev = prev
-            @prev_code = prev_code
-            more
           end
         end
       end
@@ -1946,26 +1994,34 @@ module QrReader
           s = StringScanner.new(data)
           operands = []
           stack = []
-          until s.eos?
-            s.skip(Parser::SPACE_COMMENTS)
+          space_run = Parser::SPACE_RUN
+          space_byte = Parser::SPACE_BYTE
+          token_run = Parser::TOKEN_RUN
+          delimiter_byte = Parser::DELIMITER_BYTE
+          while true
+            # (Parser.skip_space, with its common case inlined.)
+            s.skip(space_run)
             b = data.getbyte(s.pos) or break
+            b = Parser.skip_space(s, data) or break if b == 0x25 || space_byte[b]
             case b
-            when 0x2F then operands << s.scan(Parser::NAME)
+            when 0x2F then operand(operands, Parser.scan_token(s, data, Parser::NAME_RUN))
             when 0x28
               skip_string(s, data)
-              operands << nil
+              operand(operands, nil)
             when 0x3C
               if data.getbyte(s.pos + 1) == 0x3C
                 s.pos += 2
               else
                 s.skip_until(/>/) || s.terminate
-                operands << nil
+                operand(operands, nil)
               end
             when 0x3E, 0x5B, 0x5D, 0x7B, 0x7D, 0x29, 0x25 then s.pos += 1
             else
-              token = s.scan(Parser::REGULAR)
-              c = token.getbyte(0)
-              if c <= 0x39 && (c >= 0x30 || c == 0x2B || c == 0x2D || c == 0x2E)
+              # (Parser.scan_token inlined.)
+              token = s.scan(token_run)
+              n = data.getbyte(s.pos)
+              s.pos = data.index(Parser::DELIMITER, s.pos) || data.bytesize if n && !delimiter_byte[n]
+              if b <= 0x39 && (b >= 0x30 || b == 0x2B || b == 0x2D || b == 0x2E)
                 operands << token
                 operands.shift if operands.size > MAX_OPERANDS
                 next
@@ -1980,6 +2036,12 @@ module QrReader
               operands.clear
             end
           end
+        end
+
+        # Keeps the last MAX_OPERANDS operands (operators take at most 6).
+        def operand(operands, value)
+          operands << value
+          operands.shift if operands.size > MAX_OPERANDS
         end
 
         def skip_string(s, data)
@@ -2093,10 +2155,11 @@ module QrReader
         def ei_at(data, pos)
           return nil if pos > data.bytesize
 
-          s = StringScanner.new(data)
-          s.pos = pos
-          s.skip(/[\x00\t\n\f\r ]*/)
-          s.scan(EI) ? s.pos : nil
+          pos = data.index(Parser::NOT_SPACE, pos) or return nil
+          return nil unless data.getbyte(pos) == 0x45 && data.getbyte(pos + 1) == 0x49 # EI
+          return nil unless (after = data.getbyte(pos + 2)).nil? || Parser::DELIMITERS.include?(after)
+
+          pos + 2
         end
 
         # First " EI" followed by something that looks like content stream
@@ -2122,10 +2185,11 @@ module QrReader
         IDENTITY = (0..255).to_a.freeze
         SOF_MARKERS = [0xC0, 0xC1, 0xC2, 0xC3, 0xC5, 0xC6, 0xC7, 0xC9, 0xCA, 0xCB, 0xCD, 0xCE, 0xCF].freeze
 
-        def initialize(doc, source)
+        def initialize(doc, source, raw_jpeg = false)
           @doc = doc
           @source = source
           @dict = source.dict
+          @raw_jpeg = raw_jpeg
         end
 
         def decode
@@ -2177,7 +2241,10 @@ module QrReader
 
           ncomp = space.components
           stride = (width * ncomp * bpc + 7) / 8
-          raise UnsupportedImageError, "PDF image too large" if stride * height > SAMPLE_LIMIT
+          # Packed and unpacked (one byte per sample) buffers are both bounded.
+          if stride * height > SAMPLE_LIMIT || width * ncomp * height > SAMPLE_LIMIT
+            raise UnsupportedImageError, "PDF image too large"
+          end
 
           raw = Filters.decode(data, filters, params, stride * height)
           raise ImageError, "image has no data" if raw.empty?
@@ -2278,21 +2345,29 @@ module QrReader
             raise ImageError, "JPEG size #{jw}x#{jh} does not match the image (#{width}x#{height})"
           end
 
-          image = JPEG.decode(jpeg)
-          case jpeg_components(jpeg) || space&.components || 1
+          # Plain images (luminance = JPEG.decode) go undecoded with raw_jpeg.
+          components = jpeg_components(jpeg) || space&.components || 1
+          case components
           when 1
             lut = one_component(space).luma_lut(8, decode)
+            return RawJpeg.new(jpeg, jw, jh) if @raw_jpeg && lut == IDENTITY
+
+            image = JPEG.decode(jpeg)
             lut == IDENTITY ? image : Image.new(image.width, image.height, translate(image.data, lut))
           when 4
             # JPEG.decode reads CMYK the Adobe way (stored inverted), which
             # PDFs declare with /Decode [1 0 1 0 1 0 1 0].
             cmyk = space&.components == 4 ? space : ColorSpace::CMYK
-            return image if cmyk.inverted?(decode)
+            raise UnsupportedImageError, "CMYK JPEG image without an inverting /Decode array" unless cmyk.inverted?(decode)
 
-            raise UnsupportedImageError, "CMYK JPEG image without an inverting /Decode array"
+            @raw_jpeg ? RawJpeg.new(jpeg, jw, jh) : JPEG.decode(jpeg)
           else
             rgb = space&.components == 3 ? space : ColorSpace::RGB
-            rgb.kind != :lab && rgb.inverted?(decode) ? image.invert : image
+            invert = rgb.kind != :lab && rgb.inverted?(decode)
+            return RawJpeg.new(jpeg, jw, jh) if @raw_jpeg && !invert && components == 3
+
+            image = JPEG.decode(jpeg)
+            invert ? image.invert : image
           end
         end
 

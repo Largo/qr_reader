@@ -25,7 +25,7 @@ require_relative "qr_reader/native_kernels"
 #   QrReader.scan("scans.tiff") { |code| puts "page #{code.page}: #{code.text}" }
 #
 # Every method accepts a file path (String or Pathname), an IO, encoded image
-# bytes (PNG, JPEG, GIF, BMP, PNM, TIFF, PDF), a QrReader::Image, or a
+# bytes (PNG, JPEG, JPEG 2000, GIF, BMP, PNM, TIFF, PDF), a QrReader::Image, or a
 # ChunkyPNG-style canvas (#width, #height, #pixels), plus these options:
 #
 #   try_harder: true    - fall back to slower strategies when the fast ones find nothing

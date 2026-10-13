@@ -8,7 +8,7 @@ require_relative "../lib/qr_reader"
 options = { all: false, format: :text, try_harder: true, inverted: :auto }
 parser = OptionParser.new do |o|
   o.banner = "Usage: qr_reader [options] IMAGE...\n" \
-             "Decodes QR codes in PNG, JPEG, GIF, BMP and PNM images (use - for stdin)."
+             "Decodes QR codes in PNG, JPEG, JPEG 2000, GIF, BMP, PNM, TIFF and PDF files (use - for stdin)."
   o.on("-a", "--all", "Print every code found (default: first code only)") { options[:all] = true }
   o.on("-j", "--json", "Print results as JSON lines with metadata") { options[:format] = :json }
   o.on("-v", "--verbose", "Print metadata (version, EC level, position) after the text") { options[:format] = :verbose }

@@ -2,8 +2,9 @@
 
 A fast, accurate QR code reader in pure Ruby. No native extensions, no
 ImageMagick, no zbar — just Ruby (and its standard library). Reads photos and
-scanned documents: PNG, JPEG, GIF, BMP, PNM, TIFF (including CCITT G3/G4 fax
-compression) and the images inside scanned PDFs.
+scanned documents: PNG, JPEG, JPEG 2000, GIF, BMP, PNM, TIFF (including CCITT
+G3/G4 fax compression) and PDFs (embedded images, vector-drawn codes and
+barcode fonts).
 
 ```ruby
 require "qr_reader"
@@ -138,13 +139,28 @@ What does help with big inputs:
   150–600 DPI, fax pages (CCITT G3/G4, non-square 204x98 dpi pixels),
   B&W/dithered scanner modes, multi-page TIFF and PDF, Swiss QR-bills (the
   cross in the middle is just damage the error correction repairs).
-- Scanned PDFs: images compressed with JPEG, CCITT fax, JBIG2 (generic
-  regions), Flate, LZW, run-length; xref and object streams; PDFs encrypted
-  with an empty user password.
+- JPEG 2000 (JP2 files and raw codestreams, all of Part 1: tiles, layers,
+  precincts, every progression order and code-block style, 5/3 and 9/7
+  wavelets); large images are first decoded at reduced resolution.
+- Scanned PDFs: images compressed with JPEG (also CMYK/YCCK), JPEG 2000, CCITT
+  fax, JBIG2 (generic regions), Flate, LZW, run-length; xref and object
+  streams; PDFs encrypted
+  with an empty user password; page images that printer drivers cut into
+  (overlapping) strips.
+- Digitally created PDFs: QR codes drawn as vector graphics (rectangles or
+  other straight-edged paths per module or run of modules, round dots or
+  rounded modules, filled or stroked, also light on a coloured background)
+  and codes set as text in a barcode font (embedded TrueType, OpenType, CFF,
+  Type 1 or Type 3 fonts, simple or composite).
 - Multiple codes per image (`decode_all` / `read_all`).
 
-Vector-drawn QR codes in digitally created PDFs are not rendered — only raster
-images embedded in the PDF are scanned. JPEG 2000 images in PDFs are skipped.
+PDF pages are not rendered as a whole: qr_reader reads the raster images a page
+draws, and renders only groups of small shapes (paths and barcode-font glyphs)
+that look like a vector-drawn code. Codes drawn as shadings or patterns, in
+fonts that are not embedded, or with glyphs that have curves are not found.
+JPEG 2000 decoding is the slowest format (a 2900 x 3900 colour page takes about
+15 s without YJIT; single-tile images above 32 megapixels are decoded at half
+resolution).
 Images larger than 67 megapixels (JPEG) or 134 megapixels (other formats) are
 rejected rather than risking huge memory use.
 

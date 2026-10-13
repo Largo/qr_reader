@@ -7,13 +7,17 @@ require_relative "../kernels/lzw"
 module QrReader
   module Formats
     # Extracts the raster images of PDF documents page by page: scanned
-    # pages, faxes and photos placed in PDFs. Vector graphics (including
-    # vector-drawn QR codes) are not rendered.
+    # pages, faxes and photos placed in PDFs. Vector graphics are not
+    # rendered, except that with +vector: true+ groups of paths that may
+    # be a vector-drawn QR code are rasterized (see PathCollector and
+    # VectorRenderer) and yielded after the page's raster images, with
+    # +info[:vector]+ true and +info[:name]+ nil.
     #
     #   PDF.each_image(bytes) { |image, info| ... }  # info: {page: 0, name: "Im0", width: 2480, height: 3508,
     #                                                #        pixel_aspect: 1.0, dpi: [300.0, 300.0]}
     #   PDF.each_image(bytes)                        # => Enumerator
     #   PDF.each_image(bytes, raw_jpeg: true) { |image_or_jpeg, info| ... }
+    #   PDF.each_image(bytes, vector: true) { |image, info| ... }
     #   PDF.images(bytes)                            # => [#<QrReader::Image 2480x3508>, ...]
     #
     # Structure: the header may sit anywhere in the first KB; classic
@@ -43,6 +47,8 @@ module QrReader
     # with +info[:format]+ :jpeg and the size of the JPEG frame, so that a
     # caller can decode it at reduced size first (JPEG.decode(data,
     # scale:)). JPEG.decode of such data may still raise ImageError.
+    # JPXDecode images come undecoded too, as a RawJpx (+info[:format]+
+    # :jpx), whose #decode(reduce:) makes the Image.
     #
     # Images: 1/2/4/8/16 bits per component; DeviceGray/RGB/CMYK, CalGray,
     # CalRGB, ICCBased (by /N), Indexed, Separation and DeviceN (tint =
@@ -50,9 +56,10 @@ module QrReader
     # arrays. Filters: FlateDecode and LZWDecode (with PNG and TIFF
     # predictors), RunLengthDecode, ASCIIHexDecode, ASCII85Decode,
     # DCTDecode (JPEG), CCITTFaxDecode and JBIG2Decode (generic regions;
-    # symbol, halftone and refinement coding are skipped). JPEG 2000 images
-    # are skipped. Colour is reduced to luminance with Image.luma; alpha
-    # (/SMask) is ignored.
+    # symbol, halftone and refinement coding are skipped) and JPXDecode
+    # (JPEG 2000, its own colour information unless the image dictionary
+    # has a /ColorSpace). Colour is reduced to luminance with Image.luma;
+    # alpha (/SMask, JPX opacity channels) is ignored.
     #
     # Encrypted documents are decrypted when their user password is empty
     # (standard security handler: RC4, AES-128, AES-256); other encrypted
@@ -82,11 +89,31 @@ module QrReader
       # A DCT image handed over undecoded (each_image with raw_jpeg: true):
       # the JPEG data and its frame size.
       RawJpeg = Struct.new(:data, :width, :height)
+      # A JPXDecode image handed over undecoded (each_image with raw_jpeg:
+      # true): the JPEG 2000 data, its full size and the PDF colour space
+      # that overrides the JP2 colour information (nil when the image
+      # dictionary has none). #decode makes the luminance Image, at a
+      # reduced resolution with +reduce+ (default: the least the decoder
+      # accepts, see JPEG2000.fitting_reduce).
+      RawJpx = Struct.new(:data, :width, :height, :space) do
+        def fitting_reduce
+          JPEG2000.fitting_reduce(data)
+        end
+
+        def decode(reduce: fitting_reduce)
+          return JPEG2000.decode(data, reduce: reduce) unless space
+
+          comps = JPEG2000.decode_components(data, reduce: reduce, palette: false)
+          Image.new(comps.width, comps.height, PDF.jpx_luminance(comps, space))
+        end
+      end
 
       # Largest decoded stream we produce for anything but image samples.
       STREAM_LIMIT = 1 << 26
       # Largest decoded image sample buffer.
       SAMPLE_LIMIT = 1 << 28
+      # Most rows by which two bands of one picture may overlap (see Band).
+      MAX_OVERLAP_ROWS = 2
 
       # Errors that garbage input could trigger deep inside the decoders.
       INTERNAL_ERRORS = [NoMethodError, TypeError, ArgumentError, RangeError, IndexError, ZeroDivisionError,
@@ -94,10 +121,11 @@ module QrReader
 
       class << self
         # Yields each raster image of the document with an info Hash
-        # ({page:, name:, width:, height:}), page by page in drawing order.
+        # ({page:, name:, width:, height:}), page by page in drawing order;
+        # with +vector+ also the rendered groups of vector shapes.
         # Returns an Enumerator without a block.
-        def each_image(bytes, raw_jpeg: false)
-          return enum_for(:each_image, bytes, raw_jpeg: raw_jpeg) unless block_given?
+        def each_image(bytes, raw_jpeg: false, vector: false)
+          return enum_for(:each_image, bytes, raw_jpeg: raw_jpeg, vector: vector) unless block_given?
 
           document = guard { Document.new(binary(bytes)) }
           pages = guard { document.pages }
@@ -105,7 +133,8 @@ module QrReader
           count = 0
           pages.each_with_index do |page, index|
             band = nil # the latest image, held back in case the next one continues it
-            sources(document, page, failures).each do |source|
+            paths = PathCollector.new(document, page.resources) if vector
+            sources(document, page, failures, paths).each do |source|
               part = decode(document, source, failures, raw_jpeg) or next
               next if band&.join(part, source.ctm)
 
@@ -115,10 +144,17 @@ module QrReader
               end
               band = Band.new([part], source.ctm, source.name)
             end
-            next unless band && (image = band.image)
+            if band && (image = band.image)
+              count += 1
+              yield image, band.info(index, image)
+            end
+            next unless paths
 
-            count += 1
-            yield image, band.info(index, image)
+            vector_images(paths, failures).each do |image, dpi|
+              count += 1
+              yield image, { page: index, name: nil, width: image.width, height: image.height, pixel_aspect: 1.0,
+                             dpi: [dpi, dpi], vector: true }
+            end
           end
           raise no_images(failures) if count.zero?
 
@@ -128,6 +164,21 @@ module QrReader
         # All raster images of the document (see #each_image).
         def images(bytes)
           each_image(bytes).map { |image, _info| image }
+        end
+
+        # Luminance of decoded JPEG 2000 +comps+ in the PDF colour space
+        # +space+, which overrides the JP2 colour information (internal).
+        def jpx_luminance(comps, space)
+          alpha = comps.alpha || []
+          channels = comps.components.reject.with_index { |_, i| alpha.include?(i) }
+          if space.components == 1 || channels.size < space.components
+            lut = space.luma_lut(8, nil)
+            first = channels.first or raise ImageError, "JPEG 2000 image without colour channels"
+            return lut == ImageDecoder::IDENTITY ? first : first.tr(ImageDecoder::ALL_BYTES, Image::TR_ESCAPE.call(lut))
+          end
+
+          color = { rgb: :rgb, cmyk: :cmyk, lab: :gray }[space.kind]
+          JPEG2000.luminance(JPEG2000::Components.new(comps.width, comps.height, channels, color, false, []))
         end
 
         private
@@ -144,8 +195,15 @@ module QrReader
           raise ImageError, "corrupt PDF (#{e.class}: #{e.message})"
         end
 
-        def sources(document, page, failures)
-          document.page_images(page)
+        def sources(document, page, failures, paths)
+          document.page_images(page, paths)
+        rescue Error, *INTERNAL_ERRORS => e
+          failures << e
+          []
+        end
+
+        def vector_images(paths, failures)
+          VectorRenderer.images(paths.shapes)
         rescue Error, *INTERNAL_ERRORS => e
           failures << e
           []
@@ -173,29 +231,50 @@ module QrReader
       # Images drawn directly above or below each other with the same width
       # and scale are bands of one picture (scanner drivers that print
       # through PostScript cut page images into strips), joined so that a
-      # code across a band boundary stays readable. +parts+ (Images or
-      # RawJpegs) are top to bottom; +ctm+ maps the unit square onto the
+      # code across a band boundary stays readable. Bands may overlap by up
+      # to MAX_OVERLAP_ROWS rows (drivers often repeat a row so that no gap
+      # shows); the repeated rows are dropped. +parts+ (Images or RawJpegs)
+      # are top to bottom, +skips+ the number of rows hidden at the top of
+      # each (by the part above); +ctm+ maps the unit square onto the
       # joined picture.
-      Band = Struct.new(:parts, :ctm, :name) do
-        # The picture: an Image, the JPEG data of a lone RawJpeg, or nil
-        # when a joined RawJpeg cannot be decoded.
+      Band = Struct.new(:parts, :ctm, :name, :skips) do
+        def initialize(parts, ctm, name)
+          super(parts, ctm, name, Array.new(parts.size, 0))
+        end
+
+        # The picture: an Image, the JPEG data of a lone RawJpeg, a lone
+        # RawJpx, or nil when a joined RawJpeg or RawJpx cannot be decoded.
         def image
           part = parts.first
           return part.is_a?(RawJpeg) ? part.data : part if parts.size == 1
 
-          images = parts.map { |p| p.is_a?(RawJpeg) ? JPEG.decode(p.data) : p }
-          Image.new(images.first.width, images.sum(&:height), images.map(&:data).join)
+          data = parts.each_with_index.map do |p, i|
+            p = JPEG.decode(p.data) if p.is_a?(RawJpeg)
+            if p.is_a?(RawJpx)
+              raw = p
+              p = raw.decode(reduce: 0)
+              raise ImageError, "JPX band of another size" unless [p.width, p.height] == [raw.width, raw.height]
+            end
+            skip = skips[i] * p.width
+            skip.zero? ? p.data : p.data.byteslice(skip, p.data.bytesize - skip)
+          end
+          Image.new(parts.first.width, rows, data.join)
         rescue Error
           nil
+        end
+
+        # Height of the joined picture.
+        def rows
+          parts.sum(&:height) - skips.sum
         end
 
         # The info Hash for +image+ (see PDF.each_image).
         def info(page, image)
           info = { page: page, name: name }
-          if image.is_a?(String)
+          if image.is_a?(String) || image.is_a?(RawJpx)
             info[:width] = parts.first.width
             info[:height] = parts.first.height
-            info[:format] = :jpeg
+            info[:format] = image.is_a?(String) ? :jpeg : :jpx
           else
             info[:width] = image.width
             info[:height] = image.height
@@ -223,7 +302,7 @@ module QrReader
           return false unless ctm && matrix && upright?(ctm) && upright?(matrix)
 
           width = parts.first.width
-          height = parts.sum(&:height)
+          height = rows
           a, _, _, d, e, f = ctm
           a2, _, _, d2, e2, f2 = matrix
           row = d / height
@@ -232,12 +311,19 @@ module QrReader
           return false unless (a2 - a).abs <= a * 0.01 && (e2 - e).abs <= a / width / 2
           return false unless (d2 / image.height - row).abs <= row * 0.01
 
-          if (f2 + d2 - f).abs <= row / 2 # directly below
+          if (overlap = overlap_rows(f2 + d2 - f, row)) # directly below
+            return false if overlap >= image.height
+
             parts << image
-            self.ctm = [a, 0.0, 0.0, d + d2, e, f2]
-          elsif (f + d - f2).abs <= row / 2 # directly above
+            skips << overlap
+            self.ctm = [a, 0.0, 0.0, f + d - f2, e, f2]
+          elsif (overlap = overlap_rows(f + d - f2, row)) # directly above
+            return false if overlap >= parts.first.height - skips.first
+
+            skips[0] += overlap
             parts.unshift(image)
-            self.ctm = [a, 0.0, 0.0, d + d2, e, f]
+            skips.unshift(0)
+            self.ctm = [a, 0.0, 0.0, f2 + d2 - f, e, f]
           else
             return false
           end
@@ -245,6 +331,13 @@ module QrReader
         end
 
         private
+
+        # Whole rows by which two bands overlap (+overlap+ in points, 0 when
+        # they just touch), or nil when they are not adjacent.
+        def overlap_rows(overlap, row)
+          n = (overlap / row).round
+          n.between?(0, MAX_OVERLAP_ROWS) && (overlap - n * row).abs <= row / 2 ? n : nil
+        end
 
         def upright?(m)
           m[1].abs < 1e-6 && m[2].abs < 1e-6 && m[0].positive? && m[3].positive?
@@ -679,6 +772,11 @@ module QrReader
           Filters.decode(stream_bytes(stream), filters, params, limit)
         end
 
+        # Fonts loaded for text drawing, by font dictionary (see Font).
+        def fonts
+          @fonts ||= {}
+        end
+
         # Decoded content stream, or nil when it cannot be decoded (or the
         # document's CONTENT_BUDGET is spent).
         def content(stream)
@@ -700,8 +798,9 @@ module QrReader
           list
         end
 
-        # ImageSources drawn by +page+ in drawing order.
-        def page_images(page)
+        # ImageSources drawn by +page+ in drawing order; its paths go to
+        # +paths+ (a PathCollector) if given.
+        def page_images(page, paths = nil)
           return [ImageSource.new(page.orphan.dict, page.orphan, nil, {}, nil, nil)] if page.orphan
 
           resources = page.resources
@@ -713,7 +812,7 @@ module QrReader
           # Undecodable content: list the page's image resources instead.
           return resource_images(resources) if parts.empty?
 
-          ContentScanner.new(self).images(parts.join("\n"), resources)
+          ContentScanner.new(self, paths).images(parts.join("\n"), resources)
         end
 
         private
@@ -1976,8 +2075,9 @@ module QrReader
         TEXTUAL = /\A[\t\n\r\x20-\x7E]*\z/
         STRING_SPECIAL = /[()\\]/
 
-        def initialize(doc)
+        def initialize(doc, paths = nil)
           @doc = doc
+          @paths = paths
           @images = []
           @seen = {}
           @forms = {}
@@ -2006,16 +2106,29 @@ module QrReader
             case b
             when 0x2F then operand(operands, Parser.scan_token(s, data, Parser::NAME_RUN))
             when 0x28
-              skip_string(s, data)
-              operand(operands, nil)
+              # Strings and arrays only matter for text (see pdf/text.rb).
+              if @paths
+                operand(operands, text_operand(s, data))
+              else
+                skip_string(s, data)
+                operand(operands, nil)
+              end
             when 0x3C
               if data.getbyte(s.pos + 1) == 0x3C
                 s.pos += 2
+              elsif @paths
+                operand(operands, text_operand(s, data))
               else
                 s.skip_until(/>/) || s.terminate
                 operand(operands, nil)
               end
-            when 0x3E, 0x5B, 0x5D, 0x7B, 0x7D, 0x29, 0x25 then s.pos += 1
+            when 0x5B
+              if @paths
+                operand(operands, text_operand(s, data))
+              else
+                s.pos += 1
+              end
+            when 0x3E, 0x5D, 0x7B, 0x7D, 0x29, 0x25 then s.pos += 1
             else
               # (Parser.scan_token inlined.)
               token = s.scan(token_run)
@@ -2028,10 +2141,22 @@ module QrReader
               end
               case token
               when "cm" then ctm = multiply(operands.last(6).map(&:to_f), ctm) if operands.size >= 6
-              when "q" then stack << ctm if stack.size < MAX_STACK
-              when "Q" then ctm = stack.pop || ctm
+              when "q"
+                stack << ctm if stack.size < MAX_STACK
+                @paths&.save
+              when "Q"
+                ctm = stack.pop || ctm
+                @paths&.restore
               when "Do" then draw(operands.last, resources, ctm, depth)
               when "BI" then inline_image(s, data, resources, ctm)
+              else
+                if @paths
+                  if PathCollector.operator?(token)
+                    @paths.operator(token, operands, ctm, resources)
+                  elsif TEXT_OPERATORS[token]
+                    text_operator(token, operands, ctm, resources, depth)
+                  end
+                end
               end
               operands.clear
             end
@@ -2081,7 +2206,7 @@ module QrReader
           dict = stream.dict
           subtype = @doc.resolve(dict[:Subtype])
           if subtype == :Image || (subtype.nil? && dict.key?(:Width))
-            return if @seen[key]
+            return if @seen[key] || @in_glyph&.positive?
 
             @seen[key] = true
             @images << ImageSource.new(dict, stream, nil, resources, name.to_s, ctm)
@@ -2093,7 +2218,9 @@ module QrReader
             matrix = @doc.resolve(dict[:Matrix])
             matrix = matrix.map { |v| Util.number(@doc.resolve(v)) || 0.0 } if matrix.is_a?(Array) && matrix.size == 6
             ctm = multiply(matrix, ctm) if matrix.is_a?(Array) && matrix.size == 6
+            @paths&.save
             scan(content, dict.key?(:Resources) ? dict[:Resources] : resources, ctm, depth + 1)
+            @paths&.restore
           end
         end
 
@@ -2115,6 +2242,8 @@ module QrReader
           start += 1 if start < data.bytesize && " \t\n\f\r\x00".include?(data.byteslice(start, 1))
           stop, after = extent(data, start, dict, resources)
           s.pos = after
+          return if @in_glyph&.positive?
+
           @images << ImageSource.new(dict, nil, data.byteslice(start, stop - start), resources, nil, ctm)
         rescue ParseError
           s.skip_until(EI) || s.terminate
@@ -2221,8 +2350,11 @@ module QrReader
           when :JBIG2Decode
             data = Filters.decode(data, filters, params, SAMPLE_LIMIT)
             jbig2_image(data, codec_params, width, height, one_component(space), decode)
-          else
-            raise UnsupportedImageError, "JPEG 2000 (JPXDecode) images are not supported"
+          else # JPXDecode: its own colour information unless /ColorSpace (or /ImageMask) says otherwise
+            jpx = Filters.decode(data, filters, params, SAMPLE_LIMIT)
+            jw, jh = JPEG2000.dimensions(jpx)
+            raw = RawJpx.new(jpx, jw, jh, @dict.key?(:ColorSpace) || mask ? space : nil)
+            @raw_jpeg ? raw : raw.decode
           end
         end
 
@@ -2355,10 +2487,11 @@ module QrReader
             image = JPEG.decode(jpeg)
             lut == IDENTITY ? image : Image.new(image.width, image.height, translate(image.data, lut))
           when 4
-            # JPEG.decode reads CMYK the Adobe way (stored inverted), which
-            # PDFs declare with /Decode [1 0 1 0 1 0 1 0].
+            # PDFs store ink amounts (0 = no ink); data written the Adobe
+            # way (255 = no ink, JPEG.decode's default) is declared with
+            # /Decode [1 0 1 0 1 0 1 0].
             cmyk = space&.components == 4 ? space : ColorSpace::CMYK
-            raise UnsupportedImageError, "CMYK JPEG image without an inverting /Decode array" unless cmyk.inverted?(decode)
+            return JPEG.decode(jpeg, cmyk: :plain) unless cmyk.inverted?(decode)
 
             @raw_jpeg ? RawJpeg.new(jpeg, jw, jh) : JPEG.decode(jpeg)
           else
@@ -2927,9 +3060,15 @@ module QrReader
         end
       end
 
-      private_constant :ParseError, :Ref, :Keyword, :Stream, :Page, :ImageSource, :Band, :STREAM_LIMIT, :SAMPLE_LIMIT,
+      private_constant :ParseError, :Ref, :Keyword, :Stream, :Page, :ImageSource, :Band, :STREAM_LIMIT, :SAMPLE_LIMIT, :MAX_OVERLAP_ROWS,
                        :INTERNAL_ERRORS, :Util, :Parser, :Document, :Security, :Filters, :ColorSpace, :Pixels,
                        :ContentScanner, :ImageDecoder, :JBIG2
     end
   end
 end
+
+require_relative "pdf/font_tables"
+require_relative "pdf/font_programs"
+require_relative "pdf/fonts"
+require_relative "pdf/text"
+require_relative "pdf/vector"

@@ -40,14 +40,15 @@ file, describe it in your final report instead.
 
 | owner | files |
 |---|---|
-| core (integrator) | `lib/qr_reader.rb`, `lib/qr_reader/kernels.rb`, `lib/qr_reader/kernels/image.rb`, `script/**`, `native/**`, `lib/qr_reader/{version,errors,image,bit_matrix,result,symbol_version,format_information}.rb`, `lib/qr_reader/reader.rb`, `test/test_helper.rb`, `test/support/qr_test_helper.rb`, `exe/qr_reader`, `test/test_core_types.rb`, `DESIGN.md`, `Rakefile`, gemspec |
+| core (integrator) | `lib/qr_reader.rb`, `lib/qr_reader/kernels.rb`, `lib/qr_reader/kernels/image.rb`, `script/**`, `native/**`, `lib/qr_reader/{version,errors,image,bit_matrix,result,symbol_version,format_information}.rb`, `lib/qr_reader/reader.rb`, `test/test_helper.rb`, `test/support/qr_test_helper.rb`, `exe/qr_reader`, `test/test_core_types.rb`, `test/test_reader.rb`, `DESIGN.md`, `Rakefile`, gemspec |
 | formats | `lib/qr_reader/formats.rb`, `lib/qr_reader/formats/{png,gif,bmp,pnm}.rb`, `test/formats/test_{png,gif,bmp,pnm,formats}.rb`, `test/fixtures/images/**` |
 | jpeg | `lib/qr_reader/formats/jpeg.rb`, `test/formats/test_jpeg.rb`, `test/fixtures/jpeg/**`, `bench/jpeg_bench.rb` |
+| jpeg2000 | `lib/qr_reader/formats/jpeg2000.rb`, `lib/qr_reader/formats/jpeg2000/**`, `test/formats/test_jpeg2000.rb`, `test/fixtures/jpeg2000/**` |
 | decoder | `lib/qr_reader/decoder.rb`, `lib/qr_reader/decoder/**`, `test/decoder/**` |
 | detector | `lib/qr_reader/detector.rb`, `lib/qr_reader/detector/**`, `lib/qr_reader/binarizer.rb`, `test/detector/**` |
 | testkit | `test/support/**` (except `qr_test_helper.rb` and `scan_sim.rb`), `test/test_encoder.rb`, `bench/**` (except `bench/jpeg_bench.rb`, `bench/scans/**`; `bench/reference/zxcpp.py` may be extended) |
 | tiff | `lib/qr_reader/formats/{ccitt,tiff}.rb`, `test/formats/test_{ccitt,tiff}*.rb`, `test/fixtures/tiff/**` |
-| pdf | `lib/qr_reader/formats/pdf.rb`, `test/formats/test_pdf*.rb`, `test/fixtures/pdf/**` |
+| pdf | `lib/qr_reader/formats/pdf.rb`, `lib/qr_reader/formats/pdf/**`, `test/formats/test_pdf*.rb`, `test/fixtures/pdf/**` |
 | scans | `bench/scans/**`, `test/corpus/scans/**` (generated, gitignored), `test/support/scan_sim.rb` |
 
 Each component has one entry file (`formats.rb`, `decoder.rb`, `detector.rb`)
@@ -143,6 +144,24 @@ IDCTs (4x4, 2x2, DC only) — output size `ceil(w/scale) x ceil(h/scale)`, like
 libjpeg. Truncated data: decode what is there, fill the rest with mid-gray.
 EXIF orientation is ignored (QR decoding is rotation-invariant).
 
+### jpeg2000
+
+```ruby
+QrReader::Formats::JPEG2000.decode(bytes, reduce: 0)   # => Image (luminance)
+QrReader::Formats::JPEG2000.decode_components(bytes)    # => Components (8-bit channels, colour)
+QrReader::Formats::JPEG2000.dimensions(bytes)           # => [w, h]
+QrReader::Formats::JPEG2000.fitting_reduce(bytes)       # => least reduce decode accepts
+```
+
+All of Part 1 for JP2 files and raw codestreams (codestream.rb: markers;
+container.rb: JP2 boxes; tile.rb: geometry, packets, progressions; tier1.rb:
+MQ decoder and EBCOT passes; dwt.rb: 5/3 and 9/7 synthesis). Matches OpenJPEG
+(exactly for 5/3, within 1 for 9/7). +reduce+ discards resolution levels
+without tier-1 decoding them. Tile by tile, component by component; a
+tile-component above MAX_DECODE_SAMPLES needs +reduce+ (memory: about 8 bytes
+per sample of it). Pure Ruby, not a kernel. Fixtures: `test/fixtures/jpeg2000`
+(generate.py, with Pillow and opj_compress).
+
 ### tiff (scans)
 
 ```ruby
@@ -164,12 +183,21 @@ and tiles, compression 1/2/3/4/5/7/8/32773/32946, predictor 2, photometric
 
 ```ruby
 QrReader::Formats::PDF.each_image(bytes) { |image, info| }  # info: {page:, name:, width:, height:}
+QrReader::Formats::PDF.each_image(bytes, vector: true) { }  # also rendered vector groups (info[:vector])
 QrReader::Formats::PDF.images(bytes)                         # => Array<Image>
 ```
 
-Extracts the raster images of (scanned) PDFs page by page — vector-drawn QR
-codes are out of scope. Filters: Flate (+ predictors), DCT (via JPEG), CCITTFax
-(via CCITT), LZW, RunLength, ASCIIHex, ASCII85; JBIG2/JPX images are skipped.
+Extracts the raster images of (scanned) PDFs page by page. With `vector: true`
+(the Reader uses it) the paths a page fills or strokes are collected too
+(`pdf/vector.rb`): groups of at least 20 small right-angled polygons or dots
+that cover a good part of their area (one rectangle per module or run, as PDF
+generators draw codes) are rasterized at about 4 pixels per module (dots as
+whole modules) and yielded after the page's raster images. Text is positioned
+glyph by glyph (`pdf/text.rb`); glyphs of embedded fonts whose outlines are
+right-angled polygons (barcode fonts; `pdf/fonts.rb`, `pdf/font_programs.rb`:
+TrueType, CFF, Type 1) and Type 3 glyph procedures join the paths. Shadings,
+patterns and clipping are ignored. Filters: Flate (+ predictors), DCT (via JPEG), CCITTFax
+(via CCITT), JBIG2 (generic regions), JPX (via JPEG2000), LZW, RunLength, ASCIIHex, ASCII85.
 Images that can't be decoded are skipped; `UnsupportedImageError` only if the
 PDF is encrypted or contains no decodable image at all.
 

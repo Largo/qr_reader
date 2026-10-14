@@ -18,6 +18,7 @@
 # Compare interpreters with `ruby bench/speed.rb` vs `ruby --yjit bench/speed.rb`.
 
 require_relative "support"
+require "stringio"
 require "optparse"
 require "time"
 require "qr_encoder"
@@ -152,14 +153,14 @@ module SpeedBench
     inputs.corpus_samples.first(2).each do |path|
       yield "decode(path) #{path.split('/').last(2).join('/')}", nil, -> { QrReader.decode(path) }
     end
-    yield "decode(png bytes) clean v10", nil, -> { QrReader.decode(inputs.clean_png) }
+    yield "decode(png bytes) clean v10", nil, -> { QrReader.decode(StringIO.new(inputs.clean_png)) }
     yield "decode(Image) photo 1600x1200", inputs.photo.size / 1e6, -> { QrReader.decode(inputs.photo) }
     page = inputs.scan_page
     yield "decode(Image) A4 scan #{page.width}x#{page.height}", page.size / 1e6, -> { QrReader.decode(page) }
     yield "read_all(Image) 4 codes", nil, -> { QrReader.read_all(inputs.multi) }
     return unless Distort.jpeg_available?
 
-    yield "decode(jpeg bytes) photo 1600x1200", inputs.photo.size / 1e6, -> { QrReader.decode(inputs.jpegs.first[1]) }
+    yield "decode(jpeg bytes) photo 1600x1200", inputs.photo.size / 1e6, -> { QrReader.decode(StringIO.new(inputs.jpegs.first[1])) }
   end
 
   # Scanned documents: one A4 page at 300 DPI in the formats scanners write.
@@ -169,13 +170,13 @@ module SpeedBench
     label = "A4 300 DPI #{page.width}x#{page.height}"
     png = inputs.scan_png
     yield "png load #{label}", mp, -> { QrReader::Formats.decode(png) }
-    yield "decode(png bytes) #{label}", mp, -> { QrReader.decode(png) }
+    yield "decode(png bytes) #{label}", mp, -> { QrReader.decode(StringIO.new(png)) }
     inputs.scan_documents.each do |name, bytes|
       # No ImageMagick: shown as n/a.
       next yield("#{name} #{label}", mp, -> { raise NotImplementedError, bytes.message }) if bytes.is_a?(Exception)
 
       yield "#{name} load #{label}", mp, -> { load_document(bytes) }
-      yield "decode(#{name} bytes) #{label}", mp, -> { QrReader.decode(bytes) }
+      yield "decode(#{name} bytes) #{label}", mp, -> { QrReader.decode(StringIO.new(bytes)) }
     end
   end
 

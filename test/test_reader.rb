@@ -2,6 +2,8 @@
 
 require_relative "test_helper"
 require "tmpdir"
+require "pathname"
+require "open3"
 
 # QrReader::Reader on images of unusual shape.
 class TestReader < Minitest::Test
@@ -20,22 +22,33 @@ class TestReader < Minitest::Test
     assert_equal "wide", QrReader.decode(image)
   end
 
-  # Short Strings that are neither a file nor image data: text is taken as a
-  # missing path (like File.read), binary or invalid text as bad image data.
-  def test_unrecognised_short_strings
-    assert_raises(Errno::ENOENT) { QrReader.decode("no/such/scan.png") }
-    ["not an image".b, "\xFF\xFEjunk".dup.force_encoding(Encoding::UTF_8)].each do |data|
-      error = assert_raises(QrReader::ImageError, data.inspect) { QrReader.decode(data) }
-      assert_match(/unrecognised image data/, error.message)
-    end
-  end
-
-  def test_binary_path_strings_still_name_files
+  # A String is always a file path, never image data; bytes come as an IO.
+  # Image bytes passed as a String fail loudly instead of being sniffed, so
+  # bytes that happen to spell a path are never read as one by mistake.
+  def test_strings_are_paths_and_bytes_come_as_io
+    code = QrTestHelper.render(QrTestHelper.rqr_matrix("path"), module_size: 3)
+    pgm = "P5 #{code.width} #{code.height} 255\n#{Array.new(code.height) { |y| code.row(y) }.join}".b
     Dir.mktmpdir do |dir|
       path = File.join(dir, "code.pgm")
-      code = QrTestHelper.render(QrTestHelper.rqr_matrix("path"), module_size: 3)
-      File.binwrite(path, "P5 #{code.width} #{code.height} 255\n#{Array.new(code.height) { |y| code.row(y) }.join}")
+      File.binwrite(path, pgm)
+      assert_equal "path", QrReader.decode(path)
       assert_equal "path", QrReader.decode(path.b)
+      assert_equal "path", QrReader.decode(Pathname(path))
+      File.open(path, "rb") { |file| assert_equal "path", QrReader.decode(file) }
     end
+    assert_equal "path", QrReader.decode(StringIO.new(pgm))
+    assert_equal ["path"], QrReader.scan(StringIO.new(pgm)).map(&:text)
+    out, status = Open3.capture2("ruby", "-I#{File.expand_path('../lib', __dir__)}",
+                                 File.expand_path("../exe/qr_reader", __dir__), "-", stdin_data: pgm, binmode: true)
+    assert_equal ["path\n", true], [out, status.success?]
+    assert_equal code.width, QrReader.load_image(StringIO.new(pgm)).width
+
+    error = assert_raises(ArgumentError) { QrReader.decode(pgm) }
+    assert_match(/looks like image data.*StringIO/, error.message)
+    assert_raises(ArgumentError) { QrReader.decode("\x89PNG\r\n\x1A\n\0\0".b) }
+    assert_raises(Errno::ENOENT) { QrReader.decode("no/such/scan.png") }
+    assert_raises(Errno::ENOENT) { QrReader.decode("not an image".b) }
+    error = assert_raises(ArgumentError) { QrReader.decode(nil) }
+    assert_match(/unsupported input NilClass/, error.message)
   end
 end

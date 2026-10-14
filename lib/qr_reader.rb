@@ -24,9 +24,14 @@ require_relative "qr_reader/native_kernels"
 #   QrReader.read("label.png")            # => #<data QrReader::Result text=..., version=3, ...>
 #   QrReader.scan("scans.tiff") { |code| puts "page #{code.page}: #{code.text}" }
 #
-# Every method accepts a file path (String or Pathname), an IO, encoded image
-# bytes (PNG, JPEG, JPEG 2000, GIF, BMP, PNM, TIFF, PDF), a QrReader::Image, or a
-# ChunkyPNG-style canvas (#width, #height, #pixels), plus these options:
+# Every method takes a file path (String or Pathname), an IO with encoded
+# image bytes (PNG, JPEG, JPEG 2000, GIF, BMP, PNM, TIFF, PDF), a
+# QrReader::Image, or a ChunkyPNG-style canvas (#width, #height, #pixels). A
+# String is always a path, never image data; wrap bytes in an IO:
+#
+#   QrReader.decode(StringIO.new(bytes))
+#
+# Options:
 #
 #   try_harder: true    - fall back to slower strategies when the fast ones find nothing
 #   inverted:   :auto   - also look for light-on-dark codes (true: only those, false: never)
@@ -66,8 +71,8 @@ module QrReader
       nil
     end
 
-    # Loads an image (path, IO, encoded bytes, Image or ChunkyPNG-style canvas)
-    # as a grayscale QrReader::Image; multi-page documents yield their first page.
+    # Loads an image (path, IO, Image or ChunkyPNG-style canvas) as a
+    # grayscale QrReader::Image; multi-page documents yield their first page.
     def load_image(input)
       Reader.load_image(input)
     end

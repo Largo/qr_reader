@@ -61,7 +61,7 @@ class TestPdfFonts < Minitest::Test
   end
 
   def read(w, font, content)
-    QrReader.decode(w.document([[content, { Font: { F1: font } }]]))
+    QrReader.decode(StringIO.new(w.document([[content, { Font: { F1: font } }]])))
   end
 
   # Nothing to read: the page draws no image and no code-like vector group.

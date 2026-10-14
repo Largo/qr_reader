@@ -36,16 +36,21 @@ module QrReader
       @inverted = inverted
     end
 
+    # The input is a file path (String or Pathname), an IO with encoded image
+    # bytes (a File, StringIO.new(bytes), an upload's Tempfile), a
+    # QrReader::Image or a ChunkyPNG-style canvas. A String is always a path,
+    # never image data.
+
     # First decoded Result, or nil.
     def read(input)
-      each_result(input, false) { |result| return result }
+      each_result(self.class.source(input), false) { |result| return result }
       nil
     end
 
     # All decoded Results (distinct symbols, all pages), possibly empty.
     def read_all(input)
       results = []
-      each_result(input, true) { |result| results << result }
+      each_result(self.class.source(input), true) { |result| results << result }
       results
     end
 
@@ -54,60 +59,44 @@ module QrReader
     def scan(input, &block)
       return enum_for(:scan, input) unless block
 
-      each_result(input, true, &block)
+      each_result(self.class.source(input), true, &block)
       self
     end
 
     class << self
-      # Converts any supported input into an Image (the first page of
-      # multi-page documents).
+      # Converts any supported input (see #read) into an Image (the first
+      # page of multi-page documents).
       def load_image(input)
-        return input if input.is_a?(Image)
+        source = source(input)
+        return source if source.is_a?(Image)
 
-        bytes = input_bytes(input)
-        if bytes
-          # Formats.decode reads the first page of TIFF and PDF too; this also
-          # finds PDFs with junk before their header.
-          if container_format(bytes) == :pdf
-            Formats::PDF.each_image(bytes) { |image, _info| return image }
+        # Formats.decode reads the first page of TIFF and PDF too; this also
+        # finds PDFs with junk before their header.
+        if container_format(source) == :pdf
+          Formats::PDF.each_image(source) { |image, _info| return image }
+        end
+        Formats.decode(source)
+      end
+
+      # The input as encoded image bytes (a binary String) or an Image.
+      def source(input)
+        case input
+        when Image then input
+        when String then path_bytes(input)
+        else
+          # IOs first: since Ruby 3.2 every IO has #to_path ($stdin's is "<STDIN>").
+          if input.respond_to?(:read)
+            data = input.read or raise ImageError, "IO returned no data"
+            data.b
+          elsif input.respond_to?(:to_path)
+            File.binread(input.to_path)
+          elsif input.respond_to?(:width) && input.respond_to?(:height) && input.respond_to?(:pixels)
+            # ChunkyPNG-style canvas: pixels are 0xRRGGBBAA integers.
+            Image.from_pixels(input.width, input.height, input.pixels.pack("N*"), :rgba)
+          else
+            raise ArgumentError, "unsupported input #{input.class}: expected a file path, an IO or a QrReader::Image"
           end
-          return Formats.decode(bytes)
         end
-
-        if input.respond_to?(:width) && input.respond_to?(:height) && input.respond_to?(:pixels)
-          # ChunkyPNG-style canvas: pixels are 0xRRGGBBAA integers.
-          return Image.from_pixels(input.width, input.height, input.pixels.pack("N*"), :rgba)
-        end
-
-        raise ArgumentError, "unsupported input #{input.class}: expected a path, IO, image bytes or QrReader::Image"
-      end
-
-      # Encoded image bytes for paths, IOs and byte strings; nil for other objects.
-      def input_bytes(input)
-        if input.is_a?(String)
-          # A short String naming an existing file is a path, even if it
-          # starts like image data ("GIF89a.gif", "P5 scan.pgm").
-          short = input.bytesize <= 4096 && !input.include?("\0")
-          return File.binread(input) if short && File.file?(input)
-          return input.b if Formats.format_of(input) || container_format(input)
-          raise ImageError, "unrecognised image data" unless short && path_like?(input)
-
-          File.binread(input) # raises Errno::ENOENT etc. like File.read
-        elsif input.respond_to?(:to_path)
-          File.binread(input.to_path)
-        elsif input.respond_to?(:read)
-          data = input.read
-          raise ImageError, "IO returned no data" unless data
-
-          data.b
-        end
-      end
-
-      # Whether a String that is neither a file nor image data could still be
-      # meant as a path: binary Strings (image bytes from File.binread, HTTP
-      # bodies, ...) and Strings that are not valid text are data.
-      def path_like?(string)
-        string.encoding != Encoding::BINARY && string.valid_encoding?
       end
 
       # :tiff or :pdf for multi-page containers, else nil.
@@ -118,11 +107,27 @@ module QrReader
 
         nil
       end
+
+      private
+
+      # A positional String is a path and nothing else. Image bytes passed by
+      # mistake fail here instead of being read (or worse: bytes that spell a
+      # path being read as one), so the mix-up shows up on the first try.
+      def path_bytes(path)
+        return File.binread(path) if !path.include?("\0") && File.file?(path)
+        if path.include?("\0") || Formats.format_of(path) || container_format(path)
+          raise ArgumentError, "expected a file path, got a String that looks like image data " \
+                               "(#{path.bytesize} bytes); pass image bytes as an IO: StringIO.new(bytes)"
+        end
+
+        File.binread(path) # raises Errno::ENOENT etc. like File.read
+      end
     end
 
     private
 
-    # Yields decoded results (deduplicated) until the caller stops iterating.
+    # Yields decoded results (deduplicated) until the caller stops iterating;
+    # +input+ is a #source (encoded bytes or an Image).
     def each_result(input, multi, &block)
       @multi = multi
       @emit = block
@@ -134,13 +139,7 @@ module QrReader
         return
       end
 
-      bytes = self.class.input_bytes(input)
-      unless bytes
-        scan_pyramid(self.class.load_image(input), nil)
-        return
-      end
-
-      @y_scale = 1.0
+      bytes = input
       case self.class.container_format(bytes)
       when :tiff
         # Pages that cannot be decoded are skipped.

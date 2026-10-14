@@ -35,10 +35,10 @@ class TestTIFFScan < Minitest::Test
   def test_multi_page_scan
     bytes = multi_page_scan
     assert_equal 3, TIFF.page_count(bytes)
-    results = QrReader.read_all(bytes)
+    results = QrReader.read_all(StringIO.new(bytes))
     assert_equal([["page one", 0], ["page three", 2]], results.map { |r| [r.text, r.page] })
-    assert_equal "page one", QrReader.decode(bytes)
-    first = QrReader.scan(bytes).first
+    assert_equal "page one", QrReader.decode(StringIO.new(bytes))
+    first = QrReader.scan(StringIO.new(bytes)).first
     assert_equal ["page one", 0], [first.text, first.page]
   end
 

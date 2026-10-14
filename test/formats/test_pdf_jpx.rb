@@ -62,8 +62,8 @@ class TestPdfJpx < Minitest::Test
 
   def test_qr_code_in_a_jpx_page
     pdf = jpx_pdf(PAGE)
-    assert_equal "JPX page", QrReader.decode(pdf)
-    assert_equal [["JPX page", 0]], QrReader.read_all(pdf).map { |r| [r.text, r.page] }
-    assert_equal "JPX page", QrReader.decode(PAGE) # a standalone JP2 file
+    assert_equal "JPX page", QrReader.decode(StringIO.new(pdf))
+    assert_equal [["JPX page", 0]], QrReader.read_all(StringIO.new(pdf)).map { |r| [r.text, r.page] }
+    assert_equal "JPX page", QrReader.decode(StringIO.new(PAGE)) # a standalone JP2 file
   end
 end

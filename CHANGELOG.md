@@ -2,15 +2,20 @@
 
 ## [Unreleased]
 
+- **Breaking:** a `String` input is always a file path, never image data;
+  pass image bytes as an IO (`QrReader.decode(StringIO.new(bytes))`, or the
+  upload's `Tempfile` directly), like `File.read` and `PDF::Reader.new`.
+  Before, Strings were sniffed: bytes that spelled the path of an existing
+  file (e.g. an uploaded "image" containing `/etc/...` or the path of a
+  server-side image with a QR code) were read from disk, and the error for
+  unrecognised data echoed the file's first bytes. A `String` that looks like
+  image data now raises `ArgumentError` with that hint.
 - PDF: a document that draws no image and no code-like vector group (e.g. a
   text-only invoice page) has no codes: `decode_all` returns `[]` and
   `decode` `nil` instead of raising `UnsupportedImageError` "PDF contains no
   raster images". PDFs whose images all fail to decode still raise.
 - PDF: data behind a `%PDF-` header without a page tree raises `ImageError`
   "corrupt PDF (no pages found)" instead of "PDF contains no raster images".
-- A short binary (or invalidly encoded) `String` that is not image data
-  raises `ImageError` "unrecognised image data" instead of being opened as a
-  path (`Errno::ENOENT`). Text Strings still name files.
 
 ## [0.0.2] - 2026-10-13
 

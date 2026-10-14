@@ -9,6 +9,7 @@
 # --dump prints the sampled grid of the first candidate.
 
 $LOAD_PATH.unshift File.expand_path("../../../lib", __dir__)
+require "stringio"
 require "qr_reader"
 require "optparse"
 
@@ -27,7 +28,7 @@ bytes = File.binread(path)
 image = case QrReader::Reader.container_format(bytes)
         when :tiff then QrReader::Formats::TIFF.decode(bytes)
         when :pdf then QrReader::Formats::PDF.images(bytes).first
-        else QrReader.load_image(bytes)
+        else QrReader.load_image(StringIO.new(bytes))
         end
 image = image.rotate(opts[:rotate])
 t0 = Process.clock_gettime(Process::CLOCK_MONOTONIC)

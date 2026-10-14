@@ -21,6 +21,9 @@ code.points          # => [[x, y], ...] corners: top-left, top-right, bottom-rig
 QrReader.scan("scans.tiff") do |code|  # lazily, page by page
   puts "page #{code.page}: #{code.text}"
 end
+
+QrReader.decode(params[:file].tempfile)  # an upload: any IO works
+QrReader.decode(StringIO.new(bytes))     # image bytes you already hold
 ```
 
 ## Installation
@@ -61,10 +64,14 @@ without the gem — or with `QR_READER_NATIVE=0` — the same code runs as Ruby.
 | `QrReader.read_all(input)` | all codes as `QrReader::Result`s |
 | `QrReader.scan(input) { \|result\| }` | yields codes as they are found; an `Enumerator` without a block |
 
-`input` can be a file path (`String` or `Pathname`), an `IO`, a binary
-`String` with the encoded image, a `QrReader::Image`, or any object with
-`width`, `height` and `pixels` (e.g. a `ChunkyPNG::Image`). Raw pixel buffers
-can be wrapped with `QrReader::Image.from_pixels(width, height, bytes, :rgba)`
+`input` can be a file path (`String` or `Pathname`), an `IO` with the encoded
+image (a `File`, an upload's `Tempfile`, `StringIO.new(bytes)`), a
+`QrReader::Image`, or any object with `width`, `height` and `pixels` (e.g. a
+`ChunkyPNG::Image`). As with `File.read` or `PDF::Reader.new`, a `String` is
+always a path and never image data: image bytes go in as an IO. A `String`
+that looks like image data raises `ArgumentError` instead of being guessed at,
+so bytes from a client can never be taken for a path on the server. Raw pixel
+buffers can be wrapped with `QrReader::Image.from_pixels(width, height, bytes, :rgba)`
 (also `:rgb`, `:bgr`, `:bgra`, `:gray`, ...).
 
 Options (for every method, and `QrReader::Reader.new` for reuse):
@@ -88,10 +95,9 @@ A `QrReader::Result` is an immutable `Data` object:
 
 Errors: `QrReader::ImageError` (unreadable image data, corrupt PDF),
 `QrReader::UnsupportedImageError` (e.g. WebP, HEIC, encrypted PDF, a PDF
-whose images all fail to decode), `Errno::ENOENT` for missing files. A PDF
-that draws nothing that could be a code (a text-only page) is not an error:
-it just has no codes. A short `String` is taken as a path only when it is
-text; binary data that is not an image raises `ImageError`.
+whose images all fail to decode), `Errno::ENOENT` for missing files, `ArgumentError` for image bytes passed
+as a `String` (use `StringIO.new(bytes)`). A PDF that draws nothing that could
+be a code (a text-only page) is not an error: it just has no codes.
 
 ### Command line
 

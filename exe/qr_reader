@@ -31,7 +31,7 @@ end
 status = 0
 reader = QrReader::Reader.new(try_harder: options[:try_harder], inverted: options[:inverted])
 files.each do |file|
-  input = file == "-" ? $stdin.binmode.read : file
+  input = file == "-" ? $stdin.binmode : file
   results = begin
     options[:all] ? reader.read_all(input) : [reader.read(input)].compact
   rescue QrReader::Error, SystemCallError => e

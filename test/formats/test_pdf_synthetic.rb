@@ -475,9 +475,9 @@ class TestPdfSynthetic < Minitest::Test
     pdf = PdfWriter.new.document([["0 0 m 100 100 l S BT /F1 12 Tf (Do) Tj ET", nil]])
     assert_empty PDF.images(pdf)
     assert_empty PDF.each_image(pdf, vector: true).to_a
-    assert_empty QrReader.decode_all(pdf)
-    assert_nil QrReader.decode(pdf)
-    assert_raises(QrReader::NotFoundError) { QrReader.decode!(pdf) }
+    assert_empty QrReader.decode_all(StringIO.new(pdf))
+    assert_nil QrReader.decode(StringIO.new(pdf))
+    assert_raises(QrReader::NotFoundError) { QrReader.decode!(StringIO.new(pdf)) }
     error = assert_raises(QrReader::UnsupportedImageError) { QrReader::Formats.decode(pdf) }
     assert_match(/no raster image/, error.message)
   end
@@ -486,7 +486,7 @@ class TestPdfSynthetic < Minitest::Test
   # empty one.
   def test_documents_without_pages
     ["%PDF-1.4 garbage", "%PDF-1.4\n%%EOF\n", "%PDF-#{"\xFF\x00" * 50}"].each do |bytes|
-      error = assert_raises(QrReader::ImageError, bytes[0, 12]) { QrReader.decode_all(bytes.b) }
+      error = assert_raises(QrReader::ImageError, bytes[0, 12]) { QrReader.decode_all(StringIO.new(bytes.b)) }
       refute_kind_of QrReader::UnsupportedImageError, error
       assert_match(/corrupt PDF/, error.message)
     end

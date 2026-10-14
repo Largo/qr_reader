@@ -128,7 +128,7 @@ class TestPdf < Minitest::Test
     assert_equal ["PDF gray fixture", "PDF bilevel fixture", "PDF rgb fixture"], results.map(&:text)
     assert_equal [0, 1, 2], results.map(&:page)
     assert_equal "Scanned page fixture", QrReader.decode(File.join(DIR, "magick_page_group4.pdf"))
-    assert_equal "JPEG scan fixture", QrReader.decode(fixture("writer_jpeg.pdf"))
+    assert_equal "JPEG scan fixture", QrReader.decode(StringIO.new(fixture("writer_jpeg.pdf")))
     assert_equal "PDF rgb fixture", QrReader.decode_all(File.join(DIR, "qpdf_aes_256.pdf")).last
   end
 

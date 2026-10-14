@@ -20,6 +20,7 @@
 # The library's own footprint (RSS after `require "qr_reader"`) is printed
 # first. Inputs whose format is not supported yet are skipped.
 
+require "stringio"
 require "json"
 require "optparse"
 require "open3"
@@ -180,13 +181,13 @@ def child(path, runs)
   File.write("/proc/self/clear_refs", "5") # reset the VmHWM peak counter
   allocs_before = GC.stat(:total_allocated_objects)
   t0 = Process.clock_gettime(Process::CLOCK_MONOTONIC)
-  result = QrReader.read(bytes)
+  result = QrReader.read(StringIO.new(bytes))
   first = Process.clock_gettime(Process::CLOCK_MONOTONIC) - t0
   allocs = GC.stat(:total_allocated_objects) - allocs_before
   peak = status.call("VmHWM") - rss_before
   warm = Array.new(runs) do
     t = Process.clock_gettime(Process::CLOCK_MONOTONIC)
-    QrReader.read(bytes)
+    QrReader.read(StringIO.new(bytes))
     Process.clock_gettime(Process::CLOCK_MONOTONIC) - t
   end.sort
   puts JSON.generate(found: !result.nil?, text: result&.text&.slice(0, 40), version: result&.version,

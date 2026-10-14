@@ -37,7 +37,7 @@ class TestPdfVector < Minitest::Test
 
   def test_one_rectangle_per_module
     bytes = pdf("0 0 0 rg\n#{rects(matrix('module by module'), 1.5, 100, 500).map { |r| "#{r} f" }.join("\n")}")
-    assert_equal "module by module", QrReader.decode(bytes)
+    assert_equal "module by module", QrReader.decode(StringIO.new(bytes))
 
     pairs = PDF.each_image(bytes, vector: true).to_a
     assert_equal 1, pairs.size
@@ -50,14 +50,14 @@ class TestPdfVector < Minitest::Test
 
   def test_runs_in_one_path_with_even_odd_rule_and_cmyk
     content = "q 0.2 0.1 0.3 0.9 k #{rects(matrix('runs'), 2, 50, 50, runs: true).join(' ')} f* Q"
-    assert_equal "runs", QrReader.decode(pdf(content))
+    assert_equal "runs", QrReader.decode(StringIO.new(pdf(content)))
   end
 
   def test_light_modules_on_a_coloured_square
     m = matrix("light on blue")
     side = m.width * 1.2
     content = "0.43 0.67 0.84 rg 100 100 #{side} #{side} re f 1 g #{rects(m, 1.2, 100, 100, light: true).join(' ')} f"
-    assert_equal "light on blue", QrReader.decode(pdf(content))
+    assert_equal "light on blue", QrReader.decode(StringIO.new(pdf(content)))
   end
 
   def test_rotated_and_scaled_form_xobject
@@ -65,7 +65,7 @@ class TestPdfVector < Minitest::Test
     form = w.add({ Type: :XObject, Subtype: :Form, BBox: [0, 0, 100, 100], Matrix: [0, 2, -2, 0, 300, 100] },
                  stream: "0 0 1 RG 0 0 0.5 rg #{rects(matrix('turned'), 1, 10, 10).join(' ')} f")
     bytes = w.document([["q 0.5 0 0 0.5 0 0 cm /Fm Do Q", { XObject: { Fm: form } }]])
-    assert_equal "turned", QrReader.decode(bytes)
+    assert_equal "turned", QrReader.decode(StringIO.new(bytes))
   end
 
   def test_stroked_runs
@@ -86,8 +86,8 @@ class TestPdfVector < Minitest::Test
         x += len
       end
     end
-    assert_equal "stroked", QrReader.decode(pdf("#{size} w #{butt.join(' ')} S"))
-    assert_equal "stroked", QrReader.decode(pdf("#{size} w 2 J #{square.join("\n")} S"))
+    assert_equal "stroked", QrReader.decode(StringIO.new(pdf("#{size} w #{butt.join(' ')} S")))
+    assert_equal "stroked", QrReader.decode(StringIO.new(pdf("#{size} w 2 J #{square.join("\n")} S")))
   end
 
   # A circle of radius +r+ around cx, cy from four Bézier curves.
@@ -120,14 +120,14 @@ class TestPdfVector < Minitest::Test
 
   def test_round_dots
     m = matrix("dots and squares")
-    assert_equal "dots and squares", QrReader.decode(pdf("0 g #{dotted(m, 1.5, 100, 100, finders: :squares)} f"))
+    assert_equal "dots and squares", QrReader.decode(StringIO.new(pdf("0 g #{dotted(m, 1.5, 100, 100, finders: :squares)} f")))
     m = matrix("only dots")
-    assert_equal "only dots", QrReader.decode(pdf("0 g #{dotted(m, 1.5, 100, 100, finders: :dots)} f"))
+    assert_equal "only dots", QrReader.decode(StringIO.new(pdf("0 g #{dotted(m, 1.5, 100, 100, finders: :dots)} f")))
   end
 
   def test_two_codes_on_a_page
     content = ["0 g", *rects(matrix("left"), 1.5, 50, 600), "f", *rects(matrix("right"), 1.5, 300, 600), "f"].join(" ")
-    assert_equal %w[left right], QrReader.read_all(pdf(content)).map(&:text).sort
+    assert_equal %w[left right], QrReader.read_all(StringIO.new(pdf(content))).map(&:text).sort
   end
 
   def test_shapes_that_are_not_codes_are_not_rendered
@@ -149,7 +149,7 @@ class TestPdfVector < Minitest::Test
     garbage.each do |content|
       bytes = w.document([["#{content} q 2 0 0 1 0 0 cm /Im Do Q #{content}", { XObject: { Im: img } }]])
       assert_equal [[1, 2]], PDF.each_image(bytes, vector: true).map { |image, _| image.data.bytes }, content
-      assert_nil QrReader.decode(bytes)
+      assert_nil QrReader.decode(StringIO.new(bytes))
     end
   end
 
@@ -158,8 +158,8 @@ class TestPdfVector < Minitest::Test
   def test_painting_order
     m = matrix("covered")
     content = "0 g #{rects(m, 2, 100, 100).join(' ')} f 1 g 100 100 #{m.width} #{m.width} re f"
-    assert_nil QrReader.decode(pdf(content))
+    assert_nil QrReader.decode(StringIO.new(pdf(content)))
     content = "0 g #{rects(m, 2, 100, 100).join(' ')} f /Pattern cs /P0 scn 100 100 #{m.width} #{m.width} re f"
-    assert_equal "covered", QrReader.decode(pdf(content))
+    assert_equal "covered", QrReader.decode(StringIO.new(pdf(content)))
   end
 end

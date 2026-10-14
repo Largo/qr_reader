@@ -35,6 +35,7 @@
 # on the in-memory image (or on JPEG bytes for the jpeg family).
 
 require_relative "support"
+require "stringio"
 require "optparse"
 require "time"
 require "tmpdir"
@@ -452,7 +453,7 @@ module SyntheticBench
     cases.each do |c|
       sample = samples[c.id]
       outcomes[c.id] = begin
-        results, elapsed = BenchSupport.measure { QrReader.read_all(sample.input) }
+        results, elapsed = BenchSupport.measure { QrReader.read_all(sample.input.is_a?(String) ? StringIO.new(sample.input) : sample.input) }
         classify(sample, results.map(&:text), elapsed)
       rescue *BenchSupport::CASE_ERRORS => e
         Outcome.new(status: :error, ms: nil, texts: [], error: "#{e.class}: #{e.message}")

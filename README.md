@@ -55,12 +55,16 @@ without the gem — or with `QR_READER_NATIVE=0` — the same code runs as Ruby.
 
 ## Usage
 
+The `decode` methods return the text of a code; the `read` methods return a
+`QrReader::Result` with the text plus metadata (version, position, page, ...).
+
 | method | returns |
 |---|---|
 | `QrReader.decode(input)` | text of the first code, or `nil` |
 | `QrReader.decode!(input)` | text of the first code, or raises `QrReader::NotFoundError` |
 | `QrReader.decode_all(input)` | texts of all codes (all pages) |
 | `QrReader.read(input)` | first code as a `QrReader::Result`, or `nil` |
+| `QrReader.read!(input)` | first code as a `QrReader::Result`, or raises `QrReader::NotFoundError` |
 | `QrReader.read_all(input)` | all codes as `QrReader::Result`s |
 | `QrReader.scan(input) { \|result\| }` | yields codes as they are found; an `Enumerator` without a block |
 

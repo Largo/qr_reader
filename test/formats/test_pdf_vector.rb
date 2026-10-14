@@ -45,7 +45,7 @@ class TestPdfVector < Minitest::Test
     assert_equal({ page: 0, name: nil, width: image.width, height: image.height, pixel_aspect: 1.0,
                    dpi: [192.0, 192.0], vector: true }, info)
     # Only raster images without vector: true.
-    assert_raises(QrReader::UnsupportedImageError) { PDF.images(bytes) }
+    assert_empty PDF.images(bytes)
   end
 
   def test_runs_in_one_path_with_even_odd_rule_and_cmyk
@@ -134,8 +134,8 @@ class TestPdfVector < Minitest::Test
     row = Array.new(60) { |i| "#{50 + i * 8} 700 5 5 re" }.join(" ")
     few = Array.new(10) { |i| "#{50 + i * 8} 400 5 5 re" }.join(" ")
     [row, few, "0 0 612 792 re", "50 50 m 60 60 l 70 50 l"].each do |content|
-      assert_raises(QrReader::UnsupportedImageError, content[0, 30]) { PDF.images(pdf("#{content} f")) }
-      assert_raises(QrReader::UnsupportedImageError) { PDF.each_image(pdf("#{content} f"), vector: true).to_a }
+      assert_empty PDF.images(pdf("#{content} f")), content[0, 30]
+      assert_empty PDF.each_image(pdf("#{content} f"), vector: true).to_a, content[0, 30]
     end
   end
 

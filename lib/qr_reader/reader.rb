@@ -90,7 +90,7 @@ module QrReader
           short = input.bytesize <= 4096 && !input.include?("\0")
           return File.binread(input) if short && File.file?(input)
           return input.b if Formats.format_of(input) || container_format(input)
-          raise ImageError, "unrecognised image data" unless short
+          raise ImageError, "unrecognised image data" unless short && path_like?(input)
 
           File.binread(input) # raises Errno::ENOENT etc. like File.read
         elsif input.respond_to?(:to_path)
@@ -101,6 +101,13 @@ module QrReader
 
           data.b
         end
+      end
+
+      # Whether a String that is neither a file nor image data could still be
+      # meant as a path: binary Strings (image bytes from File.binread, HTTP
+      # bodies, ...) and Strings that are not valid text are data.
+      def path_like?(string)
+        string.encoding != Encoding::BINARY && string.valid_encoding?
       end
 
       # :tiff or :pdf for multi-page containers, else nil.

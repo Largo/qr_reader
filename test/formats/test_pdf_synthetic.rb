@@ -469,11 +469,27 @@ class TestPdfSynthetic < Minitest::Test
     assert_raises(QrReader::ImageError) { PDF.images(w.document([["/B Do", { XObject: { B: bad } }]])) }
   end
 
+  # A text-only page has no images and no codes; that is not an error. Only
+  # asking for "the" image of such a PDF fails.
   def test_documents_without_images
-    error = assert_raises(QrReader::UnsupportedImageError) do
-      PDF.images(PdfWriter.new.document([["0 0 m 100 100 l S BT /F1 12 Tf (Do) Tj ET", nil]]))
+    pdf = PdfWriter.new.document([["0 0 m 100 100 l S BT /F1 12 Tf (Do) Tj ET", nil]])
+    assert_empty PDF.images(pdf)
+    assert_empty PDF.each_image(pdf, vector: true).to_a
+    assert_empty QrReader.decode_all(pdf)
+    assert_nil QrReader.decode(pdf)
+    assert_raises(QrReader::NotFoundError) { QrReader.decode!(pdf) }
+    error = assert_raises(QrReader::UnsupportedImageError) { QrReader::Formats.decode(pdf) }
+    assert_match(/no raster image/, error.message)
+  end
+
+  # Garbage behind a %PDF- header has no page tree: a corrupt PDF, not an
+  # empty one.
+  def test_documents_without_pages
+    ["%PDF-1.4 garbage", "%PDF-1.4\n%%EOF\n", "%PDF-#{"\xFF\x00" * 50}"].each do |bytes|
+      error = assert_raises(QrReader::ImageError, bytes[0, 12]) { QrReader.decode_all(bytes.b) }
+      refute_kind_of QrReader::UnsupportedImageError, error
+      assert_match(/corrupt PDF/, error.message)
     end
-    assert_match(/no raster images/, error.message)
   end
 
   # --- document structure ----------------------------------------------------

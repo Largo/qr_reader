@@ -86,9 +86,12 @@ A `QrReader::Result` is an immutable `Data` object:
 | `mirrored?`, `errors_corrected` | read mirrored? / number of repaired codewords |
 | `eci`, `segments`, `structured_append`, `fnc1`, `symbology_identifier` | encoding details |
 
-Errors: `QrReader::ImageError` (unreadable image data),
-`QrReader::UnsupportedImageError` (e.g. WebP, HEIC, encrypted PDF),
-`Errno::ENOENT` for missing files.
+Errors: `QrReader::ImageError` (unreadable image data, corrupt PDF),
+`QrReader::UnsupportedImageError` (e.g. WebP, HEIC, encrypted PDF, a PDF
+whose images all fail to decode), `Errno::ENOENT` for missing files. A PDF
+that draws nothing that could be a code (a text-only page) is not an error:
+it just has no codes. A short `String` is taken as a path only when it is
+text; binary data that is not an image raises `ImageError`.
 
 ### Command line
 

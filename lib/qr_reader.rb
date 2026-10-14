@@ -57,6 +57,11 @@ module QrReader
       Reader.new(**options).read(input)
     end
 
+    # Like #read, but raises NotFoundError when no code can be read.
+    def read!(input, **options)
+      read(input, **options) or raise NotFoundError, "no QR code found"
+    end
+
     # All QR codes found (on all pages) as Results, possibly empty.
     def read_all(input, **options)
       Reader.new(**options).read_all(input)

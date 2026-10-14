@@ -38,6 +38,10 @@ class TestReader < Minitest::Test
     end
     assert_equal "path", QrReader.decode(StringIO.new(pgm))
     assert_equal ["path"], QrReader.scan(StringIO.new(pgm)).map(&:text)
+    assert_equal "path", QrReader.read!(StringIO.new(pgm)).text
+    blank = QrReader::Image.new(50, 50, "\xFF".b * 2500)
+    error = assert_raises(QrReader::NotFoundError) { QrReader.read!(blank) }
+    assert_equal "no QR code found", error.message
     out, status = Open3.capture2("ruby", "-I#{File.expand_path('../lib', __dir__)}",
                                  File.expand_path("../exe/qr_reader", __dir__), "-", stdin_data: pgm, binmode: true)
     assert_equal ["path\n", true], [out, status.success?]

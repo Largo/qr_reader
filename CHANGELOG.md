@@ -2,6 +2,8 @@
 
 ## [Unreleased]
 
+- `QrReader.read!`: like `read`, but raises `NotFoundError` when no code is
+  found (the `Result` counterpart of `decode!`).
 - **Breaking:** a `String` input is always a file path, never image data;
   pass image bytes as an IO (`QrReader.decode(StringIO.new(bytes))`, or the
   upload's `Tempfile` directly), like `File.read` and `PDF::Reader.new`.

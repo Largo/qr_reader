@@ -199,7 +199,9 @@ TrueType, CFF, Type 1) and Type 3 glyph procedures join the paths. Shadings,
 patterns and clipping are ignored. Filters: Flate (+ predictors), DCT (via JPEG), CCITTFax
 (via CCITT), JBIG2 (generic regions), JPX (via JPEG2000), LZW, RunLength, ASCIIHex, ASCII85.
 Images that can't be decoded are skipped; `UnsupportedImageError` only if the
-PDF is encrypted or contains no decodable image at all.
+PDF is encrypted or none of its images can be decoded. A PDF without any image
+(and no code-like vector group) yields nothing; one without a page tree is a
+corrupt PDF (`ImageError`).
 
 `Result#page` (0-based) tells which page/image a code came from for multi-page
 inputs (nil for single images).

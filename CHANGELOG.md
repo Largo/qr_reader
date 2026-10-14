@@ -2,6 +2,16 @@
 
 ## [Unreleased]
 
+- PDF: a document that draws no image and no code-like vector group (e.g. a
+  text-only invoice page) has no codes: `decode_all` returns `[]` and
+  `decode` `nil` instead of raising `UnsupportedImageError` "PDF contains no
+  raster images". PDFs whose images all fail to decode still raise.
+- PDF: data behind a `%PDF-` header without a page tree raises `ImageError`
+  "corrupt PDF (no pages found)" instead of "PDF contains no raster images".
+- A short binary (or invalidly encoded) `String` that is not image data
+  raises `ImageError` "unrecognised image data" instead of being opened as a
+  path (`Errno::ENOENT`). Text Strings still name files.
+
 ## [0.0.2] - 2026-10-13
 
 - JPEG 2000: pure-Ruby decoder for all of Part 1 (`Formats::JPEG2000`), used

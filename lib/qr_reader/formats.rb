@@ -100,7 +100,7 @@ module QrReader
 
       def first_pdf_image(bytes)
         PDF.each_image(bytes) { |image, _info| return image }
-        raise UnsupportedImageError, "PDF contains no decodable raster image"
+        raise UnsupportedImageError, "PDF contains no raster image"
       end
 
       def unrecognized(bytes)

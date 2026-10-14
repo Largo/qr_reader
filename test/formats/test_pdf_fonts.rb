@@ -66,7 +66,7 @@ class TestPdfFonts < Minitest::Test
 
   # Nothing to read: the page draws no image and no code-like vector group.
   def assert_nothing_drawn(w, font, content, message = nil)
-    assert_raises(QrReader::UnsupportedImageError, message) { read(w, font, content) }
+    assert_nil read(w, font, content), message
   end
 
   def test_truetype
@@ -166,7 +166,7 @@ class TestPdfFonts < Minitest::Test
                        :WinAnsiEncoding)
     lines = Array.new(30) { PdfWriter.serialize("o" * 40) }
     pdf = w.document([[text_content(lines), { Font: { F1: font } }]])
-    assert_raises(QrReader::UnsupportedImageError) { QrReader::Formats::PDF.each_image(pdf, vector: true).to_a }
+    assert_empty QrReader::Formats::PDF.each_image(pdf, vector: true).to_a
     helvetica = w.add({ Type: :Font, Subtype: :Type1, BaseFont: :Helvetica })
     assert_nothing_drawn(w, helvetica, text_content(byte_lines(matrix(TEXT))))
   end

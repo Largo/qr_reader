@@ -129,6 +129,10 @@ module QrReader
 
           document = guard { Document.new(binary(bytes)) }
           pages = guard { document.pages }
+          # Every PDF has at least one page; none found means the document
+          # structure is broken (or this is not really a PDF).
+          raise ImageError, "corrupt PDF (no pages found)" if pages.empty?
+
           failures = []
           count = 0
           pages.each_with_index do |page, index|
@@ -156,7 +160,9 @@ module QrReader
                              dpi: [dpi, dpi], vector: true }
             end
           end
-          raise no_images(failures) if count.zero?
+          # A PDF that draws nothing readable (text only) simply has no
+          # images; one whose images all failed to decode is an error.
+          raise no_images(failures) if count.zero? && !failures.empty?
 
           nil
         end
@@ -217,8 +223,6 @@ module QrReader
         end
 
         def no_images(failures)
-          return UnsupportedImageError.new("PDF contains no raster images") if failures.empty?
-
           reason = failures.first.message
           if failures.any?(UnsupportedImageError)
             UnsupportedImageError.new("PDF contains no decodable raster image (#{reason})")

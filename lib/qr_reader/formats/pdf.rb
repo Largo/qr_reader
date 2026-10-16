@@ -1504,6 +1504,8 @@ module QrReader
         NONZERO = /[^\x00]/n
         HEX_DIGITS = "^0-9A-Fa-f"
         WHITESPACE = "\x00\t\n\f\r "
+        # Compressed bytes per Zlib::Inflate#inflate call (see inflate_with).
+        INFLATE_SLICE = 16_384
 
         class << self
           # Applies +filters+ in order; the output of the last one is cut
@@ -1546,14 +1548,19 @@ module QrReader
 
           # Inflated data (partial for truncated or damaged streams), nil if
           # nothing could be inflated.
+          # The data is fed in slices instead of through the block form of
+          # Zlib::Inflate#inflate: Ruby code running inside zlib's callback
+          # (allocating, collecting garbage) crashes ruby.wasm. The slices
+          # also bound how far the output can run past +limit+.
           def inflate_with(zstream, data, limit)
             out = String.new(encoding: Encoding::BINARY)
             full = false
+            pos = 0
             begin
-              zstream.inflate(data) do |chunk|
-                out << chunk
+              while pos < data.bytesize && !full
+                out << zstream.inflate(data.byteslice(pos, INFLATE_SLICE))
+                pos += INFLATE_SLICE
                 full = out.bytesize >= limit
-                break if full
               end
             rescue Zlib::Error
               failed = true

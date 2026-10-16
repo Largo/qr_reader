@@ -571,7 +571,7 @@ class TestTIFF < Minitest::Test
           flunk "#{name}: #{e.class}: #{e.message}\n#{e.backtrace.first(4).join("\n")}"
         end
         elapsed = Process.clock_gettime(Process::CLOCK_MONOTONIC) - started
-        assert_operator elapsed, :<, 2.0, "#{name} took #{elapsed.round(2)} s"
+        assert_operator elapsed, :<, QrTestHelper.time_limit(2.0), "#{name} took #{elapsed.round(2)} s"
       end
     end
   end

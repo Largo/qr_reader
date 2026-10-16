@@ -49,6 +49,6 @@ class TestTIFFScan < Minitest::Test
     image = TIFF.decode(bytes)
     elapsed = Process.clock_gettime(Process::CLOCK_MONOTONIC) - started
     assert_equal [2480, 3508], [image.width, image.height]
-    assert_operator elapsed, :<, 1.5, "A4 Group 4 TIFF took #{elapsed.round(3)} s"
+    assert_operator elapsed, :<, QrTestHelper.time_limit(1.5), "A4 Group 4 TIFF took #{elapsed.round(3)} s"
   end
 end

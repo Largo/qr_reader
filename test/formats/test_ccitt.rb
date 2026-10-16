@@ -200,7 +200,7 @@ class TestCCITT < Minitest::Test
         rescue QrReader::ImageError
           # fine
         end
-        assert_operator Process.clock_gettime(Process::CLOCK_MONOTONIC) - started, :<, 1.0
+        assert_operator Process.clock_gettime(Process::CLOCK_MONOTONIC) - started, :<, QrTestHelper.time_limit(1.0)
       end
     end
   end
@@ -214,6 +214,6 @@ class TestCCITT < Minitest::Test
     image = CCITT.decode(data, columns: 2480, rows: 3508)
     elapsed = Process.clock_gettime(Process::CLOCK_MONOTONIC) - started
     assert_equal TiffFixtures.expected_digest("scan_a4_g4.tif"), Digest::SHA256.hexdigest(image.data)
-    assert_operator elapsed, :<, 1.5, "A4 Group 4 page took #{elapsed.round(3)} s"
+    assert_operator elapsed, :<, QrTestHelper.time_limit(1.5), "A4 Group 4 page took #{elapsed.round(3)} s"
   end
 end

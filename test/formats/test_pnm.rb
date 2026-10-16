@@ -167,7 +167,7 @@ class TestPNM < Minitest::Test
     assert_raises(QrReader::ImageError) { decode("P5 #{"# # #\n" * 20_000} x".b) }
     assert_raises(QrReader::ImageError) { decode("P5#{' ' * 200_000}x".b) }
     assert_raises(QrReader::ImageError) { decode("P7\n#{"# a b\n" * 20_000}".b) }
-    assert_operator Process.clock_gettime(Process::CLOCK_MONOTONIC) - start, :<, 1.0
+    assert_operator Process.clock_gettime(Process::CLOCK_MONOTONIC) - start, :<, QrTestHelper.time_limit(1.0)
   end
 
   def test_fuzzed_fixtures_raise_only_image_errors

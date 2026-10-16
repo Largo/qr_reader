@@ -2,6 +2,8 @@
 
 ## [Unreleased]
 
+- Tested on JRuby 10 and TruffleRuby 25 as well as MRI 3.2–4.0; the tests'
+  time limits are scaled on JRuby and TruffleRuby (JIT warmup).
 - TruffleRuby: Shift_JIS (Kanji) and EUC-KR payloads are converted correctly;
   `String#encode` on the whole text mis-converted some of them there (and
   could raise on Shift_JIS). They are converted one character at a time,

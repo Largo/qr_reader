@@ -290,7 +290,7 @@ class TestTestkitAdversarial < Minitest::Test
     img = QrReader::Image.new(30, 20, (0...600).map { |i| (i * 37) % 256 }.pack("C*"))
     started = BenchSupport.now
     blurred = Distort.motion_blur(img, length: 200_000, angle: 33)
-    assert_operator BenchSupport.now - started, :<, 5
+    assert_operator BenchSupport.now - started, :<, QrTestHelper.time_limit(5)
     assert_equal [30, 20], [blurred.width, blurred.height]
   end
 
@@ -302,7 +302,7 @@ class TestTestkitAdversarial < Minitest::Test
     end
     started = BenchSupport.now
     Distort.box_blur(gray(30, 30, 9), 1_000_000)
-    assert_operator BenchSupport.now - started, :<, 0.5
+    assert_operator BenchSupport.now - started, :<, QrTestHelper.time_limit(0.5)
   end
 
   def test_cylinder_extremes
@@ -341,7 +341,7 @@ class TestTestkitAdversarial < Minitest::Test
     assert_equal [255], Distort.lut(img, Array.new(256, Float::INFINITY)).data.bytes.uniq
     started = BenchSupport.now
     sp = Distort.salt_pepper(img, amount: 1e12, seed: 1) # clamped to 1: one draw per pixel
-    assert_operator BenchSupport.now - started, :<, 1
+    assert_operator BenchSupport.now - started, :<, QrTestHelper.time_limit(1)
     assert_operator sp.data.bytes.count { |v| v != 100 }, :>, 32
   end
 
@@ -607,7 +607,7 @@ class TestTestkitAdversarial < Minitest::Test
       blurred = Distort.motion_blur(img, length: length, angle: angle)
       assert_equal [30, 20], [blurred.width, blurred.height]
     end
-    assert_operator BenchSupport.now - started, :<, 2
+    assert_operator BenchSupport.now - started, :<, QrTestHelper.time_limit(2)
     # The same weights as summing every step one by one.
     [[1, 0], [2, 45], [8, 35], [15, 135], [40, 89.5], [1001, 10], [4000, 271]].each do |length, angle|
       rad = angle * Math::PI / 180

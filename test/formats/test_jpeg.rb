@@ -158,7 +158,7 @@ class TestJPEG < Minitest::Test
     image = decode(bytes, scale: 2)
     elapsed = Process.clock_gettime(Process::CLOCK_MONOTONIC) - started
     assert_equal [4096, 4096], [image.width, image.height]
-    assert_operator elapsed, :<, 5, "coefficient rows are only allocated where data is decoded"
+    assert_operator elapsed, :<, QrTestHelper.time_limit(5), "coefficient rows are only allocated where data is decoded"
   end
 
   def test_scan_limit_keeps_the_decoded_image

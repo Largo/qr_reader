@@ -10,15 +10,15 @@
 # kernel file; collect the "# spinel-sample: QrReaderKernels.name(args)"
 # comments (one per entry point; they give Spinel the argument types); write
 # native/lib/qr_reader_native/kernel.rb with a QrReaderNative wrapper per
-# entry plus kernel_files / kernels_digest (checked by
-# QrReader::NativeKernels at load time); run `spin ext build`.
+# entry plus kernel_files / kernels_digest (QrReader::KernelDigest, checked
+# by QrReader::NativeKernels at load time); run `spin ext build`.
 
-require "digest"
 require "fileutils"
 require "open3"
 
 ROOT = File.expand_path("..", __dir__)
 LIB = File.join(ROOT, "lib")
+require_relative "../lib/qr_reader/kernel_digest"
 NATIVE = File.join(ROOT, "native")
 spin = File.join(ENV.fetch("SPINEL_HOME", File.expand_path("~/workspace/spinel")), "bin", "spin")
 abort "spin not found at #{spin} (set SPINEL_HOME)" unless File.executable?(spin)
@@ -68,9 +68,7 @@ names = samples.map { |_, name, _| name }
 dups = names.select { |n| names.count(n) > 1 }.uniq
 abort "duplicate samples for #{dups.join(', ')}" unless dups.empty?
 
-sha = Digest::SHA256.new
-files.each { |rel| sha << rel << "\0" << File.binread(File.join(LIB, rel)) << "\0" }
-digest = sha.hexdigest
+digest = QrReader::KernelDigest.digest(files, LIB) # comments and spacing do not count
 
 version = File.read(File.join(LIB, "qr_reader", "version.rb"))[/VERSION = "([^"]+)"/, 1]
 pkg = File.join(NATIVE, "lib", "qr_reader_native")

@@ -278,7 +278,10 @@ extension entry points must be top-level module methods), required by
 complete example). Pure Ruby is the default and the fallback; the optional
 gem `qr_reader-native` compiles the very same files with Spinel
 (`spin ext`, https://github.com/matz/spinel) into a CRuby extension and swaps
-in the native entries when its kernel digest matches.
+in the native entries when its kernel digest matches. The digest
+(`QrReader::KernelDigest`) covers the Ruby tokens of the kernel files, not
+their bytes: comments, blank lines and spacing do not count, code and
+`# spinel-sample:` comments do.
 
 Rules for kernel code (everything reachable from an entry point):
 

@@ -30,6 +30,9 @@
   succeeds.
 - `QrReader.read!`: like `read`, but raises `NotFoundError` when no code is
   found (the `Result` counterpart of `decode!`).
+- qr_reader-native: the check that the native kernels were built from the
+  same sources now compares code tokens, not file bytes, so comments and
+  layout in the kernel files no longer switch the native kernels off.
 - Tested on JRuby 10 and TruffleRuby 25 as well as MRI 3.2–4.0; the tests'
   time limits are scaled on JRuby and TruffleRuby (JIT warmup).
 

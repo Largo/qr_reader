@@ -21,6 +21,7 @@ jobs:
     permissions:
       contents: read
       id-token: write # OIDC token: RubyGems API key and Sigstore signing identity
+      attestations: write # GitHub build provenance (actions/attest)
     steps:
       - uses: actions/checkout@v5
         with:
@@ -41,6 +42,16 @@ jobs:
         run: |
           bundle exec rake build native:gem
           ls -l pkg
+      # Signed build provenance on GitHub for every gem, before anything is
+      # published; check a downloaded gem with
+      #   gh attestation verify qr_reader-<version>.gem -R Largo/qr_reader
+      - name: Attest build provenance
+        uses: actions/attest@1e69f48acb82d1966a394da916b4c1698aa569d6 # v4.2.2
+        with:
+          subject-path: 'pkg/*.gem'
+      # The attestation above stays on GitHub; RubyGems.org shows a gem as
+      # built and signed on GitHub Actions only when it is pushed with a
+      # Sigstore bundle for it (RubyGems 4.0 does not sign by itself).
       # Signs each gem with this workflow's GitHub OIDC identity (keyless
       # Sigstore, recorded in the public Rekor log). RubyGems.org verifies the
       # bundle on push and shows the gem's provenance: this repository, this

@@ -242,7 +242,8 @@ regenerating.
 
 Releases are published from GitHub Actions with RubyGems
 [trusted publishing](https://guides.rubygems.org/trusted-publishing/) — no API
-key is stored anywhere. One tag releases both gems, qr_reader and
+key is stored anywhere — and each gem carries a Sigstore attestation, so
+RubyGems.org shows which repository, workflow and commit built it. One tag releases both gems, qr_reader and
 qr_reader-native, at the same version. Bump `QrReader::VERSION`, update
 `CHANGELOG.md`, then:
 

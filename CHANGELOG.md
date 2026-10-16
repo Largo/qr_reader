@@ -33,6 +33,8 @@
 - qr_reader-native: the check that the native kernels were built from the
   same sources now compares code tokens, not file bytes, so comments and
   layout in the kernel files no longer switch the native kernels off.
+- Releases (qr_reader and qr_reader-native) are signed with Sigstore and
+  pushed with their attestations, so RubyGems.org shows their provenance.
 - Tested on JRuby 10 and TruffleRuby 25 as well as MRI 3.2–4.0; the tests'
   time limits are scaled on JRuby and TruffleRuby (JIT warmup).
 

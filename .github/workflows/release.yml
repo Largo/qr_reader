@@ -3,7 +3,8 @@
 #
 #   git tag v0.0.1 && git push origin v0.0.1   (the tag must equal QrReader::VERSION)
 #
-# Releases both gems, qr_reader and qr_reader-native, at the same version.
+# Releases both gems, qr_reader and qr_reader-native, at the same version,
+# each with a Sigstore attestation (build provenance shown on RubyGems.org).
 # RubyGems.org must know this workflow as a trusted publisher for each of them:
 # owner "largo", repository "qr_reader", workflow "release.yml", environment
 # "release" (see README, "Releasing").
@@ -19,7 +20,7 @@ jobs:
     environment: release
     permissions:
       contents: read
-      id-token: write # OIDC token exchanged for a short-lived RubyGems API key
+      id-token: write # OIDC token: RubyGems API key and Sigstore signing identity
     steps:
       - uses: actions/checkout@v5
         with:
@@ -40,9 +41,22 @@ jobs:
         run: |
           bundle exec rake build native:gem
           ls -l pkg
+      # Signs each gem with this workflow's GitHub OIDC identity (keyless
+      # Sigstore, recorded in the public Rekor log). RubyGems.org verifies the
+      # bundle on push and shows the gem's provenance: this repository, this
+      # workflow, this commit. The same signer rubygems/release-gem uses; a
+      # failure stops the release instead of pushing unsigned gems.
+      - name: Sign both gems (Sigstore attestations)
+        run: |
+          for gem in pkg/*.gem; do
+            gem exec sigstore-cli:0.2.3 sign "$gem" --bundle "$gem.sigstore.json"
+          done
+          ls -l pkg
       # Exchanges the workflow's OIDC token for a short-lived RubyGems API key.
       - uses: rubygems/configure-rubygems-credentials@dc5a8d8553e6ee01fc26761a49e99e733d17954a # v2.1.0
-      - name: Push both gems
+      - name: Push both gems with their attestations
         run: |
-          gem push "pkg/qr_reader-${GITHUB_REF_NAME#v}.gem"
-          gem push "pkg/qr_reader-native-${GITHUB_REF_NAME#v}.gem"
+          version="${GITHUB_REF_NAME#v}"
+          for name in qr_reader qr_reader-native; do
+            gem push "pkg/$name-$version.gem" --attestation "pkg/$name-$version.gem.sigstore.json"
+          done

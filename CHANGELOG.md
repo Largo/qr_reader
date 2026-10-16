@@ -2,20 +2,8 @@
 
 ## [Unreleased]
 
-- Tested on JRuby 10 and TruffleRuby 25 as well as MRI 3.2–4.0; the tests'
-  time limits are scaled on JRuby and TruffleRuby (JIT warmup).
-- TruffleRuby: Shift_JIS (Kanji) and EUC-KR payloads are converted correctly;
-  `String#encode` on the whole text mis-converted some of them there (and
-  could raise on Shift_JIS). They are converted one character at a time,
-  with the same result as before on MRI.
-- JRuby: `Decoder.diagnose` no longer raises `TypeError` when no attempt
-  succeeds.
-- ruby.wasm: PNG and PDF (Flate) images no longer crash the VM ("null
-  function or function signature mismatch"). Zlib is no longer called with a
-  block, because Ruby code that allocates inside zlib's callback crashes
-  ruby.wasm; data is inflated in 16 KB slices instead.
-- `QrReader.read!`: like `read`, but raises `NotFoundError` when no code is
-  found (the `Result` counterpart of `decode!`).
+## [0.0.3] - 2026-10-16
+
 - **Breaking:** a `String` input is always a file path, never image data;
   pass image bytes as an IO (`QrReader.decode(StringIO.new(bytes))`, or the
   upload's `Tempfile` directly), like `File.read` and `PDF::Reader.new`.
@@ -30,6 +18,20 @@
   raster images". PDFs whose images all fail to decode still raise.
 - PDF: data behind a `%PDF-` header without a page tree raises `ImageError`
   "corrupt PDF (no pages found)" instead of "PDF contains no raster images".
+- ruby.wasm: PNG and PDF (Flate) images no longer crash the VM ("null
+  function or function signature mismatch"). Zlib is no longer called with a
+  block, because Ruby code that allocates inside zlib's callback crashes
+  ruby.wasm; data is inflated in 16 KB slices instead.
+- TruffleRuby: Shift_JIS (Kanji) and EUC-KR payloads are converted correctly;
+  `String#encode` on the whole text mis-converted some of them there (and
+  could raise on Shift_JIS). They are converted one character at a time,
+  with the same result as before on MRI.
+- JRuby: `Decoder.diagnose` no longer raises `TypeError` when no attempt
+  succeeds.
+- `QrReader.read!`: like `read`, but raises `NotFoundError` when no code is
+  found (the `Result` counterpart of `decode!`).
+- Tested on JRuby 10 and TruffleRuby 25 as well as MRI 3.2–4.0; the tests'
+  time limits are scaled on JRuby and TruffleRuby (JIT warmup).
 
 ## [0.0.2] - 2026-10-13
 

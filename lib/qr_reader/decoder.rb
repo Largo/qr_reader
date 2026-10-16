@@ -63,7 +63,9 @@ module QrReader
         result = run(bits, bit_matrix.width, try_mirrored, diags)
         return diags.find { |diag| diag[:result].equal?(result) } if result
 
-        diags.max_by.with_index { |diag, i| [STATUSES.index(diag[:status]), -i] }
+        # each_with_index.max_by, not max_by.with_index: JRuby passes the latter's
+        # block one [diag, i] Array.
+        diags.each_with_index.max_by { |diag, i| [STATUSES.index(diag[:status]), -i] }.first
       end
 
       private

@@ -2,6 +2,12 @@
 
 ## [Unreleased]
 
+- TruffleRuby: Shift_JIS (Kanji) and EUC-KR payloads are converted correctly;
+  `String#encode` on the whole text mis-converted some of them there (and
+  could raise on Shift_JIS). They are converted one character at a time,
+  with the same result as before on MRI.
+- JRuby: `Decoder.diagnose` no longer raises `TypeError` when no attempt
+  succeeds.
 - ruby.wasm: PNG and PDF (Flate) images no longer crash the VM ("null
   function or function signature mismatch"). Zlib is no longer called with a
   block, because Ruby code that allocates inside zlib's callback crashes

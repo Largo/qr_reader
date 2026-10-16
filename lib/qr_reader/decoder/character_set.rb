@@ -87,7 +87,9 @@ module QrReader
           # Windows-31J one by one, so the rest keep their JIS X 0208 mapping.
           # Ruby maps 0x815C to U+2014 EM DASH; ZXing and zxing-cpp (like
           # Unicode's SHIFTJIS.TXT and Windows-31J) to U+2015 HORIZONTAL BAR.
-          bytes.encode(UTF_8, SHIFT_JIS, invalid: :replace, fallback: WINDOWS_31J_FALLBACK).tr("\u2014", "\u2015")
+          by_char(bytes, SHIFT_JIS, WINDOWS_31J_FALLBACK).tr("\u2014", "\u2015")
+        when Encoding::EUC_KR
+          by_char(bytes, Encoding::EUC_KR)
         when GB18030
           # Ruby uses the GB 18030-2000 private-use mappings for 11 GBK codes
           # that GB 18030-2005 (and zxing-cpp) map to standard characters.
@@ -98,6 +100,22 @@ module QrReader
         else
           bytes.encode(UTF_8, encoding, invalid: :replace, undef: :replace)
         end
+      end
+
+      # Converts +bytes+ to UTF-8 one character at a time; invalid characters
+      # become U+FFFD, characters +encoding+ cannot map go to +fallback+ (or
+      # U+FFFD). For Shift_JIS and EUC-KR this gives exactly what String#encode
+      # with invalid/undef: :replace gives on MRI, but String#encode on the
+      # whole string mis-converts some of their input on TruffleRuby 25
+      # (Shift_JIS even when valid, and it can return invalid UTF-8).
+      def by_char(bytes, encoding, fallback = nil)
+        bytes.dup.force_encoding(encoding).each_char.map do |char|
+          next "\uFFFD" unless char.valid_encoding?
+
+          char.encode(UTF_8)
+        rescue Encoding::UndefinedConversionError
+          fallback ? fallback.call(char) : "\uFFFD"
+        end.join
       end
 
       # ZXing's Latin-1 vs. Shift_JIS heuristics (bytes known not to be UTF-8).

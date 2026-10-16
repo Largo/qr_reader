@@ -183,11 +183,13 @@ class TestJPEG2000 < Minitest::Test
     siz = bytes.index("\xFF\x51".b)
     bytes[siz + 6, 8] = [16_384, 8192].pack("N2")
     bytes[siz + 22, 8] = [16_384, 8192].pack("N2") # one 134M-sample tile
-    allocated = GC.stat(:malloc_increase_bytes)
+    # malloc_increase_bytes is MRI's; JRuby and TruffleRuby have no such key.
+    malloc_stat = GC.stat.key?(:malloc_increase_bytes)
+    allocated = GC.stat(:malloc_increase_bytes) if malloc_stat
     started = Process.clock_gettime(Process::CLOCK_MONOTONIC)
     assert_raises(QrReader::UnsupportedImageError) { J2K.decode(bytes) }
     assert_operator Process.clock_gettime(Process::CLOCK_MONOTONIC) - started, :<, 2
-    assert_operator GC.stat(:malloc_increase_bytes) - allocated, :<, 64 << 20
+    assert_operator GC.stat(:malloc_increase_bytes) - allocated, :<, 64 << 20 if malloc_stat
     image = decode(bytes, reduce: 3)
     assert_equal [2048, 1024], [image.width, image.height]
   end

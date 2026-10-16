@@ -234,7 +234,9 @@ SPINEL_HOME=~/workspace/spinel bundle exec rake native:generate
 bundle exec rake native:compile native:test
 ```
 
-CI fails when the generated sources are out of date.
+CI fails when the generated sources are out of date. Only code counts:
+comments, blank lines and spacing in the kernel files can change without
+regenerating.
 
 ### Releasing
 

@@ -52,7 +52,8 @@ module QrReader
           return false
         end
 
-        expected = digest(QrReaderNative.kernel_files)
+        require_relative "kernel_digest"
+        expected = KernelDigest.digest(QrReaderNative.kernel_files, File.expand_path("..", __dir__))
         if expected != QrReaderNative.kernels_digest
           @reason = "qr_reader-native #{QrReaderNative.kernels_digest[0, 12]} was built from other kernel " \
                     "sources than qr_reader #{VERSION} (#{expected[0, 12] if expected}); using pure Ruby"
@@ -103,22 +104,6 @@ module QrReader
         when Array then value.each { |v| v.force_encoding(Encoding::BINARY) if v.is_a?(String) }
         else value
         end
-      end
-
-      private
-
-      # SHA-256 over the given files (paths relative to lib/), nil if one is missing.
-      def digest(files)
-        require "digest"
-        lib = File.expand_path("..", __dir__)
-        sha = Digest::SHA256.new
-        files.each do |rel|
-          path = File.join(lib, rel)
-          return nil unless File.file?(path)
-
-          sha << rel << "\0" << File.binread(path) << "\0"
-        end
-        sha.hexdigest
       end
     end
   end

@@ -9,6 +9,6 @@ module QrReader
   # The image format was recognised but is not supported (e.g. arithmetic-coded JPEG).
   class UnsupportedImageError < ImageError; end
 
-  # Raised by QrReader.decode! and QrReader.read! when no QR code could be read.
+  # Raised by QrReader.decode! when no QR code could be read.
   class NotFoundError < Error; end
 end

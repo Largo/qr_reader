@@ -612,6 +612,6 @@ class TestPdfSynthetic < Minitest::Test
     started = Process.clock_gettime(Process::CLOCK_MONOTONIC)
     images = PDF.images(w.render(root: w.add({ Type: :Catalog, Pages: page_tree })))
     assert_equal [[0] * 100], images.map { |i| i.data.bytes }
-    assert_operator Process.clock_gettime(Process::CLOCK_MONOTONIC) - started, :<, 5
+    assert_operator Process.clock_gettime(Process::CLOCK_MONOTONIC) - started, :<, QrTestHelper.time_limit(5)
   end
 end

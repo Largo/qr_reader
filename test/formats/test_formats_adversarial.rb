@@ -136,7 +136,7 @@ class TestFormatsAdversarial < Minitest::Test
                        palette: rle4 ? palette.first(16) : palette, compression: rle4 ? 2 : 1)
       image = nil
       time = elapsed { image = F.decode(bmp) }
-      assert_operator time, :<, 1.0, "RLE#{rle4 ? 4 : 8} absolute groups took #{time.round(2)} s"
+      assert_operator time, :<, QrTestHelper.time_limit(1.0), "RLE#{rle4 ? 4 : 8} absolute groups took #{time.round(2)} s"
       assert_equal reference_rle(data, width, height, lumas, rle4: rle4), image.data.bytes
     end
   end
@@ -350,7 +350,7 @@ class TestFormatsAdversarial < Minitest::Test
     image = nil
     time = elapsed { image = F.decode(png) }
     assert_equal "\0".b * 360_000, image.data
-    assert_operator time, :<, 2.0
+    assert_operator time, :<, QrTestHelper.time_limit(2.0)
   end
 
   # --- dispatcher ---------------------------------------------------------------

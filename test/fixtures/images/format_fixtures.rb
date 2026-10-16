@@ -74,7 +74,7 @@ module FormatFixtures
               "(#{bytes.bytesize} bytes)\n#{e.backtrace.first(4).join("\n")}"
       end
       elapsed = Process.clock_gettime(Process::CLOCK_MONOTONIC) - start
-      assert_operator elapsed, :<, max_seconds, "decoding took #{elapsed.round(2)} s"
+      assert_operator elapsed, :<, QrTestHelper.time_limit(max_seconds), "decoding took #{elapsed.round(2)} s"
     end
 
     def assert_same_image(expected, actual, message = nil)

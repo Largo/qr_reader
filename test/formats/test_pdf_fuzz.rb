@@ -20,7 +20,7 @@ class TestPdfFuzz < Minitest::Test
       nil
     end
     elapsed = Process.clock_gettime(Process::CLOCK_MONOTONIC) - started
-    assert_operator elapsed, :<, 3, "#{label} took #{elapsed.round(2)}s"
+    assert_operator elapsed, :<, QrTestHelper.time_limit(3), "#{label} took #{elapsed.round(2)}s"
   end
 
   def test_truncated_documents

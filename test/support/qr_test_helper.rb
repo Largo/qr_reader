@@ -14,6 +14,15 @@ end
 module QrTestHelper
   module_function
 
+  # The time limits in the tests guard against super-linear behaviour on
+  # hostile input and are set for MRI. JRuby and TruffleRuby run the suite
+  # mostly before their JITs have warmed up, so their limits are scaled.
+  TIME_LIMIT_FACTOR = RUBY_ENGINE == "ruby" ? 1 : 4
+
+  def time_limit(seconds)
+    seconds * TIME_LIMIT_FACTOR
+  end
+
   # QR symbol as a QrReader::BitMatrix, encoded by rqrcode_core.
   # level: :l, :m, :q, :h; size: version (1..40) or nil for automatic;
   # mode: nil, :number, :alphanumeric, :byte_8bit.

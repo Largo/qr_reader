@@ -281,7 +281,7 @@ class TestPNG < Minitest::Test
     bomb = png.byteslice(0, 33) + idat + W.chunk("IEND", "")
     start = Process.clock_gettime(Process::CLOCK_MONOTONIC)
     assert_equal [1, 1], [decode(bomb).width, decode(bomb).height]
-    assert_operator Process.clock_gettime(Process::CLOCK_MONOTONIC) - start, :<, 1.0
+    assert_operator Process.clock_gettime(Process::CLOCK_MONOTONIC) - start, :<, QrTestHelper.time_limit(1.0)
   end
 
   def test_dimensions_reads_the_header_only

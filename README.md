@@ -37,6 +37,10 @@ no native libraries — it also runs on Rubies without C extensions. Enable YJIT
 for the best speed (`RUBY_YJIT_ENABLE=1`, `ruby --yjit`, or
 `RubyVM::YJIT.enable` at boot).
 
+It runs on every major Ruby implementation. The full test suite passes on MRI
+(CRuby) 3.2, 3.3, 3.4 and 4.0, JRuby 10 and TruffleRuby 25, and ruby.wasm
+(Ruby 4.0) decodes PNGs and PDFs.
+
 ### Optional: native kernels (qr_reader-native)
 
 The hot loops (image decoding, binarization, pattern scanning) are written as

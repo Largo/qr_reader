@@ -349,7 +349,7 @@ class TestJPEGAdversarial < Minitest::Test
     started = Process.clock_gettime(Process::CLOCK_MONOTONIC)
     error = assert_raises(QrReader::UnsupportedImageError) { decode(bytes) }
     assert_match(/scale/, error.message)
-    assert_operator Process.clock_gettime(Process::CLOCK_MONOTONIC) - started, :<, 1
+    assert_operator Process.clock_gettime(Process::CLOCK_MONOTONIC) - started, :<, QrTestHelper.time_limit(1)
     image = decode(bytes, scale: 8)
     assert_equal [1024, 1024], [image.width, image.height]
   end

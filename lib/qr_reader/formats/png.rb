@@ -40,7 +40,7 @@ module QrReader
 
       # Compressed bytes fed to zlib at a time (bounds the work done for
       # zip bombs: the output of one slice is at most ~66 MB, streamed).
-      INFLATE_SLICE = 1 << 16
+      INFLATE_SLICE = 16_384
       # Inflated bytes collected before a kernel call (bounds memory).
       KERNEL_SLICE = 1 << 20
 
@@ -268,8 +268,11 @@ module QrReader
         end
 
         # Yields the inflated IDAT payload in pieces, until the consumer
-        # sets @enough.
-        def each_inflated(&block)
+        # sets @enough. Not through the block form of Zlib::Inflate#inflate:
+        # Ruby code running inside zlib's callback (allocating, collecting
+        # garbage) crashes ruby.wasm, so each slice's output is yielded after
+        # the C call has returned.
+        def each_inflated
           zstream = Zlib::Inflate.new
           @idat.each do |pos, length|
             stop = pos + length
@@ -277,14 +280,17 @@ module QrReader
               return if @enough
 
               n = [stop - pos, INFLATE_SLICE].min
-              zstream.inflate(@bytes.byteslice(pos, n), &block)
+              data = zstream.inflate(@bytes.byteslice(pos, n))
               pos += n
+              yield data unless data.empty?
             end
           end
         rescue Zlib::Error => e
-          # Data inflated before the error was used; what is missing is
+          # Data inflated before the error is used; what is missing is
           # reported as truncation by the caller.
           @zlib_error = e
+          rest = zstream.flush_next_out.to_s
+          yield rest unless rest.empty? || @enough
         ensure
           if zstream
             zstream.reset # an unfinished stream would warn on close

@@ -2,6 +2,10 @@
 
 ## [Unreleased]
 
+- ruby.wasm: PNG and PDF (Flate) images no longer crash the VM ("null
+  function or function signature mismatch"). Zlib is no longer called with a
+  block, because Ruby code that allocates inside zlib's callback crashes
+  ruby.wasm; data is inflated in 16 KB slices instead.
 - `QrReader.read!`: like `read`, but raises `NotFoundError` when no code is
   found (the `Result` counterpart of `decode!`).
 - **Breaking:** a `String` input is always a file path, never image data;

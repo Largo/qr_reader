@@ -41,6 +41,10 @@ It runs on every major Ruby implementation. The full test suite passes on MRI
 (CRuby) 3.2, 3.3, 3.4 and 4.0, JRuby 10 and TruffleRuby 25, and ruby.wasm
 (Ruby 4.0) decodes PNGs and PDFs.
 
+For reading QR-bills (Swiss QR codes on invoices) specifically, see
+[swiss_qr](https://github.com/Largo/swiss_qr), which parses and validates the
+payload and uses this gem to read the images and PDFs.
+
 ### Optional: native kernels (qr_reader-native)
 
 The hot loops (image decoding, binarization, pattern scanning) are written as
